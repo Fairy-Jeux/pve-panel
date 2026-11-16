@@ -513,3 +513,326 @@ public struct ToastMessage: Identifiable, Equatable, Sendable {
     public let isError: Bool
     public let text: String
 }
+
+// MARK: - Multi-Server & Setup
+
+public struct SavedServerProfile: Codable, Sendable, Equatable, Identifiable {
+    public let id: UUID
+    public var name: String
+    public var baseURL: String
+    public var addedAt: Date
+
+    public init(id: UUID = UUID(), name: String, baseURL: String, addedAt: Date = Date()) {
+        self.id = id
+        self.name = name
+        self.baseURL = baseURL
+        self.addedAt = addedAt
+    }
+}
+
+public struct SetupEnvConfig: Codable, Sendable, Equatable {
+    public var devAuthBypass: Bool
+    public var allowedTailscaleUsers: String
+    public var protectedOwnerUsername: String
+    public var pveHost: String
+    public var pveNode: String
+    public var pveTokenId: String
+    public var pveTokenSecretSet: Bool
+    public var pveVerifySsl: Bool
+    public var panelSelfVmid: Int
+    public var jellyfinUrl: String
+    public var jellyfinApiKeySet: Bool
+    public var jellyseerrUrl: String
+    public var jellyseerrApiKeySet: Bool
+    public var plexUrl: String
+    public var plexTokenSet: Bool
+    public var radarrUrl: String
+    public var radarrApiKeySet: Bool
+    public var sonarrUrl: String
+    public var sonarrApiKeySet: Bool
+    public var prowlarrUrl: String
+    public var prowlarrApiKeySet: Bool
+    public var qbitUrl: String
+    public var qbitUsername: String
+    public var qbitPasswordSet: Bool
+
+    public init(
+        devAuthBypass: Bool = false,
+        allowedTailscaleUsers: String = "",
+        protectedOwnerUsername: String = "admin",
+        pveHost: String = "",
+        pveNode: String = "pve",
+        pveTokenId: String = "",
+        pveTokenSecretSet: Bool = false,
+        pveVerifySsl: Bool = false,
+        panelSelfVmid: Int = 116,
+        jellyfinUrl: String = "",
+        jellyfinApiKeySet: Bool = false,
+        jellyseerrUrl: String = "",
+        jellyseerrApiKeySet: Bool = false,
+        plexUrl: String = "",
+        plexTokenSet: Bool = false,
+        radarrUrl: String = "",
+        radarrApiKeySet: Bool = false,
+        sonarrUrl: String = "",
+        sonarrApiKeySet: Bool = false,
+        prowlarrUrl: String = "",
+        prowlarrApiKeySet: Bool = false,
+        qbitUrl: String = "",
+        qbitUsername: String = "",
+        qbitPasswordSet: Bool = false
+    ) {
+        self.devAuthBypass = devAuthBypass
+        self.allowedTailscaleUsers = allowedTailscaleUsers
+        self.protectedOwnerUsername = protectedOwnerUsername
+        self.pveHost = pveHost
+        self.pveNode = pveNode
+        self.pveTokenId = pveTokenId
+        self.pveTokenSecretSet = pveTokenSecretSet
+        self.pveVerifySsl = pveVerifySsl
+        self.panelSelfVmid = panelSelfVmid
+        self.jellyfinUrl = jellyfinUrl
+        self.jellyfinApiKeySet = jellyfinApiKeySet
+        self.jellyseerrUrl = jellyseerrUrl
+        self.jellyseerrApiKeySet = jellyseerrApiKeySet
+        self.plexUrl = plexUrl
+        self.plexTokenSet = plexTokenSet
+        self.radarrUrl = radarrUrl
+        self.radarrApiKeySet = radarrApiKeySet
+        self.sonarrUrl = sonarrUrl
+        self.sonarrApiKeySet = sonarrApiKeySet
+        self.prowlarrUrl = prowlarrUrl
+        self.prowlarrApiKeySet = prowlarrApiKeySet
+        self.qbitUrl = qbitUrl
+        self.qbitUsername = qbitUsername
+        self.qbitPasswordSet = qbitPasswordSet
+    }
+}
+
+public struct SetupServiceConfig: Codable, Sendable, Equatable, Identifiable {
+    public var id: String
+    public var name: String
+    public var description: String?
+    public var url: String
+    public var pingUrl: String?
+    public var icon: String?
+    public var widget: String?
+
+    public init(
+        id: String,
+        name: String,
+        description: String? = nil,
+        url: String,
+        pingUrl: String? = nil,
+        icon: String? = nil,
+        widget: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.url = url
+        self.pingUrl = pingUrl
+        self.icon = icon
+        self.widget = widget
+    }
+}
+
+public struct SetupCategoryConfig: Codable, Sendable, Equatable, Identifiable {
+    public var id: String { name }
+    public var name: String
+    public var services: [SetupServiceConfig]
+
+    public init(name: String, services: [SetupServiceConfig]) {
+        self.name = name
+        self.services = services
+    }
+}
+
+public struct StorageMountConfig: Codable, Sendable, Equatable, Identifiable {
+    public var id: String { subpath }
+    public var mount: String?
+    public var subpath: String
+    public var wwn: String?
+    public var label: String?
+
+    public init(mount: String? = nil, subpath: String, wwn: String? = nil, label: String? = nil) {
+        self.mount = mount
+        self.subpath = subpath
+        self.wwn = wwn
+        self.label = label
+    }
+}
+
+public struct SetupStatusResponse: Codable, Sendable, Equatable {
+    public let isConfigured: Bool
+    public let tailscaleUrl: String
+    public let pairingDeepLink: String
+    public let env: SetupEnvConfig
+    public let categories: [SetupCategoryConfig]?
+    public let storageMounts: [StorageMountConfig]?
+
+    public init(
+        isConfigured: Bool,
+        tailscaleUrl: String,
+        pairingDeepLink: String,
+        env: SetupEnvConfig,
+        categories: [SetupCategoryConfig]? = nil,
+        storageMounts: [StorageMountConfig]? = nil
+    ) {
+        self.isConfigured = isConfigured
+        self.tailscaleUrl = tailscaleUrl
+        self.pairingDeepLink = pairingDeepLink
+        self.env = env
+        self.categories = categories
+        self.storageMounts = storageMounts
+    }
+}
+
+public struct ServiceTestRequest: Codable, Sendable {
+    public let service: String
+    public let url: String
+    public let node: String?
+    public let tokenId: String?
+    public let secret: String?
+    public let username: String?
+    public let verifySsl: Bool?
+
+    public init(
+        service: String,
+        url: String,
+        node: String? = nil,
+        tokenId: String? = nil,
+        secret: String? = nil,
+        username: String? = nil,
+        verifySsl: Bool? = nil
+    ) {
+        self.service = service
+        self.url = url
+        self.node = node
+        self.tokenId = tokenId
+        self.secret = secret
+        self.username = username
+        self.verifySsl = verifySsl
+    }
+}
+
+public struct ServiceTestResponse: Codable, Sendable, Equatable {
+    public let ok: Bool
+    public let service: String
+    public let message: String
+    public let latencyMs: Double?
+
+    public init(ok: Bool, service: String, message: String, latencyMs: Double? = nil) {
+        self.ok = ok
+        self.service = service
+        self.message = message
+        self.latencyMs = latencyMs
+    }
+}
+
+public struct SetupEnvUpdate: Codable, Sendable {
+    public var devAuthBypass: Bool?
+    public var allowedTailscaleUsers: String?
+    public var protectedOwnerUsername: String?
+    public var pveHost: String?
+    public var pveNode: String?
+    public var pveTokenId: String?
+    public var pveTokenSecret: String?
+    public var pveVerifySsl: Bool?
+    public var panelSelfVmid: Int?
+    public var jellyfinUrl: String?
+    public var jellyfinApiKey: String?
+    public var jellyseerrUrl: String?
+    public var jellyseerrApiKey: String?
+    public var plexUrl: String?
+    public var plexToken: String?
+    public var radarrUrl: String?
+    public var radarrApiKey: String?
+    public var sonarrUrl: String?
+    public var sonarrApiKey: String?
+    public var prowlarrUrl: String?
+    public var prowlarrApiKey: String?
+    public var qbitUrl: String?
+    public var qbitUsername: String?
+    public var qbitPassword: String?
+
+    public init(
+        devAuthBypass: Bool? = nil,
+        allowedTailscaleUsers: String? = nil,
+        protectedOwnerUsername: String? = nil,
+        pveHost: String? = nil,
+        pveNode: String? = nil,
+        pveTokenId: String? = nil,
+        pveTokenSecret: String? = nil,
+        pveVerifySsl: Bool? = nil,
+        panelSelfVmid: Int? = nil,
+        jellyfinUrl: String? = nil,
+        jellyfinApiKey: String? = nil,
+        jellyseerrUrl: String? = nil,
+        jellyseerrApiKey: String? = nil,
+        plexUrl: String? = nil,
+        plexToken: String? = nil,
+        radarrUrl: String? = nil,
+        radarrApiKey: String? = nil,
+        sonarrUrl: String? = nil,
+        sonarrApiKey: String? = nil,
+        prowlarrUrl: String? = nil,
+        prowlarrApiKey: String? = nil,
+        qbitUrl: String? = nil,
+        qbitUsername: String? = nil,
+        qbitPassword: String? = nil
+    ) {
+        self.devAuthBypass = devAuthBypass
+        self.allowedTailscaleUsers = allowedTailscaleUsers
+        self.protectedOwnerUsername = protectedOwnerUsername
+        self.pveHost = pveHost
+        self.pveNode = pveNode
+        self.pveTokenId = pveTokenId
+        self.pveTokenSecret = pveTokenSecret
+        self.pveVerifySsl = pveVerifySsl
+        self.panelSelfVmid = panelSelfVmid
+        self.jellyfinUrl = jellyfinUrl
+        self.jellyfinApiKey = jellyfinApiKey
+        self.jellyseerrUrl = jellyseerrUrl
+        self.jellyseerrApiKey = jellyseerrApiKey
+        self.plexUrl = plexUrl
+        self.plexToken = plexToken
+        self.radarrUrl = radarrUrl
+        self.radarrApiKey = radarrApiKey
+        self.sonarrUrl = sonarrUrl
+        self.sonarrApiKey = sonarrApiKey
+        self.prowlarrUrl = prowlarrUrl
+        self.prowlarrApiKey = prowlarrApiKey
+        self.qbitUrl = qbitUrl
+        self.qbitUsername = qbitUsername
+        self.qbitPassword = qbitPassword
+    }
+}
+
+public struct SetupConfigUpdateRequest: Codable, Sendable {
+    public var env: SetupEnvUpdate?
+    public var categories: [SetupCategoryConfig]?
+    public var storageMounts: [StorageMountConfig]?
+
+    public init(
+        env: SetupEnvUpdate? = nil,
+        categories: [SetupCategoryConfig]? = nil,
+        storageMounts: [StorageMountConfig]? = nil
+    ) {
+        self.env = env
+        self.categories = categories
+        self.storageMounts = storageMounts
+    }
+}
+
+public struct SetupConfigUpdateResponse: Codable, Sendable, Equatable {
+    public let ok: Bool
+    public let isConfigured: Bool
+    public let message: String
+
+    public init(ok: Bool, isConfigured: Bool, message: String) {
+        self.ok = ok
+        self.isConfigured = isConfigured
+        self.message = message
+    }
+}

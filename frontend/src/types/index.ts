@@ -280,3 +280,100 @@ export interface OpsOverview {
     torrents: QbitTorrentItem[];
   };
 }
+
+export interface SetupEnvConfig {
+  dev_auth_bypass: boolean;
+  allowed_tailscale_users: string;
+  protected_owner_username: string;
+  pve_host: string;
+  pve_node: string;
+  pve_token_id: string;
+  pve_token_secret_set: boolean;
+  pve_verify_ssl: boolean;
+  panel_self_vmid: number;
+  jellyfin_url: string;
+  jellyfin_api_key_set: boolean;
+  jellyseerr_url: string;
+  jellyseerr_api_key_set: boolean;
+  plex_url: string;
+  plex_token_set: boolean;
+  radarr_url: string;
+  radarr_api_key_set: boolean;
+  sonarr_url: string;
+  sonarr_api_key_set: boolean;
+  prowlarr_url: string;
+  prowlarr_api_key_set: boolean;
+  qbit_url: string;
+  qbit_username: string;
+  qbit_password_set: boolean;
+}
+
+export interface SetupServiceConfig {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  ping_url?: string;
+  icon: string;
+  widget?: string;
+}
+
+export interface SetupCategoryConfig {
+  name: string;
+  services: SetupServiceConfig[];
+}
+
+export interface StorageMountConfig {
+  mount: string;
+  subpath: string;
+  wwn: string;
+  label: string;
+}
+
+export interface SetupStatusResponse {
+  is_configured: boolean;
+  tailscale_url: string;
+  pairing_deep_link: string;
+  env: SetupEnvConfig;
+  categories: SetupCategoryConfig[];
+  storage_mounts: StorageMountConfig[];
+}
+
+export type SetupTestServiceName =
+  | 'proxmox'
+  | 'jellyfin'
+  | 'jellyseerr'
+  | 'plex'
+  | 'radarr'
+  | 'sonarr'
+  | 'prowlarr'
+  | 'qbittorrent';
+
+export interface SetupTestServiceRequest {
+  service: SetupTestServiceName | string;
+  url: string;
+  node?: string;
+  token_id?: string;
+  secret?: string;
+  username?: string;
+  verify_ssl?: boolean;
+}
+
+export interface SetupTestServiceResponse {
+  ok: boolean;
+  service: string;
+  message: string;
+  latency_ms: number | null;
+}
+
+export interface SetupConfigUpdateRequest {
+  env: Partial<Record<string, string | number | boolean>>;
+  categories?: SetupCategoryConfig[];
+  storage_mounts?: StorageMountConfig[];
+}
+
+export interface SetupConfigUpdateResponse {
+  ok: boolean;
+  is_configured: boolean;
+  message: string;
+}

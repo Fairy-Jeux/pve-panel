@@ -1,4 +1,4 @@
-name: iOS App Store & TestFlight Build
+name: Apple App Store & Multi-Platform Build (iOS / macOS / tvOS)
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
 
 jobs:
   swift-verify:
-    name: Verify & Package Native Swift 6 (macOS + iOS)
+    name: Verify & Package Native Swift 6 (macOS + tvOS 27.0)
     runs-on: macos-15
     steps:
       - name: Checkout repository
@@ -39,6 +39,11 @@ jobs:
           ./build-macos-app.sh
           mkdir -p dist-macos
           ditto -c -k --sequesterRsrc --keepParent "build/PVE Center.app" "dist-macos/PVE-Center-macOS.zip"
+
+      - name: Verify Apple TV Build (tvOS 27.0)
+        run: |
+          xcodebuild -project ios-native/PVECenter.xcodeproj -scheme PVECenter -destination 'generic/platform=tvOS' -derivedDataPath /tmp/pve-tvos-ci CODE_SIGNING_ALLOWED=NO build
+          rm -rf /tmp/pve-tvos-ci
 
       - name: Upload macOS App Artifact
         uses: actions/upload-artifact@v4

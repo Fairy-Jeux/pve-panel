@@ -13,6 +13,8 @@ public struct ContentView: View {
         ZStack(alignment: .bottom) {
             #if os(macOS)
             macOSBody
+            #elseif os(tvOS)
+            tvOSBody
             #else
             adaptiveAppleBody
             #endif
@@ -28,12 +30,26 @@ public struct ContentView: View {
             reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
             value: viewModel.toast?.id
         )
-        .sheet(isPresented: $viewModel.showServerSettings) {
+        .sheet(
+            isPresented: $viewModel.showServerSettings,
+            onDismiss: {
+                if viewModel.pendingOpenSetupWizard {
+                    viewModel.pendingOpenSetupWizard = false
+                    viewModel.showServerSetupWizard = true
+                }
+            }
+        ) {
             ServerSettingsSheet(viewModel: viewModel)
                 .preferredColorScheme(.dark)
         }
+        .sheet(isPresented: $viewModel.showServerSetupWizard) {
+            ServerSetupWizardSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
+        }
+        #if !os(tvOS)
         .sensoryFeedback(.success, trigger: viewModel.hapticSuccessTrigger)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: viewModel.hapticImpactTrigger)
+        #endif
         .task {
             viewModel.start()
         }
@@ -99,9 +115,38 @@ public struct ContentView: View {
     }
     #endif
 
-    // MARK: - iOS / iPadOS 26 Native Liquid Glass Layout
+    // MARK: - tvOS 27 Native 10-foot Top TabView
 
-    #if !os(macOS)
+    #if os(tvOS)
+    private var tvOSBody: some View {
+        TabView(selection: $viewModel.selectedTab) {
+            ForEach(AppTab.allCases) { tab in
+                tvOSTabScreen(for: tab)
+            }
+        }
+        .tint(Color(red: 0.220, green: 0.824, blue: 0.910))
+    }
+
+    @ViewBuilder
+    private func tvOSTabScreen(for tab: AppTab) -> some View {
+        NavigationStack {
+            activeTabContent(for: tab)
+                .background { AmbientBackgroundView() }
+                .navigationTitle(tab.title)
+                .toolbar {
+                    commonToolbarItems
+                }
+        }
+        .tabItem {
+            Label(tab.title, systemImage: tab.systemImage)
+        }
+        .tag(tab)
+    }
+    #endif
+
+    // MARK: - iOS / iPadOS 27 Native Liquid Glass Layout
+
+    #if !os(macOS) && !os(tvOS)
     @ViewBuilder
     private var adaptiveAppleBody: some View {
         if horizontalSizeClass == .regular {
@@ -230,11 +275,15 @@ public struct ContentView: View {
                 viewModel.showServerSettings = true
             } label: {
                 Label(
-                    viewModel.isDemoMode ? "Mode Démo" : "Serveur",
+                    viewModel.isDemoMode
+                        ? "Mode Démo"
+                        : (viewModel.serverBaseURL.isEmpty ? "Serveur" : viewModel.activeServerName),
                     systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
                 )
             }
+            #if !os(tvOS)
             .help("Configurer le serveur Tailscale Serve ou le Mode Démo (⌘;)")
+            #endif
         }
 
         ToolbarItem(placement: .automatic) {
@@ -247,7 +296,9 @@ public struct ContentView: View {
                 )
             }
             .disabled(viewModel.isRefreshing)
+            #if !os(tvOS)
             .help("Rafraîchir toutes les données maintenant (⌘R)")
+            #endif
         }
     }
 }

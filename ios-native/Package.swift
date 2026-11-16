@@ -7,6 +7,7 @@ let package = Package(
     platforms: [
         .iOS("27.0"),
         .macOS("27.0"),
+        .tvOS("27.0"),
     ],
     products: [
         .executable(name: "PVECenter", targets: ["PVECenter"]),

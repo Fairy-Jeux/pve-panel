@@ -12,6 +12,9 @@ public struct PVECenterApp: App {
     public var body: some Scene {
         WindowGroup("PVE Center", id: "main") {
             ContentView(viewModel: viewModel)
+                .onOpenURL { url in
+                    Task { await viewModel.handleIncomingURL(url) }
+                }
                 #if os(macOS)
                 .frame(minWidth: 880, minHeight: 580)
                 #endif

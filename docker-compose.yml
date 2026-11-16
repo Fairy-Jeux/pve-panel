@@ -13,5 +13,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./services.yaml:/app/services.yaml:ro
+      - ./.env:/app/.env:rw
+      - ./services.yaml:/app/services.yaml:rw
       - /host_mnt:/host_mnt:ro

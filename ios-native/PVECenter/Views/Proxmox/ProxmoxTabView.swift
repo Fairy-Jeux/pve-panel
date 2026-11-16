@@ -37,7 +37,9 @@ public struct ProxmoxTabView: View {
     }
 
     private var adaptiveColumns: [GridItem] {
-        #if os(macOS)
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 340), spacing: 14)]
         #else
         return [GridItem(.flexible())]

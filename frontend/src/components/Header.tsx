@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Terminal,
+  Wrench,
   X,
 } from 'lucide-react';
 import type { AuthUser } from '../types';
@@ -23,7 +24,9 @@ interface HeaderProps {
   onRefreshNow: () => void;
   lastUpdated: Date | null;
   demoActive: boolean;
+  needsSetup?: boolean;
   onOpenServerConfig: () => void;
+  onOpenSetupWizard: () => void;
 }
 
 export function Header({
@@ -36,7 +39,9 @@ export function Header({
   onRefreshNow,
   lastUpdated,
   demoActive,
+  needsSetup = false,
   onOpenServerConfig,
+  onOpenSetupWizard,
 }: HeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -142,6 +147,25 @@ export function Header({
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={onOpenSetupWizard}
+            className={`relative inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
+              needsSetup
+                ? 'border-amber-400/45 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25'
+                : 'liquid-pill text-slate-200 hover:text-white'
+            }`}
+            title="Assistant de configuration Proxmox, services, disques & apps"
+            aria-label="Configuration"
+          >
+            <Wrench className={`h-3.5 w-3.5 ${needsSetup ? 'text-amber-300' : 'text-cyan-300'}`} />
+            <span className="hidden sm:inline">Configuration</span>
+            <span className="sm:hidden">Config</span>
+            {needsSetup && (
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+            )}
+          </button>
 
           <button
             type="button"

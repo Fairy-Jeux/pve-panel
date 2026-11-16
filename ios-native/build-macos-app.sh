@@ -64,6 +64,19 @@ cat <<EOF > "$APP_BUNDLE/Contents/Info.plist"
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>io.github.pvepanel.app.connect</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pvecenter</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>

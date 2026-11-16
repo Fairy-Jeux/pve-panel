@@ -7,6 +7,12 @@ import type {
   QbitTorrentItem,
   SeerrRequestItem,
   ServiceCategory,
+  SetupCategoryConfig,
+  SetupConfigUpdateResponse,
+  SetupEnvConfig,
+  SetupStatusResponse,
+  SetupTestServiceResponse,
+  StorageMountConfig,
   UnifiedUser,
   UsersOverview,
   WidgetsMap,
@@ -74,6 +80,10 @@ interface DemoState {
   qbitAltSpeed: boolean;
   qbitTorrents: QbitTorrentItem[];
   users: UnifiedUser[];
+  setupConfigured: boolean;
+  setupEnv: SetupEnvConfig;
+  categories: SetupCategoryConfig[];
+  storageMounts: StorageMountConfig[];
 }
 
 const GB = 1024 ** 3;
@@ -294,6 +304,138 @@ function createInitialDemoState(): DemoState {
         auto_approve: false,
       },
     ],
+    setupConfigured: true,
+    setupEnv: {
+      dev_auth_bypass: false,
+      allowed_tailscale_users: 'user@example.com',
+      protected_owner_username: 'admin',
+      pve_host: 'https://192.168.1.10:8006',
+      pve_node: 'pve-node-01',
+      pve_token_id: 'root@pam!pve-panel',
+      pve_token_secret_set: true,
+      pve_verify_ssl: false,
+      panel_self_vmid: 116,
+      jellyfin_url: 'http://192.168.1.26:8096',
+      jellyfin_api_key_set: true,
+      jellyseerr_url: 'http://192.168.1.31:5055',
+      jellyseerr_api_key_set: true,
+      plex_url: 'http://192.168.1.30:32400',
+      plex_token_set: false,
+      radarr_url: 'http://192.168.1.27:7878',
+      radarr_api_key_set: true,
+      sonarr_url: 'http://192.168.1.28:8989',
+      sonarr_api_key_set: true,
+      prowlarr_url: 'http://192.168.1.29:9696',
+      prowlarr_api_key_set: true,
+      qbit_url: 'http://192.168.1.32:8090',
+      qbit_username: 'admin',
+      qbit_password_set: true,
+    },
+    categories: [
+      {
+        name: 'Médias & Streaming',
+        services: [
+          {
+            id: 'jellyfin',
+            name: 'Jellyfin',
+            description: 'Serveur multimédia 4K HDR & transcodage matériel',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'http://192.168.1.26:8096/health',
+            icon: 'Tv',
+            widget: 'jellyfin',
+          },
+          {
+            id: 'jellyseerr',
+            name: 'Jellyseerr',
+            description: 'Portail de demandes de films et séries',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'http://192.168.1.31:5055',
+            icon: 'Sparkles',
+          },
+        ],
+      },
+      {
+        name: 'Téléchargements & Automation',
+        services: [
+          {
+            id: 'radarr',
+            name: 'Radarr',
+            description: 'Gestion automatisée de la vidéothèque Films',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'http://192.168.1.27:7878/ping',
+            icon: 'Film',
+            widget: 'radarr',
+          },
+          {
+            id: 'sonarr',
+            name: 'Sonarr',
+            description: 'Suivi et téléchargement des séries TV',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'http://192.168.1.28:8989/ping',
+            icon: 'Clapperboard',
+            widget: 'sonarr',
+          },
+          {
+            id: 'prowlarr',
+            name: 'Prowlarr',
+            description: 'Gestionnaire centralisé d’indexeurs',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'http://192.168.1.29:9696/ping',
+            icon: 'Search',
+            widget: 'prowlarr',
+          },
+          {
+            id: 'qbittorrent',
+            name: 'qBittorrent',
+            description: 'Client BitTorrent haute vitesse',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'http://192.168.1.32:8090',
+            icon: 'Download',
+            widget: 'qbittorrent',
+          },
+        ],
+      },
+      {
+        name: 'Infrastructure & Sécurité',
+        services: [
+          {
+            id: 'proxmox',
+            name: 'Proxmox VE',
+            description: 'Hyperviseur principal KVM / LXC',
+            url: 'https://panel.example.ts.net',
+            ping_url: 'https://192.168.1.10:8006',
+            icon: 'Server',
+          },
+          {
+            id: 'vaultwarden',
+            name: 'Vaultwarden',
+            description: 'Coffre-fort de mots de passe chiffré',
+            url: 'https://panel.example.ts.net',
+            icon: 'Shield',
+          },
+        ],
+      },
+    ],
+    storageMounts: [
+      {
+        mount: '/mnt/disk1',
+        subpath: 'disk1',
+        wwn: 'wwn-0x5000demo00000001',
+        label: 'Disque 1 • 16 To',
+      },
+      {
+        mount: '/mnt/disk2',
+        subpath: 'disk2',
+        wwn: 'wwn-0x5000demo00000002',
+        label: 'Disque 2 • 16 To',
+      },
+      {
+        mount: '/mnt/disk3',
+        subpath: 'disk3',
+        wwn: 'wwn-0x5000demo00000003',
+        label: 'Cache NVMe • 2 To',
+      },
+    ],
   };
 }
 
@@ -498,108 +640,15 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
   }
 
   if (path === '/api/services' && method === 'GET') {
-    const categories: ServiceCategory[] = [
-      {
-        name: 'Médias & Streaming',
-        services: [
-          {
-            id: 'jellyfin',
-            name: 'Jellyfin',
-            description: 'Serveur multimédia 4K HDR & transcodage matériel',
-            url: 'https://panel.example.ts.net',
-            icon: 'Tv',
-            widget: 'jellyfin',
-            online: true,
-            latency_ms: 8,
-            status_code: 200,
-          },
-          {
-            id: 'jellyseerr',
-            name: 'Jellyseerr',
-            description: 'Portail de demandes de films et séries',
-            url: 'https://panel.example.ts.net',
-            icon: 'Sparkles',
-            online: true,
-            latency_ms: 11,
-            status_code: 200,
-          },
-        ],
-      },
-      {
-        name: 'Téléchargements & Automation',
-        services: [
-          {
-            id: 'radarr',
-            name: 'Radarr',
-            description: 'Gestion automatisée de la vidéothèque Films',
-            url: 'https://panel.example.ts.net',
-            icon: 'Film',
-            widget: 'radarr',
-            online: true,
-            latency_ms: 12,
-            status_code: 200,
-          },
-          {
-            id: 'sonarr',
-            name: 'Sonarr',
-            description: 'Suivi et téléchargement des séries TV',
-            url: 'https://panel.example.ts.net',
-            icon: 'Clapperboard',
-            widget: 'sonarr',
-            online: true,
-            latency_ms: 13,
-            status_code: 200,
-          },
-          {
-            id: 'prowlarr',
-            name: 'Prowlarr',
-            description: 'Gestionnaire centralisé d’indexeurs',
-            url: 'https://panel.example.ts.net',
-            icon: 'Search',
-            widget: 'prowlarr',
-            online: true,
-            latency_ms: 10,
-            status_code: 200,
-          },
-          {
-            id: 'qbittorrent',
-            name: 'qBittorrent',
-            description: 'Client BitTorrent haute vitesse',
-            url: 'https://panel.example.ts.net',
-            icon: 'Download',
-            widget: 'qbittorrent',
-            online: true,
-            latency_ms: 7,
-            status_code: 200,
-          },
-        ],
-      },
-      {
-        name: 'Infrastructure & Sécurité',
-        services: [
-          {
-            id: 'proxmox',
-            name: 'Proxmox VE',
-            description: 'Hyperviseur principal KVM / LXC',
-            url: 'https://panel.example.ts.net',
-            icon: 'Server',
-            online: true,
-            latency_ms: 3,
-            status_code: 200,
-          },
-          {
-            id: 'vaultwarden',
-            name: 'Vaultwarden',
-            description: 'Coffre-fort de mots de passe chiffré',
-            url: 'https://panel.example.ts.net',
-            icon: 'Shield',
-            online: true,
-            latency_ms: 9,
-            status_code: 200,
-          },
-        ],
-      },
-    ];
+    const categories: ServiceCategory[] = demoState.categories.map((cat) => ({
+      name: cat.name,
+      services: cat.services.map((svc, idx) => ({
+        ...svc,
+        online: true,
+        latency_ms: 6 + ((idx * 3) % 11),
+        status_code: 200,
+      })),
+    }));
     return jsonResponse({ categories });
   }
 
@@ -802,6 +851,127 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
     if (user.is_protected) return jsonResponse({ detail: 'Compte administrateur protégé' }, 403);
     demoState.users = demoState.users.filter((u) => u.jellyfin_id !== user.jellyfin_id);
     return jsonResponse({ ok: true });
+  }
+
+  if (path === '/api/setup/status' && method === 'GET') {
+    const tailscaleUrl = 'https://panel.example.ts.net';
+    const status: SetupStatusResponse = {
+      is_configured: demoState.setupConfigured,
+      tailscale_url: tailscaleUrl,
+      pairing_deep_link: `pvecenter://connect?url=${encodeURIComponent(tailscaleUrl)}&name=${encodeURIComponent(demoState.setupEnv.pve_node || 'PVE Center')}`,
+      env: { ...demoState.setupEnv },
+      categories: demoState.categories.map((cat) => ({
+        name: cat.name,
+        services: cat.services.map((svc) => ({ ...svc })),
+      })),
+      storage_mounts: demoState.storageMounts.map((mount) => ({ ...mount })),
+    };
+    return jsonResponse(status);
+  }
+
+  if (path === '/api/setup/test-service' && method === 'POST') {
+    const service = String(body.service || 'service');
+    const targetUrl = String(body.url || '').trim();
+    if (!targetUrl) {
+      const missing: SetupTestServiceResponse = {
+        ok: false,
+        service,
+        message: 'URL requise pour tester ce service.',
+        latency_ms: null,
+      };
+      return jsonResponse(missing);
+    }
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      const invalid: SetupTestServiceResponse = {
+        ok: false,
+        service,
+        message: 'L’URL doit commencer par http:// ou https://.',
+        latency_ms: null,
+      };
+      return jsonResponse(invalid);
+    }
+    const passed: SetupTestServiceResponse = {
+      ok: true,
+      service,
+      message: `Connexion ${service} validée (Mode Démo).`,
+      latency_ms: 12,
+    };
+    return jsonResponse(passed);
+  }
+
+  if (path === '/api/setup/config' && method === 'PUT') {
+    const envPatch =
+      body.env && typeof body.env === 'object'
+        ? (body.env as Record<string, unknown>)
+        : {};
+
+    const stringKeys = [
+      'allowed_tailscale_users',
+      'protected_owner_username',
+      'pve_host',
+      'pve_node',
+      'pve_token_id',
+      'jellyfin_url',
+      'jellyseerr_url',
+      'plex_url',
+      'radarr_url',
+      'sonarr_url',
+      'prowlarr_url',
+      'qbit_url',
+      'qbit_username',
+    ] as const;
+
+    for (const key of stringKeys) {
+      if (typeof envPatch[key] === 'string') {
+        demoState.setupEnv[key] = envPatch[key];
+      }
+    }
+
+    if (typeof envPatch.dev_auth_bypass === 'boolean') {
+      demoState.setupEnv.dev_auth_bypass = envPatch.dev_auth_bypass;
+    }
+    if (typeof envPatch.pve_verify_ssl === 'boolean') {
+      demoState.setupEnv.pve_verify_ssl = envPatch.pve_verify_ssl;
+    }
+    if (typeof envPatch.panel_self_vmid === 'number' && Number.isFinite(envPatch.panel_self_vmid)) {
+      demoState.setupEnv.panel_self_vmid = envPatch.panel_self_vmid;
+    }
+
+    const secretSetMap: Array<[string, keyof SetupEnvConfig]> = [
+      ['pve_token_secret', 'pve_token_secret_set'],
+      ['jellyfin_api_key', 'jellyfin_api_key_set'],
+      ['jellyseerr_api_key', 'jellyseerr_api_key_set'],
+      ['plex_token', 'plex_token_set'],
+      ['radarr_api_key', 'radarr_api_key_set'],
+      ['sonarr_api_key', 'sonarr_api_key_set'],
+      ['prowlarr_api_key', 'prowlarr_api_key_set'],
+      ['qbit_password', 'qbit_password_set'],
+    ];
+
+    for (const [secretKey, flagKey] of secretSetMap) {
+      const val = envPatch[secretKey];
+      if (typeof val === 'string' && val.trim().length > 0) {
+        (demoState.setupEnv[flagKey] as boolean) = true;
+      }
+    }
+
+    if (Array.isArray(body.categories)) {
+      demoState.categories = body.categories as SetupCategoryConfig[];
+    }
+    if (Array.isArray(body.storage_mounts)) {
+      demoState.storageMounts = body.storage_mounts as StorageMountConfig[];
+    }
+
+    demoState.setupConfigured = Boolean(
+      demoState.setupEnv.pve_host.trim() && demoState.setupEnv.pve_token_secret_set
+    );
+
+    const updated: SetupConfigUpdateResponse = {
+      ok: true,
+      is_configured: demoState.setupConfigured,
+      message: 'Configuration enregistrée et rechargée à chaud (Démo).',
+    };
+    return jsonResponse(updated);
   }
 
   return jsonResponse({ detail: `Endpoint démo non simulé: ${method} ${path}` }, 404);

@@ -17,6 +17,7 @@ import { OperationsSection } from './components/OperationsSection';
 import { ProxmoxSection } from './components/ProxmoxSection';
 import { ServerConfigModal } from './components/ServerConfigModal';
 import { ServiceCard } from './components/ServiceCard';
+import { SetupWizardModal } from './components/SetupWizardModal';
 import { StorageSection } from './components/StorageSection';
 import { UsersSection } from './components/UsersSection';
 import { getServerUrl, isDemoMode, isNativePlatform } from './lib/apiClient';
@@ -27,6 +28,7 @@ import type {
   PveOverview,
   PveResource,
   ServiceCategory,
+  SetupStatusResponse,
   UsersOverview,
   WidgetsMap,
 } from './types';
@@ -50,7 +52,10 @@ export function App() {
     () => isNativePlatform() && !getServerUrl() && !isDemoMode()
   );
   const [serverModalHint, setServerModalHint] = useState<string | null>(null);
+  const [setupStatus, setSetupStatus] = useState<SetupStatusResponse | null>(null);
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
   const hasLoadedOnceRef = useRef(false);
+  const autoPromptedSetupRef = useRef(false);
 
   const [pendingAction, setPendingAction] = useState<{
     resource: PveResource;
@@ -83,13 +88,14 @@ export function App() {
 
     setIsRefreshing(true);
     try {
-      const [meResp, pveResp, svcResp, widResp, usrResp, opsResp] = await Promise.all([
+      const [meResp, pveResp, svcResp, widResp, usrResp, opsResp, setupResp] = await Promise.all([
         fetch('/api/me'),
         fetch('/api/pve/overview'),
         fetch('/api/services'),
         fetch('/api/widgets/all'),
         fetch('/api/users'),
         fetch('/api/ops/overview'),
+        fetch('/api/setup/status'),
       ]);
 
       if (meResp.status === 403) {
@@ -111,6 +117,14 @@ export function App() {
       if (widResp.ok) setWidgets(await widResp.json());
       if (usrResp.ok) setUsersOverview(await usrResp.json());
       if (opsResp.ok) setOpsOverview(await opsResp.json());
+      if (setupResp.ok) {
+        const nextSetup = (await setupResp.json()) as SetupStatusResponse;
+        setSetupStatus(nextSetup);
+        if (!nextSetup.is_configured && !isDemoMode() && !autoPromptedSetupRef.current) {
+          autoPromptedSetupRef.current = true;
+          setSetupModalOpen(true);
+        }
+      }
 
       hasLoadedOnceRef.current = true;
       setLastUpdated(new Date());
@@ -205,6 +219,7 @@ export function App() {
             setServerModalOpen(false);
             setAuthError(null);
             hasLoadedOnceRef.current = false;
+            autoPromptedSetupRef.current = false;
             void fetchAllData();
           }}
         />
@@ -282,7 +297,9 @@ export function App() {
         onRefreshNow={fetchAllData}
         lastUpdated={lastUpdated}
         demoActive={demoActive}
+        needsSetup={Boolean(setupStatus && !setupStatus.is_configured && !demoActive)}
         onOpenServerConfig={() => setServerModalOpen(true)}
+        onOpenSetupWizard={() => setSetupModalOpen(true)}
       />
 
       {/* Barre d'onglets Liquid Glass (Desktop / iPad) */}
@@ -447,6 +464,21 @@ export function App() {
           setServerModalOpen(false);
           setAuthError(null);
           hasLoadedOnceRef.current = false;
+          autoPromptedSetupRef.current = false;
+          void fetchAllData();
+        }}
+      />
+
+      <SetupWizardModal
+        open={setupModalOpen}
+        initialStatus={setupStatus}
+        onClose={() => setSetupModalOpen(false)}
+        onApplied={(message) => {
+          setSetupModalOpen(false);
+          setToast({
+            type: 'success',
+            message: message || 'Configuration enregistrée et appliquée à chaud.',
+          });
           void fetchAllData();
         }}
       />

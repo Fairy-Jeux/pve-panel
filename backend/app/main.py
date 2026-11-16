@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.middleware.tailscale_auth import TailscaleSSOMiddleware
-from app.routers import auth, operations, proxmox, services, users, widgets
+from app.routers import auth, operations, proxmox, services, setup, users, widgets
 
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.add_middleware(TailscaleSSOMiddleware)
 app.include_router(auth.router)
 app.include_router(proxmox.router)
 app.include_router(services.router)
+app.include_router(setup.router)
 app.include_router(widgets.router)
 app.include_router(users.router)
 app.include_router(operations.router)

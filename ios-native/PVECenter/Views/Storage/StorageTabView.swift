@@ -18,7 +18,9 @@ public struct StorageTabView: View {
     }
 
     private var adaptiveColumns: [GridItem] {
-        #if os(macOS)
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 320), spacing: 12)]
         #else
         return [GridItem(.flexible())]
@@ -171,8 +173,10 @@ public struct StorageTabView: View {
                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 Spacer()
                 Toggle("Sains uniquement", isOn: $showHealthyOnly)
+                    #if !os(tvOS)
                     .toggleStyle(.button)
                     .controlSize(.small)
+                    #endif
             }
 
             LazyVGrid(columns: adaptiveColumns, spacing: 12) {

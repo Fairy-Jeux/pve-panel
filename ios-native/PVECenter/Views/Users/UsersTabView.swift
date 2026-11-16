@@ -38,7 +38,9 @@ public struct UsersTabView: View {
     }
 
     private var adaptiveColumns: [GridItem] {
-        #if os(macOS)
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 310), spacing: 12)]
         #else
         return [GridItem(.flexible())]
@@ -208,5 +210,30 @@ public struct UsersTabView: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+public struct MaxActiveSessionsControl: View {
+    @Binding public var maxActiveSessions: Int
+
+    public init(maxActiveSessions: Binding<Int>) {
+        self._maxActiveSessions = maxActiveSessions
+    }
+
+    public var body: some View {
+        #if os(tvOS)
+        Picker("Écrans simultanés", selection: $maxActiveSessions) {
+            Text("Illimité").tag(0)
+            ForEach(1...10, id: \.self) { count in
+                Text(count == 1 ? "1 écran" : "\(count) écrans").tag(count)
+            }
+        }
+        #else
+        Stepper(
+            maxActiveSessions == 0 ? "Écrans simultanés : Illimité" : "Écrans simultanés : \(maxActiveSessions)",
+            value: $maxActiveSessions,
+            in: 0...10
+        )
+        #endif
     }
 }

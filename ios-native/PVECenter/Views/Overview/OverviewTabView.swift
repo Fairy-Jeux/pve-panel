@@ -130,6 +130,22 @@ public struct OverviewTabView: View {
         }
     }
 
+    private var quickStatsColumns: [GridItem] {
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        #else
+        return [GridItem(.adaptive(minimum: 168), spacing: 12)]
+        #endif
+    }
+
+    private var servicePreviewColumns: [GridItem] {
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        #else
+        return [GridItem(.adaptive(minimum: 145), spacing: 8)]
+        #endif
+    }
+
     private var quickStatsGrid: some View {
         let pve = viewModel.pveOverview
         let allServices = viewModel.categories.flatMap(\.services)
@@ -137,7 +153,7 @@ public struct OverviewTabView: View {
         let qbit = viewModel.widgets?.qbittorrent
         let teal = DesignTokens.signalTeal(colorScheme)
 
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 168), spacing: 12)], spacing: 12) {
+        return LazyVGrid(columns: quickStatsColumns, spacing: 12) {
             statTile(
                 title: "Machines",
                 value: "\(pve?.counts.running ?? 0) / \(pve?.counts.total ?? 0)",
@@ -175,9 +191,13 @@ public struct OverviewTabView: View {
                 icon: "checkmark.seal.fill",
                 accent: DesignTokens.nominal(colorScheme)
             ) {
+                #if os(tvOS) || os(macOS)
+                viewModel.selectedTab = .services
+                #else
                 if horizontalSizeClass == .regular {
                     viewModel.selectedTab = .services
                 }
+                #endif
             }
         }
     }
@@ -223,7 +243,7 @@ public struct OverviewTabView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
                         Spacer()
-                        #if !os(macOS)
+                        #if os(iOS)
                         if horizontalSizeClass == .compact {
                             NavigationLink {
                                 ServicesTabView(viewModel: viewModel)
@@ -246,7 +266,7 @@ public struct OverviewTabView: View {
                         #endif
                     }
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 8)], spacing: 8) {
+                    LazyVGrid(columns: servicePreviewColumns, spacing: 8) {
                         ForEach(services.prefix(6)) { svc in
                             HStack(spacing: 8) {
                                 Image(systemName: svc.online ? "checkmark.circle.fill" : "xmark.circle.fill")

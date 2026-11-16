@@ -7,6 +7,7 @@ import SwiftUI
 public final class AppViewModel {
     private enum StorageKeys {
         static let serverURL = "pve_native_server_url"
+        static let savedServers = "pve_native_saved_servers"
         static let demoMode = "pve_native_demo_mode"
         static let autoRefresh = "pve_native_auto_refresh"
     }
@@ -16,9 +17,12 @@ public final class AppViewModel {
 
     // MARK: - Connection & UI State
     public var serverBaseURL: String
+    public var savedServers: [SavedServerProfile] = []
     public var isDemoMode: Bool
     public var autoRefresh: Bool
     public var showServerSettings: Bool = false
+    public var showServerSetupWizard: Bool = false
+    public var pendingOpenSetupWizard: Bool = false
 
     public var selectedTab: AppTab = .overview
     public var searchText: String = ""
@@ -39,6 +43,7 @@ public final class AppViewModel {
     public var widgets: WidgetsMap?
     public var usersOverview: UsersOverview?
     public var opsOverview: OpsOverview?
+    public var setupStatus: SetupStatusResponse?
 
     public init() {
         let defaults = UserDefaults.standard
@@ -50,10 +55,57 @@ public final class AppViewModel {
         self.isDemoMode = savedDemo
         self.autoRefresh = savedAutoRefresh
 
+        if let data = defaults.data(forKey: StorageKeys.savedServers),
+           let decoded = try? JSONDecoder().decode([SavedServerProfile].self, from: data) {
+            self.savedServers = decoded
+        } else if !savedURL.isEmpty {
+            let migrated = SavedServerProfile(
+                name: Self.defaultServerName(for: savedURL),
+                baseURL: savedURL
+            )
+            self.savedServers = [migrated]
+            persistSavedServers()
+        }
+
         if savedURL.isEmpty && !savedDemo {
             self.isInitialLoading = false
             self.showServerSettings = true
         }
+    }
+
+    public var activeServerName: String {
+        if isDemoMode { return "Mode Démo" }
+        if let profile = savedServers.first(where: {
+            $0.baseURL.caseInsensitiveCompare(serverBaseURL) == .orderedSame
+        }) {
+            return profile.name
+        }
+        return serverBaseURL.isEmpty ? "Aucun serveur" : Self.defaultServerName(for: serverBaseURL)
+    }
+
+    private static func defaultServerName(for baseURL: String) -> String {
+        if let host = URL(string: baseURL)?.host, !host.isEmpty {
+            return host.split(separator: ".").first.map(String.init) ?? host
+        }
+        return baseURL.isEmpty ? "Serveur PVE" : baseURL
+    }
+
+    private func persistSavedServers() {
+        if let data = try? JSONEncoder().encode(savedServers) {
+            UserDefaults.standard.set(data, forKey: StorageKeys.savedServers)
+        }
+    }
+
+    private func resetDomainState() {
+        user = nil
+        pveOverview = nil
+        categories = []
+        widgets = nil
+        usersOverview = nil
+        opsOverview = nil
+        setupStatus = nil
+        lastUpdated = nil
+        connectionError = nil
     }
 
     // MARK: - Lifecycle & Polling
@@ -66,7 +118,7 @@ public final class AppViewModel {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 guard !Task.isCancelled else { break }
-                if self.autoRefresh && !self.showServerSettings {
+                if self.autoRefresh && !self.showServerSettings && !self.showServerSetupWizard {
                     await self.refreshAll(silent: true)
                 }
             }
@@ -81,6 +133,9 @@ public final class AppViewModel {
 
     public func configureConnection(baseURL: String, demoMode: Bool) async {
         let normalized = APIClient.normalizeBaseURL(baseURL)
+        if serverBaseURL != normalized || isDemoMode != demoMode {
+            resetDomainState()
+        }
         self.serverBaseURL = normalized
         self.isDemoMode = demoMode
         self.connectionError = nil
@@ -94,8 +149,129 @@ public final class AppViewModel {
         await refreshAll(silent: false)
     }
 
+    public func addOrSelectServer(name: String, baseURL: String) async {
+        let normalized = APIClient.normalizeBaseURL(baseURL)
+        guard !normalized.isEmpty else {
+            showToast("L'URL du serveur est invalide.", isError: true)
+            return
+        }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = trimmedName.isEmpty ? Self.defaultServerName(for: normalized) : trimmedName
+
+        if let existingIndex = savedServers.firstIndex(where: {
+            $0.baseURL.caseInsensitiveCompare(normalized) == .orderedSame
+        }) {
+            if !trimmedName.isEmpty {
+                savedServers[existingIndex].name = resolvedName
+            }
+            let existing = savedServers.remove(at: existingIndex)
+            savedServers.insert(existing, at: 0)
+        } else {
+            savedServers.insert(SavedServerProfile(name: resolvedName, baseURL: normalized), at: 0)
+        }
+        persistSavedServers()
+        await configureConnection(baseURL: normalized, demoMode: false)
+    }
+
+    public func removeServer(id: UUID) {
+        let removed = savedServers.first(where: { $0.id == id })
+        savedServers.removeAll { $0.id == id }
+        persistSavedServers()
+
+        if let removed,
+           !isDemoMode,
+           removed.baseURL.caseInsensitiveCompare(serverBaseURL) == .orderedSame {
+            serverBaseURL = ""
+            UserDefaults.standard.set("", forKey: StorageKeys.serverURL)
+            resetDomainState()
+        }
+        hapticImpactTrigger += 1
+    }
+
+    public func openSetupWizard() {
+        if showServerSettings {
+            pendingOpenSetupWizard = true
+            showServerSettings = false
+        } else {
+            showServerSetupWizard = true
+        }
+    }
+
+    public static func parseConnectDeepLink(_ raw: String) -> (url: String, name: String)? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed) else { return nil }
+        return parseConnectDeepLink(url: url)
+    }
+
+    public static func parseConnectDeepLink(url: URL) -> (url: String, name: String)? {
+        guard url.scheme?.lowercased() == "pvecenter" else { return nil }
+        let host = url.host?.lowercased() ?? ""
+        let path = url.path.lowercased()
+        guard host == "connect" || path == "/connect" else { return nil }
+
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let rawTarget = components.queryItems?.first(where: { $0.name == "url" })?.value else {
+            return nil
+        }
+
+        let normalized = APIClient.normalizeBaseURL(rawTarget)
+        guard !normalized.isEmpty,
+              let parsedTarget = URL(string: normalized),
+              let scheme = parsedTarget.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              let targetHost = parsedTarget.host,
+              !targetHost.isEmpty else {
+            return nil
+        }
+
+        let rawName = components.queryItems?.first(where: { $0.name == "name" })?.value?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let resolvedName = rawName.isEmpty ? defaultServerName(for: normalized) : rawName
+        return (normalized, resolvedName)
+    }
+
+    public func handleIncomingURL(_ url: URL) async {
+        guard let parsed = Self.parseConnectDeepLink(url: url) else {
+            showToast("Lien d'appairage pvecenter:// invalide.", isError: true)
+            return
+        }
+
+        await addOrSelectServer(name: parsed.name, baseURL: parsed.url)
+
+        do {
+            let status = try await api.fetchSetupStatus(baseURL: parsed.url, demoMode: false)
+            self.setupStatus = status
+            if !status.isConfigured {
+                openSetupWizard()
+                showToast("Serveur « \(parsed.name) » connecté — terminez la configuration.", isError: false)
+            } else {
+                showToast("Serveur « \(parsed.name) » appairé et connecté.", isError: false)
+            }
+        } catch {
+            showToast("Serveur « \(parsed.name) » ajouté (\(error.localizedDescription)).", isError: true)
+        }
+    }
+
     public func testConnection(candidateURL: String) async throws -> AuthUser {
         try await api.testConnection(baseURL: candidateURL)
+    }
+
+    public func fetchSetupStatus() async throws -> SetupStatusResponse {
+        let status = try await api.fetchSetupStatus(baseURL: serverBaseURL, demoMode: isDemoMode)
+        self.setupStatus = status
+        return status
+    }
+
+    public func testSetupService(_ request: ServiceTestRequest) async throws -> ServiceTestResponse {
+        try await api.testServiceConnection(baseURL: serverBaseURL, demoMode: isDemoMode, payload: request)
+    }
+
+    public func saveSetupConfig(_ request: SetupConfigUpdateRequest) async throws -> SetupConfigUpdateResponse {
+        let response = try await api.saveSetupConfig(baseURL: serverBaseURL, demoMode: isDemoMode, payload: request)
+        hapticSuccessTrigger += 1
+        showToast(response.message, isError: false)
+        await refreshAll(silent: false)
+        return response
     }
 
     public func refreshAll(silent: Bool = false) async {
@@ -123,13 +299,15 @@ public final class AppViewModel {
             async let widReq = api.fetchWidgets(baseURL: serverBaseURL, demoMode: isDemoMode)
             async let opsReq = api.fetchOpsOverview(baseURL: serverBaseURL, demoMode: isDemoMode)
             async let usrReq = api.fetchUsers(baseURL: serverBaseURL, demoMode: isDemoMode)
+            async let setupReq = api.fetchSetupStatus(baseURL: serverBaseURL, demoMode: isDemoMode)
 
-            let (pve, svc, wid, ops, usr) = await (
+            let (pve, svc, wid, ops, usr, setup) = await (
                 try? pveReq,
                 try? svcReq,
                 try? widReq,
                 try? opsReq,
-                try? usrReq
+                try? usrReq,
+                try? setupReq
             )
 
             if let pve { self.pveOverview = pve }
@@ -137,6 +315,7 @@ public final class AppViewModel {
             if let wid { self.widgets = wid }
             if let ops { self.opsOverview = ops }
             if let usr { self.usersOverview = usr }
+            if let setup { self.setupStatus = setup }
 
             self.lastUpdated = Date()
         } catch {

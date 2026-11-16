@@ -40,17 +40,49 @@ flowchart LR
 5. **Gestion unifiée des utilisateurs Jellyfin ↔ Jellyseerr :**
    - Création d'un compte Jellyfin avec réplication immédiate dans Jellyseerr.
    - Édition complète : suspendre/réactiver un compte, limiter le nombre d'écrans simultanés, autoriser/interdire les téléchargements hors-ligne, restreindre l'accès par médiathèque, basculer entre **Auto-approuvé** et **Validation manuelle** sur Jellyseerr, réinitialiser le mot de passe ou supprimer le compte synchronisé *(le compte désigné par `PROTECTED_OWNER_USERNAME` reste verrouillé côté backend)*.
-6. **Application Apple Native (iOS & macOS) en Swift 6 / SwiftUI + Interface PWA Liquid Glass :**
-   - Application **100 % native macOS & iPhone / iPad** (`ios-native/PVECenter.xcodeproj`) : barre latérale `NavigationSplitView` et **MenuBarExtra** sur Mac (raccourcis `⌘R`, `⌘L`, `⌘1`–`⌘6`, `⌘,`), `TabView` et haptique Taptic Engine sur iPhone, **Swift Charts**, `.ultraThinMaterial` Light & Dark Mode et acteur `DemoDataStore`.
+6. **Applications Apple Natives (iPhone, iPad, Mac & Apple TV `tvOS 27`) en Swift 6 / SwiftUI + Interface PWA Liquid Glass :**
+   - Applications **100 % natives iPhone, iPad, Mac et Apple TV (`tvOS 27.0`)** (`ios-native/PVECenter.xcodeproj`) : barre latérale `NavigationSplitView` et **MenuBarExtra** sur Mac (raccourcis `⌘R`, `⌘L`, `⌘1`–`⌘6`, `⌘,`), `TabView` et haptique Taptic Engine sur iPhone/iPad, interface grand écran 10-foot UI sur Apple TV (`tvOS 27`), **Swift Charts**, `.ultraThinMaterial` Light & Dark Mode et acteur `DemoDataStore`.
+   - **Multi-serveurs, Appairage `pvecenter://connect` & Setup distant** : enregistrement et bascule en un clic entre plusieurs serveurs homelab, import instantané par lien `pvecenter://connect?url=...&name=...`, et assistant complet pour configurer et tester Proxmox VE, Tailscale et tous les services multimédias directement depuis l'app native.
    - Compilation directe du bundle Mac signé via `./ios-native/build-macos-app.sh` -> `PVE Center.app`.
    - Surfaces Web **Liquid Glass** (`.liquid-glass`, `.liquid-glass-elevated`, barre de navigation flottante iPhone `.liquid-glass-dock`, modales `.ios-sheet`, gestion des `env(safe-area-inset-*)`).
-   - Guide complet App Store / macOS dans [APPSTORE.md](APPSTORE.md).
+   - Guide complet App Store / macOS / Apple TV dans [APPSTORE.md](APPSTORE.md).
 
 ---
 
 ## Installation & Déploiement
 
-### 1. Préparer la configuration
+### Démarrage rapide en une commande (`./install.sh`)
+```bash
+git clone <url-de-votre-depot> pve-panel
+cd pve-panel
+chmod +x install.sh
+sudo ./install.sh
+```
+Le script détecte automatiquement votre environnement :
+- **Mode A — Hôte Proxmox VE (`pveversion` détecté)** : propose de créer un conteneur LXC Debian 12 dédié (`pve-panel`), crée le rôle restreint `PanelRole` et génère le token API `root@pam!pve-panel` via `pveum`, monte `/mnt` en lecture seule (`/host_mnt`), copie le projet dans `/opt/pve-panel`, installe Docker + Tailscale (`--advertise-tags=tag:panel` + `tailscale serve --bg http://127.0.0.1:8000`) et pré-remplit `.env`.
+- **Mode B — Serveur Linux / Conteneur LXC existant** : installe Docker Engine / Compose et Tailscale si nécessaires, initialise `.env` (`DEV_AUTH_BYPASS=false`, `ALLOWED_TAILSCALE_USERS`) et `services.yaml`, construit et démarre la stack Docker, puis active `tailscale serve --bg http://127.0.0.1:8000`.
+
+À la fin de l'exécution, `./install.sh` affiche l'URL HTTPS `https://<hostname>.<tailnet>.ts.net` ainsi que le lien d'appairage `pvecenter://connect?url=...` pour vos appareils Apple.
+
+### Configuration complète depuis le Setup Web intégré (`Configuration`)
+Une fois l'interface web ouverte (le bouton **Configuration** dans le header ouvre automatiquement l'assistant au premier lancement si le panel n'est pas encore configuré) :
+1. **Proxmox & Tailscale** : renseignez `PVE_HOST`, `PVE_NODE`, `PVE_TOKEN_ID`, `PVE_TOKEN_SECRET`, `PANEL_SELF_VMID`, `ALLOWED_TAILSCALE_USERS` et `PROTECTED_OWNER_USERNAME`, puis cliquez sur **« Tester Proxmox »**.
+2. **Médias & Téléchargements** : configurez **Jellyfin**, **Jellyseerr**, **Plex**, **Radarr**, **Sonarr**, **Prowlarr** et **qBittorrent** avec test de connectivité et mesure de latence (`ms`) en direct pour chaque service.
+3. **Services & Disques (`services.yaml`)** : ajoutez, modifiez ou supprimez vos catégories, tuiles de services et montages disques (`/host_mnt`) sans éditer le YAML à la main.
+4. **Apps iPhone / Mac / TV (`pvecenter://connect`)** : copiez l'URL Tailscale détectée ou cliquez sur **Ouvrir dans PVE Center (`pvecenter://connect?url=...`)** pour appairer instantanément votre iPhone, iPad ou Mac (et retrouvez l'URL à saisir sur Apple TV).
+
+En cliquant sur **« Enregistrer & Appliquer à chaud »**, le backend écrit de manière atomique dans `.env` et `services.yaml` (montés en lecture/écriture dans `docker-compose.yml`), recharge la configuration en mémoire et applique immédiatement vos réglages sans reconstruction Docker.
+
+### Gestion multi-serveurs & Setup distant depuis les apps Apple (iPhone, iPad, Mac, Apple TV `tvOS 27`)
+- **Multi-serveurs** : ouvrez **Serveurs & Connexion** pour enregistrer plusieurs instances (`https://<panel>.<tailnet>.ts.net` ou IP locale), basculer de l'une à l'autre en un clic/tap ou activer le **Mode Démo**.
+- **Appairage `pvecenter://connect`** : ouvrez un lien `pvecenter://connect?url=...&name=...` (depuis le Setup Web ou le résumé de `./install.sh`) ou collez-le dans **Appairage rapide (Deep-Link)** pour enregistrer et activer le serveur immédiatement ; l'assistant de configuration s'ouvre automatiquement si le serveur n'est pas encore configuré.
+- **Setup serveur à distance** : sur iPhone, iPad, Mac et Apple TV (`tvOS 27`), touchez **« Configurer les fonctionnalités du serveur… »** pour éditer Proxmox VE, la sécurité Tailscale et tous les services multimédias à chaud avec tests en direct.
+
+---
+
+### Installation manuelle (avancée)
+
+#### 1. Préparer la configuration
 ```bash
 git clone <url-de-votre-depot> pve-panel
 cd pve-panel
@@ -59,16 +91,16 @@ cp services.example.yaml services.yaml
 ```
 Adaptez `.env` et `services.yaml` à votre infrastructure. *(Les deux fichiers sont ignorés par `.gitignore` pour ne jamais publier vos secrets).*
 
-### 2. Créer un Token API Proxmox à privilèges restreints
+#### 2. Créer un Token API Proxmox à privilèges restreints
 Sur votre hôte Proxmox VE :
 ```bash
 pveum role add PanelRole -privs "Sys.Audit VM.Audit Datastore.Audit VM.PowerMgmt"
 pveum user token add root@pam pve-panel --privsep 1 --output-format json
 pveum acl modify / -tokens "root@pam!pve-panel" -roles PanelRole
 ```
-Reportez `PVE_TOKEN_ID=root@pam!pve-panel` et `PVE_TOKEN_SECRET=<secret>` dans `.env`.
+Reportez `PVE_TOKEN_ID=root@pam!pve-panel` et `PVE_TOKEN_SECRET=<secret>` dans `.env` (ou directement via l'onglet **Proxmox & Tailscale** du Setup Web).
 
-### 3. Montage des disques externes (LXC Proxmox ou Docker)
+#### 3. Montage des disques externes (LXC Proxmox ou Docker)
 Dans un conteneur LXC Proxmox dédié, exposez `/mnt` en lecture seule récursive :
 ```text
 # /etc/pve/lxc/<VMID>.conf
@@ -76,7 +108,7 @@ lxc.mount.entry: /mnt host_mnt none rbind,ro,create=dir 0 0
 ```
 *(Si vous déployez directement sur l'hôte Linux sans LXC, remplacez `- /host_mnt:/host_mnt:ro` par `- /mnt:/host_mnt:ro` dans `docker-compose.yml`).*
 
-### 4. Lancement en production avec Docker & Tailscale Serve
+#### 4. Lancement en production avec Docker & Tailscale Serve
 Assurez-vous que `DEV_AUTH_BYPASS=false` dans `.env` :
 ```bash
 docker compose up -d --build

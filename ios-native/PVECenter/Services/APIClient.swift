@@ -110,6 +110,13 @@ public actor APIClient {
         return try await send(path: "/api/users", baseURL: baseURL)
     }
 
+    public func fetchSetupStatus(baseURL: String, demoMode: Bool) async throws -> SetupStatusResponse {
+        if demoMode {
+            return await demoStore.setupStatus()
+        }
+        return try await send(path: "/api/setup/status", baseURL: baseURL)
+    }
+
     // MARK: - Mutations
 
     public func performPveAction(
@@ -270,6 +277,40 @@ public actor APIClient {
         let _: ActionOKResponse = try await send(
             path: "/api/users/\(jellyfinId)",
             method: "DELETE",
+            baseURL: baseURL
+        )
+    }
+
+    // MARK: - Setup Wizard
+
+    public func testServiceConnection(
+        baseURL: String,
+        demoMode: Bool,
+        payload: ServiceTestRequest
+    ) async throws -> ServiceTestResponse {
+        if demoMode {
+            return await demoStore.testServiceConnection(payload)
+        }
+        return try await send(
+            path: "/api/setup/test-service",
+            method: "POST",
+            body: payload,
+            baseURL: baseURL
+        )
+    }
+
+    public func saveSetupConfig(
+        baseURL: String,
+        demoMode: Bool,
+        payload: SetupConfigUpdateRequest
+    ) async throws -> SetupConfigUpdateResponse {
+        if demoMode {
+            return await demoStore.saveSetupConfig(payload)
+        }
+        return try await send(
+            path: "/api/setup/config",
+            method: "PUT",
+            body: payload,
             baseURL: baseURL
         )
     }

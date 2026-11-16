@@ -25,6 +25,7 @@
 		A10000100000000000000001 /* CreateUserSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000100000000000000001 /* CreateUserSheet.swift */; };
 		A10000110000000000000001 /* ManageUserSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000110000000000000001 /* ManageUserSheet.swift */; };
 		A10000120000000000000001 /* ServerSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000120000000000000001 /* ServerSettingsSheet.swift */; };
+		A10000140000000000000001 /* ServerSetupWizardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000150000000000000001 /* ServerSetupWizardSheet.swift */; };
 		A10000130000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000130000000000000001 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -48,6 +49,7 @@
 		B10000100000000000000001 /* CreateUserSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateUserSheet.swift; sourceTree = "<group>"; };
 		B10000110000000000000001 /* ManageUserSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageUserSheet.swift; sourceTree = "<group>"; };
 		B10000120000000000000001 /* ServerSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSettingsSheet.swift; sourceTree = "<group>"; };
+		B10000150000000000000001 /* ServerSetupWizardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupWizardSheet.swift; sourceTree = "<group>"; };
 		B10000130000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000140000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -206,6 +208,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000120000000000000001 /* ServerSettingsSheet.swift */,
+				B10000150000000000000001 /* ServerSetupWizardSheet.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -301,6 +304,7 @@
 				A10000100000000000000001 /* CreateUserSheet.swift in Sources */,
 				A10000110000000000000001 /* ManageUserSheet.swift in Sources */,
 				A10000120000000000000001 /* ServerSettingsSheet.swift in Sources */,
+				A10000140000000000000001 /* ServerSetupWizardSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -319,6 +323,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
+				TVOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Debug;
 		};
@@ -333,6 +338,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 6.0;
+				TVOS_DEPLOYMENT_TARGET = 27.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -355,11 +361,12 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.pvepanel.app;
 				PRODUCT_NAME = "PVE Center";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx appletvos appletvsimulator";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,3";
+				TVOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Debug;
 		};
@@ -381,11 +388,12 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.pvepanel.app;
 				PRODUCT_NAME = "PVE Center";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx appletvos appletvsimulator";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,3";
+				TVOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Release;
 		};

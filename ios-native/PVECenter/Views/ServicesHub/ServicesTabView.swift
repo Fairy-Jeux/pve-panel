@@ -10,7 +10,9 @@ public struct ServicesTabView: View {
     }
 
     private var adaptiveColumns: [GridItem] {
-        #if os(macOS)
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 310), spacing: 14)]
         #else
         return [GridItem(.flexible())]

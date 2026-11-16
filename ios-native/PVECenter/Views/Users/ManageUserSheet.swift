@@ -78,11 +78,7 @@ public struct ManageUserSheet: View {
                     }
 
                     Toggle("Téléchargement autorisé", isOn: $enableDownloading)
-                    Stepper(
-                        maxActiveSessions == 0 ? "Écrans simultanés : Illimité" : "Écrans simultanés : \(maxActiveSessions)",
-                        value: $maxActiveSessions,
-                        in: 0...10
-                    )
+                    MaxActiveSessionsControl(maxActiveSessions: $maxActiveSessions)
                 }
 
                 Section("Jellyseerr") {

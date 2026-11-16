@@ -13,6 +13,7 @@ public actor DemoDataStore {
     private var qbitAltSpeed: Bool = false
     private var qbitTorrents: [QbitTorrentItem]
     private var users: [UnifiedUser]
+    private var setupEnv: SetupEnvConfig
 
     public init() {
         let nowSec = Int(Date().timeIntervalSince1970)
@@ -231,6 +232,33 @@ public actor DemoDataStore {
                 autoApprove: false
             ),
         ]
+
+        self.setupEnv = SetupEnvConfig(
+            devAuthBypass: false,
+            allowedTailscaleUsers: "demo@pve-center.app",
+            protectedOwnerUsername: "admin",
+            pveHost: "https://192.168.1.10:8006",
+            pveNode: "pve-node-01",
+            pveTokenId: "root@pam!pve-panel",
+            pveTokenSecretSet: true,
+            pveVerifySsl: false,
+            panelSelfVmid: 116,
+            jellyfinUrl: "http://192.168.1.26:8096",
+            jellyfinApiKeySet: true,
+            jellyseerrUrl: "http://192.168.1.31:5055",
+            jellyseerrApiKeySet: true,
+            plexUrl: "http://192.168.1.30:32400",
+            plexTokenSet: true,
+            radarrUrl: "http://192.168.1.27:7878",
+            radarrApiKeySet: true,
+            sonarrUrl: "http://192.168.1.28:8989",
+            sonarrApiKeySet: true,
+            prowlarrUrl: "http://192.168.1.29:9696",
+            prowlarrApiKeySet: true,
+            qbitUrl: "http://192.168.1.32:8090",
+            qbitUsername: "admin",
+            qbitPasswordSet: true
+        )
     }
 
     public func currentUser() -> AuthUser {
@@ -712,5 +740,93 @@ public actor DemoDataStore {
             throw APIError.serverError(statusCode: 400, detail: "Suppression du compte propriétaire protégé interdite.")
         }
         users.removeAll { $0.jellyfinId == id }
+    }
+
+    // MARK: - Setup Simulation
+
+    public func setupStatus() -> SetupStatusResponse {
+        let configured = !setupEnv.pveHost.isEmpty && setupEnv.pveTokenSecretSet
+        let demoURL = "https://panel.example.ts.net"
+        let encodedURL = demoURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? demoURL
+        let encodedNode = setupEnv.pveNode.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? setupEnv.pveNode
+        return SetupStatusResponse(
+            isConfigured: configured,
+            tailscaleUrl: demoURL,
+            pairingDeepLink: "pvecenter://connect?url=\(encodedURL)&name=\(encodedNode)",
+            env: setupEnv,
+            categories: servicesCategories().map { category in
+                SetupCategoryConfig(
+                    name: category.name,
+                    services: category.services.map { svc in
+                        SetupServiceConfig(
+                            id: svc.id,
+                            name: svc.name,
+                            description: svc.description,
+                            url: svc.url,
+                            pingUrl: svc.pingUrl,
+                            icon: svc.icon,
+                            widget: svc.widget
+                        )
+                    }
+                )
+            },
+            storageMounts: [
+                StorageMountConfig(mount: "/mnt/disk1", subpath: "disk1", wwn: "wwn-0x5000demo00000001", label: "Disque 1 • 16 To"),
+                StorageMountConfig(mount: "/mnt/disk2", subpath: "disk2", wwn: "wwn-0x5000demo00000002", label: "Disque 2 • 16 To"),
+            ]
+        )
+    }
+
+    public func testServiceConnection(_ req: ServiceTestRequest) -> ServiceTestResponse {
+        let cleanURL = req.url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanURL.isEmpty, cleanURL.lowercased().hasPrefix("http") else {
+            return ServiceTestResponse(
+                ok: false,
+                service: req.service,
+                message: "URL invalide ou vide pour \(req.service).",
+                latencyMs: nil
+            )
+        }
+        return ServiceTestResponse(
+            ok: true,
+            service: req.service,
+            message: "Connexion simulée réussie (Mode Démo) vers \(cleanURL).",
+            latencyMs: 6.4
+        )
+    }
+
+    public func saveSetupConfig(_ req: SetupConfigUpdateRequest) -> SetupConfigUpdateResponse {
+        if let env = req.env {
+            if let v = env.devAuthBypass { setupEnv.devAuthBypass = v }
+            if let v = env.allowedTailscaleUsers { setupEnv.allowedTailscaleUsers = v }
+            if let v = env.protectedOwnerUsername { setupEnv.protectedOwnerUsername = v }
+            if let v = env.pveHost { setupEnv.pveHost = v }
+            if let v = env.pveNode { setupEnv.pveNode = v }
+            if let v = env.pveTokenId { setupEnv.pveTokenId = v }
+            if let v = env.pveTokenSecret, !v.isEmpty { setupEnv.pveTokenSecretSet = true }
+            if let v = env.pveVerifySsl { setupEnv.pveVerifySsl = v }
+            if let v = env.panelSelfVmid { setupEnv.panelSelfVmid = v }
+            if let v = env.jellyfinUrl { setupEnv.jellyfinUrl = v }
+            if let v = env.jellyfinApiKey, !v.isEmpty { setupEnv.jellyfinApiKeySet = true }
+            if let v = env.jellyseerrUrl { setupEnv.jellyseerrUrl = v }
+            if let v = env.jellyseerrApiKey, !v.isEmpty { setupEnv.jellyseerrApiKeySet = true }
+            if let v = env.plexUrl { setupEnv.plexUrl = v }
+            if let v = env.plexToken, !v.isEmpty { setupEnv.plexTokenSet = true }
+            if let v = env.radarrUrl { setupEnv.radarrUrl = v }
+            if let v = env.radarrApiKey, !v.isEmpty { setupEnv.radarrApiKeySet = true }
+            if let v = env.sonarrUrl { setupEnv.sonarrUrl = v }
+            if let v = env.sonarrApiKey, !v.isEmpty { setupEnv.sonarrApiKeySet = true }
+            if let v = env.prowlarrUrl { setupEnv.prowlarrUrl = v }
+            if let v = env.prowlarrApiKey, !v.isEmpty { setupEnv.prowlarrApiKeySet = true }
+            if let v = env.qbitUrl { setupEnv.qbitUrl = v }
+            if let v = env.qbitUsername { setupEnv.qbitUsername = v }
+            if let v = env.qbitPassword, !v.isEmpty { setupEnv.qbitPasswordSet = true }
+        }
+        let configured = !setupEnv.pveHost.isEmpty && setupEnv.pveTokenSecretSet
+        return SetupConfigUpdateResponse(
+            ok: true,
+            isConfigured: configured,
+            message: "Configuration simulée enregistrée et rechargée (Mode Démo)."
+        )
     }
 }
