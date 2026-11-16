@@ -65,7 +65,11 @@ public struct ProxmoxTabView: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.segmented)
+                    #if os(tvOS)
+                    .frame(maxWidth: 560)
+                    #else
                     .frame(maxWidth: 300)
+                    #endif
                 }
 
                 LazyVGrid(columns: adaptiveColumns, spacing: 14) {
@@ -84,8 +88,8 @@ public struct ProxmoxTabView: View {
                     }
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+            .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
@@ -252,7 +256,7 @@ public struct ProxmoxTabView: View {
                             }
                             .buttonStyle(.glassProminent)
                             .tint(DesignTokens.signalTeal(colorScheme))
-                            .controlSize(.small)
+                            .adaptiveSmallControlSize()
                         } else if !res.isSelf {
                             Button {
                                 pendingCommand = PendingPowerCommand(resource: res, action: .reboot)
@@ -261,7 +265,7 @@ public struct ProxmoxTabView: View {
                                     .frame(minHeight: 26)
                             }
                             .buttonStyle(.glass)
-                            .controlSize(.small)
+                            .adaptiveSmallControlSize()
 
                             Button {
                                 pendingCommand = PendingPowerCommand(resource: res, action: .shutdown)
@@ -271,7 +275,7 @@ public struct ProxmoxTabView: View {
                                     .frame(minHeight: 26)
                             }
                             .buttonStyle(.glass)
-                            .controlSize(.small)
+                            .adaptiveSmallControlSize()
 
                             Button(role: .destructive) {
                                 pendingCommand = PendingPowerCommand(resource: res, action: .stop)
@@ -281,7 +285,7 @@ public struct ProxmoxTabView: View {
                                     .frame(minHeight: 26)
                             }
                             .buttonStyle(.glass)
-                            .controlSize(.small)
+                            .adaptiveSmallControlSize()
                         } else {
                             Label("Protégé contre l'auto-extinction", systemImage: "shield.checkmark.fill")
                                 .font(.caption2)

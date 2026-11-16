@@ -64,7 +64,11 @@ public struct UsersTabView: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.segmented)
+                    #if os(tvOS)
+                    .frame(maxWidth: 680)
+                    #else
                     .frame(maxWidth: 360)
+                    #endif
                 }
 
                 LazyVGrid(columns: adaptiveColumns, spacing: 12) {
@@ -83,8 +87,8 @@ public struct UsersTabView: View {
                     }
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+            .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
@@ -121,7 +125,7 @@ public struct UsersTabView: View {
                     }
                     .buttonStyle(.glassProminent)
                     .tint(DesignTokens.signalTeal(colorScheme))
-                    .controlSize(.small)
+                    .adaptiveSmallControlSize()
                 }
 
                 if let unsynced = counts?.unsyncedCount, unsynced > 0 {
@@ -209,7 +213,7 @@ public struct UsersTabView: View {
                 .frame(minHeight: 44)
             }
         }
-        .buttonStyle(.plain)
+        .cardButtonStyle()
     }
 }
 

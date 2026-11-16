@@ -45,6 +45,42 @@ public enum DesignTokens {
     public static func critical(_ scheme: ColorScheme) -> Color {
         Color(red: 1.000, green: 0.420, blue: 0.420)
     }
+
+    public static var pageHorizontalPadding: CGFloat {
+        #if os(tvOS)
+        return 48
+        #else
+        return 16
+        #endif
+    }
+
+    public static var pageVerticalPadding: CGFloat {
+        #if os(tvOS)
+        return 24
+        #else
+        return 12
+        #endif
+    }
+}
+
+public extension View {
+    @ViewBuilder
+    func cardButtonStyle() -> some View {
+        #if os(tvOS)
+        self.buttonStyle(.card)
+        #else
+        self.buttonStyle(.plain)
+        #endif
+    }
+
+    @ViewBuilder
+    func adaptiveSmallControlSize() -> some View {
+        #if os(tvOS)
+        self
+        #else
+        self.controlSize(.small)
+        #endif
+    }
 }
 
 // MARK: - Native Apple Liquid Glass Panel Container (`macOS 26` / `iOS 26`)
@@ -214,6 +250,22 @@ public struct RackBayMatrixView: View {
         self.onSelectStorage = onSelectStorage
     }
 
+    private var resourceColumns: [GridItem] {
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 155), spacing: 10)]
+        #else
+        return [GridItem(.adaptive(minimum: 92), spacing: 6)]
+        #endif
+    }
+
+    private var driveColumns: [GridItem] {
+        #if os(tvOS)
+        return [GridItem(.adaptive(minimum: 150), spacing: 10)]
+        #else
+        return [GridItem(.adaptive(minimum: 84), spacing: 6)]
+        #endif
+    }
+
     public var body: some View {
         let teal = DesignTokens.signalTeal(colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
@@ -249,9 +301,9 @@ public struct RackBayMatrixView: View {
                             }
                             .frame(minHeight: 26)
                         }
-                        .buttonStyle(.plain)
+                        .cardButtonStyle()
 
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 6)], spacing: 6) {
+                        LazyVGrid(columns: resourceColumns, spacing: 8) {
                             ForEach(resources) { res in
                                 HStack(spacing: 5) {
                                     Image(systemName: res.isRunning ? "power.circle.fill" : "pause.circle")
@@ -291,9 +343,9 @@ public struct RackBayMatrixView: View {
                             }
                             .frame(minHeight: 26)
                         }
-                        .buttonStyle(.plain)
+                        .cardButtonStyle()
 
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
+                        LazyVGrid(columns: driveColumns, spacing: 8) {
                             ForEach(Array(drives.enumerated()), id: \.element.id) { idx, drive in
                                 let bayColor: Color = !drive.isHealthy
                                     ? critical

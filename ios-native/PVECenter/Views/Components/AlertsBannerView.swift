@@ -68,7 +68,7 @@ public struct AlertsBannerView: View {
                         .frame(minHeight: 36)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .cardButtonStyle()
 
                     if isExpanded {
                         VStack(spacing: 8) {
@@ -103,7 +103,7 @@ public struct AlertsBannerView: View {
                                         in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     )
                                 }
-                                .buttonStyle(.plain)
+                                .cardButtonStyle()
                             }
                         }
                     }

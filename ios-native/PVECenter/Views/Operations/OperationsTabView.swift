@@ -17,8 +17,8 @@ public struct OperationsTabView: View {
                 qbitSection
                 pveTasksSection
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+            .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
@@ -133,7 +133,7 @@ public struct OperationsTabView: View {
                                         }
                                         .buttonStyle(.glassProminent)
                                         .tint(DesignTokens.nominal(colorScheme))
-                                        .controlSize(.small)
+                                        .adaptiveSmallControlSize()
 
                                         Button(role: .destructive) {
                                             Task { await viewModel.decideSeerrRequest(id: req.id, approve: false) }
@@ -143,7 +143,7 @@ public struct OperationsTabView: View {
                                                 .frame(maxWidth: .infinity, minHeight: 28)
                                         }
                                         .buttonStyle(.glass)
-                                        .controlSize(.small)
+                                        .adaptiveSmallControlSize()
                                     }
                                 }
                             }
@@ -179,7 +179,7 @@ public struct OperationsTabView: View {
                             .foregroundStyle(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
                         }
                         .buttonStyle(.glass)
-                        .controlSize(.small)
+                        .adaptiveSmallControlSize()
                     }
 
                     ForEach(qbit.torrents) { torrent in
@@ -211,7 +211,7 @@ public struct OperationsTabView: View {
                                     .frame(minWidth: 32, minHeight: 32)
                                 }
                                 .buttonStyle(.glass)
-                                .controlSize(.small)
+                                .adaptiveSmallControlSize()
                             }
                             UsageProgressBar(
                                 percentage: torrent.progressPct,

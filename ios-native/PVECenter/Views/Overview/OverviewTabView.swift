@@ -50,8 +50,8 @@ public struct OverviewTabView: View {
                     activeStreamsSection
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+            .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
@@ -229,7 +229,7 @@ public struct OverviewTabView: View {
                 .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
             }
         }
-        .buttonStyle(.plain)
+        .cardButtonStyle()
     }
 
     @ViewBuilder
@@ -263,6 +263,7 @@ public struct OverviewTabView: View {
                         Button("Tout voir") { viewModel.selectedTab = .services }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .buttonStyle(.glass)
                         #endif
                     }
 

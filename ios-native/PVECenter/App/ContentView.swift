@@ -30,6 +30,24 @@ public struct ContentView: View {
             reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
             value: viewModel.toast?.id
         )
+        #if os(tvOS)
+        .fullScreenCover(
+            isPresented: $viewModel.showServerSettings,
+            onDismiss: {
+                if viewModel.pendingOpenSetupWizard {
+                    viewModel.pendingOpenSetupWizard = false
+                    viewModel.showServerSetupWizard = true
+                }
+            }
+        ) {
+            ServerSettingsSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
+        }
+        .fullScreenCover(isPresented: $viewModel.showServerSetupWizard) {
+            ServerSetupWizardSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
+        }
+        #else
         .sheet(
             isPresented: $viewModel.showServerSettings,
             onDismiss: {
@@ -46,6 +64,7 @@ public struct ContentView: View {
             ServerSetupWizardSheet(viewModel: viewModel)
                 .preferredColorScheme(.dark)
         }
+        #endif
         #if !os(tvOS)
         .sensoryFeedback(.success, trigger: viewModel.hapticSuccessTrigger)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: viewModel.hapticImpactTrigger)
@@ -130,17 +149,82 @@ public struct ContentView: View {
     @ViewBuilder
     private func tvOSTabScreen(for tab: AppTab) -> some View {
         NavigationStack {
-            activeTabContent(for: tab)
-                .background { AmbientBackgroundView() }
-                .navigationTitle(tab.title)
-                .toolbar {
-                    commonToolbarItems
-                }
+            VStack(spacing: 0) {
+                tvOSHeaderBar(for: tab)
+                activeTabContent(for: tab)
+            }
+            .background { AmbientBackgroundView() }
         }
         .tabItem {
-            Label(tab.title, systemImage: tab.systemImage)
+            Label(tab.tvTitle, systemImage: tab.systemImage)
         }
         .tag(tab)
+    }
+
+    private func tvOSHeaderBar(for tab: AppTab) -> some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(tab.title)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(DesignTokens.primaryText(.dark))
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(
+                            viewModel.isDemoMode
+                                ? Color.indigo
+                                : (viewModel.connectionError == nil && !viewModel.serverBaseURL.isEmpty ? Color.green : Color.orange)
+                        )
+                        .frame(width: 8, height: 8)
+                    Text(
+                        viewModel.isDemoMode
+                            ? "Mode Démo actif"
+                            : (viewModel.serverBaseURL.isEmpty ? "Aucun serveur connecté" : viewModel.activeServerName)
+                    )
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DesignTokens.secondaryText(.dark))
+                }
+            }
+
+            Spacer()
+
+            HStack(spacing: 16) {
+                if !viewModel.isDemoMode && viewModel.serverBaseURL.isEmpty {
+                    Button {
+                        Task { await viewModel.configureConnection(baseURL: "", demoMode: true) }
+                    } label: {
+                        Label("Mode Démo", systemImage: "sparkles")
+                            .padding(.horizontal, 10)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(.indigo)
+                }
+
+                Button {
+                    viewModel.showServerSettings = true
+                } label: {
+                    Label(
+                        viewModel.isDemoMode
+                            ? "Connexion"
+                            : (viewModel.serverBaseURL.isEmpty ? "Connecter un serveur" : viewModel.activeServerName),
+                        systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
+                    )
+                    .padding(.horizontal, 10)
+                }
+                .buttonStyle(.glass)
+
+                Button {
+                    Task { await viewModel.refreshAll(silent: false) }
+                } label: {
+                    Label(viewModel.isRefreshing ? "Synchro…" : "Actualiser", systemImage: "arrow.clockwise")
+                        .padding(.horizontal, 10)
+                }
+                .buttonStyle(.glass)
+                .disabled(viewModel.isRefreshing)
+            }
+        }
+        .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
     }
     #endif
 

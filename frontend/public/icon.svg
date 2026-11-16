@@ -32,7 +32,6 @@
 
   <!-- Outer Liquid Glass Tile -->
   <rect x="164" y="164" width="696" height="696" rx="184" fill="url(#glassSurface)" stroke="url(#glassStroke)" stroke-width="6" />
-  <path d="M268 176 H756" stroke="#ffffff" stroke-opacity="0.42" stroke-width="4" stroke-linecap="round" />
 
   <!-- Three stacked server blades -->
   <rect x="284" y="302" width="456" height="108" rx="34" fill="#0f172a" fill-opacity="0.72" stroke="url(#accentGrad)" stroke-width="5" />

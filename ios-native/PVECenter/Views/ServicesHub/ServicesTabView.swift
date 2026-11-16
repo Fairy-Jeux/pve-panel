@@ -52,8 +52,8 @@ public struct ServicesTabView: View {
                     }
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+            .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {

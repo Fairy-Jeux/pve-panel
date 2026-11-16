@@ -37,6 +37,17 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    public var tvTitle: String {
+        switch self {
+        case .overview: "Poste"
+        case .proxmox: "PVE"
+        case .storage: "Disques"
+        case .services: "Apps"
+        case .operations: "Activité"
+        case .users: "Comptes"
+        }
+    }
+
     public var systemImage: String {
         switch self {
         case .overview: "square.grid.2x2.fill"

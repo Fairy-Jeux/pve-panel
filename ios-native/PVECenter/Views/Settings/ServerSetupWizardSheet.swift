@@ -65,6 +65,120 @@ public struct ServerSetupWizardSheet: View {
     }
 
     public var body: some View {
+        #if os(tvOS)
+        tvOSWizardBody
+        #else
+        standardWizardBody
+        #endif
+    }
+
+    #if os(tvOS)
+    private var tvOSWizardBody: some View {
+        ZStack {
+            AmbientBackgroundView()
+
+            VStack(spacing: 0) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Configuration Serveur")
+                            .font(.largeTitle.weight(.bold))
+                        Text(isConfigured ? "Serveur configuré (\(viewModel.activeServerName))" : "Configuration initiale requise (\(viewModel.activeServerName))")
+                            .font(.callout)
+                            .foregroundStyle(isConfigured ? .green : .orange)
+                    }
+                    Spacer()
+                    Button(isSaving ? "Application…" : "Enregistrer") {
+                        Task { await saveConfig() }
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(.cyan)
+                    .disabled(isLoading || isSaving)
+
+                    Button {
+                        dismiss()
+                    } label: {
+                        Label("Fermer", systemImage: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.glass)
+                }
+                .padding(.horizontal, 48)
+                .padding(.top, 32)
+                .padding(.bottom, 16)
+
+                if isLoading {
+                    VStack(spacing: 14) {
+                        ProgressView("Chargement de la configuration du serveur…")
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 620), spacing: 28)], spacing: 24) {
+                            GlassCard(padding: 22, cornerRadius: 22) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Proxmox VE & Sécurité")
+                                        .font(.title3.weight(.semibold))
+                                    TextField("Hôte Proxmox (https://192.168.1.10:8006)", text: $pveHost)
+                                    TextField("Nom du nœud (ex: pve)", text: $pveNode)
+                                    TextField("Token ID (ex: root@pam!pve-panel)", text: $pveTokenId)
+                                    SecureField(
+                                        pveTokenSecretSet ? "Secret défini (laisser vide pour conserver)" : "Secret du token API",
+                                        text: $pveTokenSecret
+                                    )
+                                    TextField("VMID du conteneur panel (ex: 116)", text: $panelSelfVmidText)
+                                    Toggle("Vérifier le certificat SSL Proxmox", isOn: $pveVerifySsl)
+                                    testButtonAndResult(serviceKey: "proxmox", title: "Tester Proxmox VE") {
+                                        ServiceTestRequest(
+                                            service: "proxmox",
+                                            url: pveHost,
+                                            node: pveNode,
+                                            tokenId: pveTokenId,
+                                            secret: nonEmptyOrNil(pveTokenSecret),
+                                            verifySsl: pveVerifySsl
+                                        )
+                                    }
+                                    .buttonStyle(.glass)
+                                    Divider()
+                                    TextField("Emails Tailscale autorisés", text: $allowedTailscaleUsers)
+                                    TextField("Compte propriétaire protégé", text: $protectedOwnerUsername)
+                                    Toggle("Bypass auth locale (DEV uniquement)", isOn: $devAuthBypass)
+                                }
+                            }
+
+                            GlassCard(padding: 22, cornerRadius: 22) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Services Médias & Téléchargements")
+                                        .font(.title3.weight(.semibold))
+                                    TextField("URL Jellyfin", text: $jellyfinUrl)
+                                    SecureField(jellyfinApiKeySet ? "Clé API Jellyfin (définie)" : "Clé API Jellyfin", text: $jellyfinApiKey)
+                                    TextField("URL Jellyseerr", text: $jellyseerrUrl)
+                                    SecureField(jellyseerrApiKeySet ? "Clé API Jellyseerr (définie)" : "Clé API Jellyseerr", text: $jellyseerrApiKey)
+                                    TextField("URL Plex", text: $plexUrl)
+                                    SecureField(plexTokenSet ? "Token Plex (défini)" : "Token Plex", text: $plexToken)
+                                    TextField("URL Radarr", text: $radarrUrl)
+                                    SecureField(radarrApiKeySet ? "Clé API Radarr (définie)" : "Clé API Radarr", text: $radarrApiKey)
+                                    TextField("URL Sonarr", text: $sonarrUrl)
+                                    SecureField(sonarrApiKeySet ? "Clé API Sonarr (définie)" : "Clé API Sonarr", text: $sonarrApiKey)
+                                    TextField("URL Prowlarr", text: $prowlarrUrl)
+                                    SecureField(prowlarrApiKeySet ? "Clé API Prowlarr (définie)" : "Clé API Prowlarr", text: $prowlarrApiKey)
+                                    TextField("URL qBittorrent", text: $qbitUrl)
+                                    TextField("Utilisateur qBittorrent", text: $qbitUsername)
+                                    SecureField(qbitPasswordSet ? "Mot de passe qBittorrent (défini)" : "Mot de passe qBittorrent", text: $qbitPassword)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 48)
+                        .padding(.bottom, 36)
+                    }
+                }
+            }
+        }
+        .task {
+            await loadStatus()
+        }
+    }
+    #endif
+
+    private var standardWizardBody: some View {
         NavigationStack {
             Group {
                 if isLoading {
