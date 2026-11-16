@@ -36,6 +36,14 @@ public struct ProxmoxTabView: View {
         }
     }
 
+    private var adaptiveColumns: [GridItem] {
+        #if os(macOS)
+        return [GridItem(.adaptive(minimum: 340), spacing: 14)]
+        #else
+        return [GridItem(.flexible())]
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
@@ -45,8 +53,10 @@ public struct ProxmoxTabView: View {
 
                 filterBar
 
-                ForEach(displayedResources) { resource in
-                    resourceCard(resource)
+                LazyVGrid(columns: adaptiveColumns, spacing: 14) {
+                    ForEach(displayedResources) { resource in
+                        resourceCard(resource)
+                    }
                 }
 
                 if displayedResources.isEmpty {

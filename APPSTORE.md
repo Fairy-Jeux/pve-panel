@@ -44,15 +44,23 @@ L’équipe de révision Apple ne peut pas accéder au Tailnet privé du propri�
 
 ## 3. Options d’installation & Build
 
-### Option A — Compiler et installer l’app native SwiftUI avec Xcode
-1. Ouvrez `ios-native/PVECenter.xcodeproj` dans Xcode (macOS avec Xcode 16+).
-2. Sélectionnez votre **Team** dans *Signing & Capabilities* et ajustez le **Bundle Identifier** si souhaité.
-3. Lancez sur votre iPhone (`Cmd + R`), ou utilisez **Product -> Archive -> Distribute App -> TestFlight & App Store**.
+### Option A — Application macOS native (`PVE Center.app`) directement sur Mac
+Générez, signez et installez le bundle macOS natif (`NavigationSplitView`, `MenuBarExtra` dans la barre des menus, raccourcis `⌘R` / `⌘L` / `⌘1`–`⌘6` / `⌘,`) sans même ouvrir Xcode :
+```bash
+cd ios-native
+./build-macos-app.sh
+```
+Le script compile en Release Swift 6, génère `AppIcon.icns`, signe `ios-native/build/PVE Center.app` et l’installe dans `/Applications` (ou `~/Applications`).
 
-### Option B — Build Cloud automatique via GitHub Actions (`macos-15`)
+### Option B — Compiler et installer l’app native SwiftUI iPhone/Mac avec Xcode
+1. Ouvrez `ios-native/PVECenter.xcodeproj` dans Xcode (projet universel `iphoneos` + `macosx`, `SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO`).
+2. Sélectionnez votre **Team** dans *Signing & Capabilities* et ajustez le **Bundle Identifier** si souhaité.
+3. Lancez sur votre iPhone ou Mac (`Cmd + R`), ou utilisez **Product -> Archive -> Distribute App -> TestFlight & App Store**.
+
+### Option C — Build Cloud automatique via GitHub Actions (`macos-15`)
 Le workflow [`.github/workflows/ios-appstore.yml`](.github/workflows/ios-appstore.yml) exécute automatiquement :
-1. **`swift-verify`** : `swift build -c release` dans `ios-native/` sur `macos-15`.
+1. **`swift-verify`** : exécute `./build-macos-app.sh` sur `macos-15` et publie l’artefact `PVE-Center-macOS.zip`.
 2. **`build-ios`** : archive Xcode `ios-native/PVECenter.xcodeproj` (ou `frontend/ios/App/App.xcodeproj` si `project_mode=capacitor`), signe le `.ipa` si vos secrets Apple (`APPLE_CERTIFICATE_BASE64`, `APPLE_P12_PASSWORD`, `APPLE_PROVISIONING_PROFILE_BASE64`, `APPLE_PROVISIONING_PROFILE_NAME`, `APPLE_TEAM_ID`) sont configurés, et publie l’artefact ou envoie vers TestFlight.
 
-### Option C — PWA Safari (0 certificat requis)
+### Option D — PWA Safari (0 certificat requis)
 Ouvrez `https://<votre-panel>.<tailnet>.ts.net` dans **Safari** sur iPhone -> **Partager** -> **Sur l’écran d’accueil**.

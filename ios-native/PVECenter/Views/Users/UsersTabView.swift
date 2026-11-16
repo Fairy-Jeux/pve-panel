@@ -36,6 +36,14 @@ public struct UsersTabView: View {
         }
     }
 
+    private var adaptiveColumns: [GridItem] {
+        #if os(macOS)
+        return [GridItem(.adaptive(minimum: 310), spacing: 12)]
+        #else
+        return [GridItem(.flexible())]
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
@@ -64,8 +72,10 @@ public struct UsersTabView: View {
                     }
                 }
 
-                ForEach(displayedUsers) { user in
-                    userRow(user)
+                LazyVGrid(columns: adaptiveColumns, spacing: 12) {
+                    ForEach(displayedUsers) { user in
+                        userRow(user)
+                    }
                 }
 
                 if displayedUsers.isEmpty {

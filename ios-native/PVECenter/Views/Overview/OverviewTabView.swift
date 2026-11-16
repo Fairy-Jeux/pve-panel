@@ -127,7 +127,7 @@ public struct OverviewTabView: View {
         let onlineServices = allServices.filter(\.online).count
         let qbit = viewModel.widgets?.qbittorrent
 
-        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 175), spacing: 12)], spacing: 12) {
             Button {
                 viewModel.selectedTab = .proxmox
             } label: {

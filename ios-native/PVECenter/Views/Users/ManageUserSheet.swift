@@ -128,6 +128,7 @@ public struct ManageUserSheet: View {
                     }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle(user.name)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -175,5 +176,8 @@ public struct ManageUserSheet: View {
                 Text("Ce compte sera supprimé de Jellyfin et de Jellyseerr.")
             }
         }
+        #if os(macOS)
+        .frame(minWidth: 500, idealWidth: 540, minHeight: 500)
+        #endif
     }
 }

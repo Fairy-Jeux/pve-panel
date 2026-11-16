@@ -26,15 +26,26 @@ on:
 
 jobs:
   swift-verify:
-    name: Verify Native Swift 6 Package
+    name: Verify & Package Native Swift 6 (macOS + iOS)
     runs-on: macos-15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Compile Swift 6 Package
+      - name: Build & Package macOS App (PVE Center.app)
         working-directory: ios-native
-        run: swift build -c release
+        run: |
+          chmod +x build-macos-app.sh
+          ./build-macos-app.sh
+          mkdir -p dist-macos
+          ditto -c -k --sequesterRsrc --keepParent "build/PVE Center.app" "dist-macos/PVE-Center-macOS.zip"
+
+      - name: Upload macOS App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pve-center-macos-app
+          path: ios-native/dist-macos/PVE-Center-macOS.zip
+          retention-days: 14
 
   build-ios:
     name: Archive & Package iOS (PVE Center)

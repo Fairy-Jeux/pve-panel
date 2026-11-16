@@ -128,6 +128,14 @@ public struct StorageTabView: View {
         }
     }
 
+    private var adaptiveColumns: [GridItem] {
+        #if os(macOS)
+        return [GridItem(.adaptive(minimum: 320), spacing: 12)]
+        #else
+        return [GridItem(.flexible())]
+        #endif
+    }
+
     private func drivesSection(_ drives: [PhysicalDriveInfo]) -> some View {
         let q = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let filtered = drives.filter { drive in
@@ -151,33 +159,35 @@ public struct StorageTabView: View {
                     .font(.caption2.weight(.semibold))
             }
 
-            ForEach(filtered) { drive in
-                GlassCard(padding: 14, cornerRadius: 18) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(drive.label)
-                                    .font(.subheadline.weight(.semibold))
-                                Text("\(drive.model) • \(drive.type) (\(drive.rpm))")
-                                    .font(.caption2)
+            LazyVGrid(columns: adaptiveColumns, spacing: 12) {
+                ForEach(filtered) { drive in
+                    GlassCard(padding: 14, cornerRadius: 18) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(drive.label)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text("\(drive.model) • \(drive.type) (\(drive.rpm))")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                StatusPill(
+                                    "SMART \(drive.health)",
+                                    color: drive.isHealthy ? .green : .red
+                                )
+                            }
+
+                            UsageProgressBar(percentage: drive.usedPct)
+
+                            HStack {
+                                Text("\(ByteFormatters.formatDecimalTB(drive.usedBytes)) / \(ByteFormatters.formatDecimalTB(drive.totalBytes))")
+                                    .font(.caption.weight(.medium).monospacedDigit())
+                                Spacer()
+                                Text("\(drive.devpath) • \(drive.mount)")
+                                    .font(.caption2.monospaced())
                                     .foregroundStyle(.secondary)
                             }
-                            Spacer()
-                            StatusPill(
-                                "SMART \(drive.health)",
-                                color: drive.isHealthy ? .green : .red
-                            )
-                        }
-
-                        UsageProgressBar(percentage: drive.usedPct)
-
-                        HStack {
-                            Text("\(ByteFormatters.formatDecimalTB(drive.usedBytes)) / \(ByteFormatters.formatDecimalTB(drive.totalBytes))")
-                                .font(.caption.weight(.medium).monospacedDigit())
-                            Spacer()
-                            Text("\(drive.devpath) • \(drive.mount)")
-                                .font(.caption2.monospaced())
-                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -191,28 +201,30 @@ public struct StorageTabView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            ForEach(storages) { storage in
-                GlassCard(padding: 14, cornerRadius: 18) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Label(storage.name, systemImage: "internaldrive.fill")
-                                .font(.subheadline.weight(.semibold))
-                            Text(storage.type)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(String(format: "%.1f %%", storage.usedPct))
-                                .font(.caption.weight(.bold).monospacedDigit())
-                        }
-                        UsageProgressBar(percentage: storage.usedPct, tint: .indigo)
-                        HStack {
-                            Text("\(ByteFormatters.formatBytes(storage.usedBytes)) utilisés")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text("Total \(ByteFormatters.formatBytes(storage.totalBytes))")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+            LazyVGrid(columns: adaptiveColumns, spacing: 12) {
+                ForEach(storages) { storage in
+                    GlassCard(padding: 14, cornerRadius: 18) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Label(storage.name, systemImage: "internaldrive.fill")
+                                    .font(.subheadline.weight(.semibold))
+                                Text(storage.type)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(String(format: "%.1f %%", storage.usedPct))
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                            }
+                            UsageProgressBar(percentage: storage.usedPct, tint: .indigo)
+                            HStack {
+                                Text("\(ByteFormatters.formatBytes(storage.usedBytes)) utilisés")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text("Total \(ByteFormatters.formatBytes(storage.totalBytes))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }

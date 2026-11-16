@@ -8,6 +8,14 @@ public struct ServicesTabView: View {
         self.viewModel = viewModel
     }
 
+    private var adaptiveColumns: [GridItem] {
+        #if os(macOS)
+        return [GridItem(.adaptive(minimum: 310), spacing: 14)]
+        #else
+        return [GridItem(.flexible())]
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
@@ -23,8 +31,10 @@ public struct ServicesTabView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        ForEach(category.services) { service in
-                            serviceCard(service)
+                        LazyVGrid(columns: adaptiveColumns, spacing: 14) {
+                            ForEach(category.services) { service in
+                                serviceCard(service)
+                            }
                         }
                     }
                 }

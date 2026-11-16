@@ -40,10 +40,11 @@ flowchart LR
 5. **Gestion unifiée des utilisateurs Jellyfin ↔ Jellyseerr :**
    - Création d'un compte Jellyfin avec réplication immédiate dans Jellyseerr.
    - Édition complète : suspendre/réactiver un compte, limiter le nombre d'écrans simultanés, autoriser/interdire les téléchargements hors-ligne, restreindre l'accès par médiathèque, basculer entre **Auto-approuvé** et **Validation manuelle** sur Jellyseerr, réinitialiser le mot de passe ou supprimer le compte synchronisé *(le compte désigné par `PROTECTED_OWNER_USERNAME` reste verrouillé côté backend)*.
-6. **Interface iPhone Liquid Glass (iOS 26), PWA & App Store (`Capacitor`) :**
-   - Surfaces **Liquid Glass** (`.liquid-glass`, `.liquid-glass-elevated`, barre de navigation flottante iPhone `.liquid-glass-dock`, modales `.ios-sheet`, gestion des `env(safe-area-inset-*)`).
-   - Projet iOS natif généré dans `frontend/ios/` avec `CapacitorHttp` activé, prêt pour Xcode / TestFlight et l’App Store (voir [APPSTORE.md](APPSTORE.md)).
-   - **Mode Démo interactif intégré** (`Serveur / Démo`) simulant l’ensemble des données et actions en mémoire pour tester l’interface ou valider l’App Store Review (Guideline 2.1) sans accès VPN.
+6. **Application Apple Native (iOS & macOS) en Swift 6 / SwiftUI + Interface PWA Liquid Glass :**
+   - Application **100 % native macOS & iPhone / iPad** (`ios-native/PVECenter.xcodeproj`) : barre latérale `NavigationSplitView` et **MenuBarExtra** sur Mac (raccourcis `⌘R`, `⌘L`, `⌘1`–`⌘6`, `⌘,`), `TabView` et haptique Taptic Engine sur iPhone, **Swift Charts**, `.ultraThinMaterial` Light & Dark Mode et acteur `DemoDataStore`.
+   - Compilation directe du bundle Mac signé via `./ios-native/build-macos-app.sh` -> `PVE Center.app`.
+   - Surfaces Web **Liquid Glass** (`.liquid-glass`, `.liquid-glass-elevated`, barre de navigation flottante iPhone `.liquid-glass-dock`, modales `.ios-sheet`, gestion des `env(safe-area-inset-*)`).
+   - Guide complet App Store / macOS dans [APPSTORE.md](APPSTORE.md).
 
 ---
 

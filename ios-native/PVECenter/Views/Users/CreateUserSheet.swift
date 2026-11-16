@@ -80,6 +80,7 @@ public struct CreateUserSheet: View {
                     }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle("Nouvel utilisateur")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -112,5 +113,8 @@ public struct CreateUserSheet: View {
                 }
             }
         }
+        #if os(macOS)
+        .frame(minWidth: 500, idealWidth: 540, minHeight: 460)
+        #endif
     }
 }

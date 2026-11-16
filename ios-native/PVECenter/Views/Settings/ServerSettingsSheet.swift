@@ -94,6 +94,7 @@ public struct ServerSettingsSheet: View {
                     }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle("Serveur & Connexion")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -104,6 +105,9 @@ public struct ServerSettingsSheet: View {
                 }
             }
         }
+        #if os(macOS)
+        .frame(minWidth: 500, idealWidth: 540, minHeight: 460)
+        #endif
     }
 
     private func verifyAndConnect() async {

@@ -18,5 +18,6 @@ frontend/ios/DerivedData/
 *.p12
 *.p8
 ios-native/.build/
+ios-native/build/
 *.xcuserstate
 xcuserdata/
