@@ -28,24 +28,29 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .overview: "Accueil"
-        case .proxmox: "Proxmox"
+        case .overview: "Poste"
+        case .proxmox: "Machines"
         case .storage: "Stockage"
         case .services: "Services"
-        case .operations: "Actions"
+        case .operations: "Activité"
         case .users: "Comptes"
         }
     }
 
     public var systemImage: String {
         switch self {
-        case .overview: "rectangle.grid.2x2.fill"
+        case .overview: "square.grid.2x2.fill"
         case .proxmox: "server.rack"
         case .storage: "internaldrive.fill"
-        case .services: "sparkles.rectangle.stack.fill"
-        case .operations: "bolt.horizontal.circle.fill"
+        case .services: "app.connected.to.app.below.fill"
+        case .operations: "bolt.circle.fill"
         case .users: "person.2.fill"
         }
+    }
+
+    /// 5 onglets maximum en largeur compacte iPhone pour éviter le repli "Plus" (`tab-bars.md`).
+    public static var compactTabs: [AppTab] {
+        [.overview, .proxmox, .storage, .operations, .users]
     }
 }
 

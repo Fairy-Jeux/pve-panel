@@ -1,6 +1,8 @@
 import SwiftUI
 
 public struct AlertsBannerView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     public let alerts: [SmartAlert]
     public let onSelectTab: (AppTab) -> Void
     @State private var isExpanded: Bool = true
@@ -12,9 +14,9 @@ public struct AlertsBannerView: View {
 
     private func color(for severity: SmartAlert.Severity) -> Color {
         switch severity {
-        case .critical: .red
-        case .warning: .orange
-        case .info: .cyan
+        case .critical: DesignTokens.critical(colorScheme)
+        case .warning: DesignTokens.caution(colorScheme)
+        case .info: DesignTokens.signalTeal(colorScheme)
         }
     }
 
@@ -33,11 +35,15 @@ public struct AlertsBannerView: View {
                 ?? .info
             let accent = color(for: topSeverity)
 
-            GlassCard(padding: 14, cornerRadius: 20) {
+            GlassCard(padding: 14, cornerRadius: 18) {
                 VStack(alignment: .leading, spacing: 10) {
                     Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                        if reduceMotion {
                             isExpanded.toggle()
+                        } else {
+                            withAnimation(.spring(response: 0.30, dampingFraction: 0.85)) {
+                                isExpanded.toggle()
+                            }
                         }
                     } label: {
                         HStack(spacing: 10) {
@@ -47,18 +53,20 @@ public struct AlertsBannerView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(alerts.count) point\(alerts.count > 1 ? "s" : "") d'attention")
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                 if !isExpanded, let first = alerts.first {
                                     Text(first.title)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 }
                             }
                             Spacer()
                             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
+                        .frame(minHeight: 36)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
@@ -70,31 +78,34 @@ public struct AlertsBannerView: View {
                                     onSelectTab(alert.targetTab)
                                 } label: {
                                     HStack(spacing: 10) {
-                                        Circle()
-                                            .fill(alertColor)
-                                            .frame(width: 8, height: 8)
+                                        Image(systemName: icon(for: alert.severity))
+                                            .font(.subheadline)
+                                            .foregroundStyle(alertColor)
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(alert.title)
                                                 .font(.caption.weight(.semibold))
-                                                .foregroundStyle(.primary)
+                                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                             Text(alert.subtitle)
                                                 .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(1)
+                                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                                .lineLimit(2)
                                         }
                                         Spacer()
-                                        Image(systemName: "arrow.right.circle.fill")
-                                            .foregroundStyle(alertColor.opacity(0.85))
-                                            .font(.subheadline)
+                                        Image(systemName: "arrow.right")
+                                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                            .font(.caption.weight(.semibold))
                                     }
                                     .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(alertColor.opacity(0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .padding(.vertical, 10)
+                                    .frame(minHeight: 44)
+                                    .background(
+                                        DesignTokens.surfaceElevated(colorScheme),
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    )
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
             }

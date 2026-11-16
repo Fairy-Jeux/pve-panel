@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct OperationsTabView: View {
     public var viewModel: AppViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var scanningTarget: String?
 
     public init(viewModel: AppViewModel) {
@@ -27,9 +28,9 @@ public struct OperationsTabView: View {
     private var quickActionsCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Actions rapides multimédia", systemImage: "bolt.fill")
+                Label("Indexation des médiathèques", systemImage: "bolt.fill")
                     .font(.headline)
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
                 HStack(spacing: 10) {
                     Button {
@@ -39,16 +40,13 @@ public struct OperationsTabView: View {
                             scanningTarget = nil
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                            Text(scanningTarget == "jellyfin" ? "Scan…" : "Scan Jellyfin")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.cyan.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Label(
+                            scanningTarget == "jellyfin" ? "Scan en cours…" : "Scanner Jellyfin",
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 32)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderedProminent)
                     .disabled(scanningTarget != nil)
 
                     Button {
@@ -58,16 +56,13 @@ public struct OperationsTabView: View {
                             scanningTarget = nil
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: "sparkles")
-                            Text(scanningTarget == "plex" ? "Scan…" : "Scan Plex")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.indigo.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Label(
+                            scanningTarget == "plex" ? "Scan en cours…" : "Scanner Plex",
+                            systemImage: "arrow.clockwise"
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 32)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
                     .disabled(scanningTarget != nil)
                 }
             }
@@ -82,33 +77,44 @@ public struct OperationsTabView: View {
                 HStack {
                     Label("Demandes Jellyseerr", systemImage: "film.stack.fill")
                         .font(.headline)
+                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
                     Spacer()
                     if viewModel.pendingRequestsCount > 0 {
-                        StatusPill("\(viewModel.pendingRequestsCount) en attente", color: .orange)
+                        StatusPill(
+                            "\(viewModel.pendingRequestsCount) en attente",
+                            color: DesignTokens.caution(colorScheme),
+                            systemImage: "clock.fill"
+                        )
                     }
                 }
 
                 if requests.isEmpty {
                     Text("Aucune demande récente.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 } else {
                     ForEach(requests) { req in
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Image(systemName: req.mediaType == "tv" ? "tv" : "film")
-                                    .foregroundStyle(.cyan)
+                                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(req.title)
                                         .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                     Text("Demandé par \(req.requestedBy)")
                                         .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 }
                                 Spacer()
                                 StatusPill(
                                     req.statusLabel,
-                                    color: req.status == 1 ? .orange : (req.status == 2 ? .green : .red)
+                                    color: req.status == 1
+                                        ? DesignTokens.caution(colorScheme)
+                                        : (req.status == 2 ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme)),
+                                    systemImage: req.status == 1
+                                        ? "clock.fill"
+                                        : (req.status == 2 ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 )
                             }
 
@@ -117,31 +123,28 @@ public struct OperationsTabView: View {
                                     Button {
                                         Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
                                     } label: {
-                                        Label("Approuver", systemImage: "checkmark.circle.fill")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.green)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 7)
-                                            .background(Color.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        Label("Approuver", systemImage: "checkmark")
+                                            .frame(maxWidth: .infinity, minHeight: 28)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.small)
 
-                                    Button {
+                                    Button(role: .destructive) {
                                         Task { await viewModel.decideSeerrRequest(id: req.id, approve: false) }
                                     } label: {
-                                        Label("Refuser", systemImage: "xmark.circle.fill")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.red)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 7)
-                                            .background(Color.red.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        Label("Refuser", systemImage: "xmark")
+                                            .frame(maxWidth: .infinity, minHeight: 28)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
                                 }
                             }
                         }
                         .padding(10)
-                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(
+                            DesignTokens.surfaceElevated(colorScheme),
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
                     }
                 }
             }
@@ -156,6 +159,7 @@ public struct OperationsTabView: View {
                     HStack {
                         Label("qBittorrent", systemImage: "arrow.down.circle.fill")
                             .font(.headline)
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
                         Spacer()
                         Button {
                             Task { await viewModel.toggleQbitSpeedMode() }
@@ -164,16 +168,10 @@ public struct OperationsTabView: View {
                                 qbit.altSpeedEnabled ? "Tortue ON" : "Vitesse Max",
                                 systemImage: qbit.altSpeedEnabled ? "tortoise.fill" : "hare.fill"
                             )
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(qbit.altSpeedEnabled ? .orange : .green)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                (qbit.altSpeedEnabled ? Color.orange : Color.green).opacity(0.15),
-                                in: Capsule()
-                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
+                        .tint(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
+                        .controlSize(.small)
                     }
 
                     ForEach(qbit.torrents) { torrent in
@@ -182,10 +180,11 @@ public struct OperationsTabView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(torrent.name)
                                         .font(.caption.weight(.semibold))
+                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                         .lineLimit(1)
                                     Text("\(String(format: "%.1f %%", torrent.progressPct)) • ↓ \(ByteFormatters.formatSpeed(torrent.dlspeed)) • ↑ \(ByteFormatters.formatSpeed(torrent.upspeed)) • ETA \(ByteFormatters.formatETA(torrent.eta))")
-                                        .font(.caption2.monospacedDigit())
-                                        .foregroundStyle(.secondary)
+                                        .font(.system(.caption2, design: .monospaced))
+                                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 }
                                 Spacer()
                                 Button {
@@ -196,16 +195,26 @@ public struct OperationsTabView: View {
                                         )
                                     }
                                 } label: {
-                                    Image(systemName: torrent.isPaused ? "play.circle.fill" : "pause.circle.fill")
-                                        .font(.title2)
-                                        .foregroundStyle(torrent.isPaused ? .green : .orange)
+                                    Label(
+                                        torrent.isPaused ? "Reprendre" : "Pause",
+                                        systemImage: torrent.isPaused ? "play.fill" : "pause.fill"
+                                    )
+                                    .labelStyle(.iconOnly)
+                                    .frame(minWidth: 32, minHeight: 32)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
                             }
-                            UsageProgressBar(percentage: torrent.progressPct, tint: torrent.isPaused ? .orange : .cyan)
+                            UsageProgressBar(
+                                percentage: torrent.progressPct,
+                                tint: torrent.isPaused ? DesignTokens.caution(colorScheme) : DesignTokens.signalTeal(colorScheme)
+                            )
                         }
                         .padding(10)
-                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(
+                            DesignTokens.surfaceElevated(colorScheme),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        )
                     }
                 }
             }
@@ -219,28 +228,30 @@ public struct OperationsTabView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Journal des tâches Proxmox", systemImage: "list.bullet.clipboard.fill")
                     .font(.headline)
+                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
                 if tasks.isEmpty {
                     Text("Aucune tâche récente.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 } else {
                     ForEach(tasks.prefix(8)) { task in
                         HStack {
-                            Image(systemName: task.isSuccess ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                                .foregroundStyle(task.isSuccess ? .green : .orange)
+                            Image(systemName: task.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundStyle(task.isSuccess ? DesignTokens.nominal(colorScheme) : DesignTokens.caution(colorScheme))
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("\(task.type.uppercased()) \(task.vmid.isEmpty ? "" : "#\(task.vmid)")")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                 Text("\(task.user) • \(ByteFormatters.formatTimestamp(task.starttime))")
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             }
                             Spacer()
                             if let sec = task.durationSec {
                                 Text("\(sec)s")
-                                    .font(.caption2.monospacedDigit())
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             }
                         }
                         .padding(.vertical, 3)

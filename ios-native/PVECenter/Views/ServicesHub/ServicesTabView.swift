@@ -3,6 +3,7 @@ import SwiftUI
 public struct ServicesTabView: View {
     public var viewModel: AppViewModel
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
@@ -24,11 +25,11 @@ public struct ServicesTabView: View {
                         HStack {
                             Text(category.name)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Spacer()
                             Text("\(category.services.filter(\.online).count)/\(category.services.count) en ligne")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
 
                         LazyVGrid(columns: adaptiveColumns, spacing: 14) {
@@ -72,32 +73,41 @@ public struct ServicesTabView: View {
     }
 
     private func serviceCard(_ service: ServiceItem) -> some View {
-        GlassCard(padding: 14, cornerRadius: 20) {
+        let teal = DesignTokens.signalTeal(colorScheme)
+        let nominal = DesignTokens.nominal(colorScheme)
+        let critical = DesignTokens.critical(colorScheme)
+
+        return GlassCard(padding: 14, cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: sfSymbol(for: service.icon))
                         .font(.title3)
-                        .foregroundStyle(service.online ? .cyan : .red)
+                        .foregroundStyle(service.online ? teal : critical)
                         .frame(width: 40, height: 40)
                         .background(
-                            (service.online ? Color.cyan : Color.red).opacity(0.13),
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            DesignTokens.surfaceElevated(colorScheme),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
                             Text(service.name)
                                 .font(.headline)
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
                             Spacer()
                             if let latency = service.latencyMs, service.online {
-                                StatusPill(String(format: "%.0f ms", latency), color: .green)
+                                StatusPill(String(format: "%.0f ms", latency), color: nominal, systemImage: "checkmark.circle.fill")
                             } else {
-                                StatusPill(service.online ? "En ligne" : "Hors ligne", color: service.online ? .green : .red)
+                                StatusPill(
+                                    service.online ? "En ligne" : "Hors ligne",
+                                    color: service.online ? nominal : critical,
+                                    systemImage: service.online ? "checkmark.circle.fill" : "xmark.octagon.fill"
+                                )
                             }
                         }
                         Text(service.description)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             .lineLimit(2)
                     }
                 }
@@ -111,18 +121,15 @@ public struct ServicesTabView: View {
                         openURL(url)
                     } label: {
                         HStack {
-                            Text("Ouvrir l'interface web")
+                            Label("Ouvrir l'interface web", systemImage: "safari")
                                 .font(.caption.weight(.semibold))
                             Spacer()
                             Image(systemName: "arrow.up.right")
                                 .font(.caption.weight(.semibold))
                         }
-                        .foregroundStyle(.cyan)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.cyan.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(maxWidth: .infinity, minHeight: 28)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
                 }
             }
         }
@@ -133,7 +140,7 @@ public struct ServicesTabView: View {
         switch key {
         case "jellyfin":
             if let jf = viewModel.widgets?.jellyfin {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     miniStat("Flux", "\(jf.activeStreamsCount ?? 0)")
                     miniStat("Films", "\(jf.moviesCount ?? 0)")
                     miniStat("Séries", "\(jf.seriesCount ?? 0)")
@@ -141,14 +148,14 @@ public struct ServicesTabView: View {
             }
         case "plex":
             if let plex = viewModel.widgets?.plex {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     miniStat("Flux", "\(plex.activeStreamsCount ?? 0)")
                     miniStat("Librairies", "\(plex.librariesCount ?? 0)")
                 }
             }
         case "radarr":
             if let radarr = viewModel.widgets?.radarr {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     miniStat("Films", "\(radarr.moviesDownloaded ?? 0)/\(radarr.moviesTotal ?? 0)")
                     miniStat("File", "\(radarr.queueCount ?? 0)")
                     miniStat("Manquants", "\(radarr.moviesMissing ?? 0)")
@@ -156,7 +163,7 @@ public struct ServicesTabView: View {
             }
         case "sonarr":
             if let sonarr = viewModel.widgets?.sonarr {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     miniStat("Séries", "\(sonarr.seriesTotal ?? 0)")
                     miniStat("Épisodes", "\(sonarr.episodesDownloaded ?? 0)")
                     miniStat("File", "\(sonarr.queueCount ?? 0)")
@@ -164,14 +171,14 @@ public struct ServicesTabView: View {
             }
         case "prowlarr":
             if let prowlarr = viewModel.widgets?.prowlarr {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     miniStat("Indexeurs", "\(prowlarr.indexersEnabled ?? 0)/\(prowlarr.indexersTotal ?? 0)")
                     miniStat("Grabs", "\(prowlarr.grabs ?? 0)")
                 }
             }
         case "qbittorrent":
             if let qbit = viewModel.widgets?.qbittorrent {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     miniStat("DL", ByteFormatters.formatSpeed(qbit.dlSpeedBytes))
                     miniStat("UP", ByteFormatters.formatSpeed(qbit.upSpeedBytes))
                     miniStat("Torrents", "\(qbit.torrentsTotal ?? 0)")
@@ -186,12 +193,13 @@ public struct ServicesTabView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
             Text(value)
-                .font(.caption.weight(.semibold).monospacedDigit())
+                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                .foregroundStyle(DesignTokens.primaryText(colorScheme))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(DesignTokens.surfaceElevated(colorScheme), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }

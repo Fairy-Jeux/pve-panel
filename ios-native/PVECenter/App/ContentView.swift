@@ -2,6 +2,8 @@ import SwiftUI
 
 public struct ContentView: View {
     @Bindable var viewModel: AppViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
@@ -12,7 +14,7 @@ public struct ContentView: View {
             #if os(macOS)
             macOSBody
             #else
-            iOSBody
+            adaptiveAppleBody
             #endif
 
             if let toast = viewModel.toast {
@@ -21,7 +23,10 @@ public struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.toast?.id)
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
+            value: viewModel.toast?.id
+        )
         .sheet(isPresented: $viewModel.showServerSettings) {
             ServerSettingsSheet(viewModel: viewModel)
         }
@@ -40,7 +45,7 @@ public struct ContentView: View {
         #endif
     }
 
-    // MARK: - macOS Native Split View Layout
+    // MARK: - macOS Native Split View (`sidebars.md` & `designing-for-macos.md`)
 
     #if os(macOS)
     private var sidebarSelectionBinding: Binding<AppTab?> {
@@ -65,17 +70,14 @@ public struct ContentView: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 210, ideal: 235, max: 275)
-            .safeAreaInset(edge: .bottom) {
-                sidebarFooter
-            }
+            .navigationSplitViewColumnWidth(min: 205, ideal: 230, max: 270)
         } detail: {
             NavigationStack {
                 ZStack {
                     AmbientBackgroundView()
                     activeTabContent(for: viewModel.selectedTab)
                 }
-                .navigationTitle(viewModel.selectedTab == .overview ? "PVE Center" : viewModel.selectedTab.title)
+                .navigationTitle(viewModel.selectedTab.title)
                 .searchable(
                     text: $viewModel.searchText,
                     placement: .toolbar,
@@ -86,88 +88,79 @@ public struct ContentView: View {
                 }
             }
         }
-        .tint(.cyan)
     }
 
     private func sidebarRow(for tab: AppTab, badge: Int = 0) -> some View {
-        Label {
-            HStack {
-                Text(tab.title)
-                if badge > 0 {
-                    Spacer()
-                    Text("\(badge)")
-                        .font(.caption2.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.orange, in: Capsule())
-                }
-            }
-        } icon: {
-            Image(systemName: tab.systemImage)
-                .foregroundStyle(.cyan)
-        }
-        .tag(tab)
-    }
-
-    private var sidebarFooter: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Divider()
-            HStack(spacing: 8) {
-                StatusPill(
-                    viewModel.isDemoMode ? "Mode Démo" : (viewModel.user != nil ? "Tailscale SSO" : "Hors ligne"),
-                    color: viewModel.isDemoMode ? .indigo : (viewModel.user != nil ? .green : .orange),
-                    systemImage: viewModel.isDemoMode ? "sparkles" : "lock.shield.fill"
-                )
-                Spacer()
-                Button {
-                    viewModel.showServerSettings = true
-                } label: {
-                    Image(systemName: "gearshape.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Connexion Serveur & Mode Démo")
-            }
-
-            if let last = viewModel.lastUpdated {
-                Text("MàJ \(last.formatted(date: .omitted, time: .standard))")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.bottom, 12)
-        .background(.ultraThinMaterial)
+        Label(tab.title, systemImage: tab.systemImage)
+            .badge(badge)
+            .tag(tab)
     }
     #endif
 
-    // MARK: - iOS Native TabView Layout
+    // MARK: - iOS / iPadOS Size-Class Adaptive Layout (`layout.md` & `tab-bars.md`)
 
     #if !os(macOS)
-    private var iOSBody: some View {
-        TabView(selection: $viewModel.selectedTab) {
-            tabScreen(for: .overview) {
-                OverviewTabView(viewModel: viewModel)
+    @ViewBuilder
+    private var adaptiveAppleBody: some View {
+        if horizontalSizeClass == .regular {
+            NavigationSplitView {
+                List(selection: Binding(
+                    get: { Optional(viewModel.selectedTab) },
+                    set: { if let v = $0 { viewModel.selectedTab = v } }
+                )) {
+                    Section("Supervision") {
+                        Label(AppTab.overview.title, systemImage: AppTab.overview.systemImage).tag(AppTab.overview)
+                        Label(AppTab.proxmox.title, systemImage: AppTab.proxmox.systemImage).tag(AppTab.proxmox)
+                        Label(AppTab.storage.title, systemImage: AppTab.storage.systemImage).tag(AppTab.storage)
+                        Label(AppTab.services.title, systemImage: AppTab.services.systemImage).tag(AppTab.services)
+                    }
+                    Section("Administration") {
+                        Label(AppTab.operations.title, systemImage: AppTab.operations.systemImage)
+                            .badge(viewModel.pendingRequestsCount)
+                            .tag(AppTab.operations)
+                        Label(AppTab.users.title, systemImage: AppTab.users.systemImage).tag(AppTab.users)
+                    }
+                }
+                .listStyle(.sidebar)
+                .navigationTitle("PVE Center")
+            } detail: {
+                NavigationStack {
+                    ZStack {
+                        AmbientBackgroundView()
+                        activeTabContent(for: viewModel.selectedTab)
+                    }
+                    .navigationTitle(viewModel.selectedTab.title)
+                    .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
+                    .toolbar {
+                        commonToolbarItems
+                    }
+                }
             }
-            tabScreen(for: .proxmox) {
-                ProxmoxTabView(viewModel: viewModel)
+        } else {
+            // Compact iPhone: exactement 5 onglets sans débordement "Plus" (`tab-bars.md`)
+            TabView(selection: compactTabBinding) {
+                ForEach(AppTab.compactTabs) { tab in
+                    tabScreen(
+                        for: tab,
+                        badge: tab == .operations ? viewModel.pendingRequestsCount : 0
+                    ) {
+                        activeTabContent(for: tab)
+                    }
+                }
             }
-            tabScreen(for: .storage) {
-                StorageTabView(viewModel: viewModel)
-            }
-            tabScreen(for: .services) {
-                ServicesTabView(viewModel: viewModel)
-            }
-            tabScreen(for: .operations, badge: viewModel.pendingRequestsCount) {
-                OperationsTabView(viewModel: viewModel)
-            }
-            tabScreen(for: .users) {
-                UsersTabView(viewModel: viewModel)
-            }
+            .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
         }
-        .tint(.cyan)
-        .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
+    }
+
+    private var compactTabBinding: Binding<AppTab> {
+        Binding(
+            get: {
+                viewModel.selectedTab == .services ? .overview : viewModel.selectedTab
+            },
+            set: { newValue in
+                viewModel.selectedTab = newValue
+            }
+        )
     }
 
     @ViewBuilder
@@ -181,7 +174,7 @@ public struct ContentView: View {
                 AmbientBackgroundView()
                 content()
             }
-            .navigationTitle(tab == .overview ? "PVE Center" : tab.title)
+            .navigationTitle(tab.title)
             .toolbar {
                 commonToolbarItems
             }
@@ -194,7 +187,7 @@ public struct ContentView: View {
     }
     #endif
 
-    // MARK: - Shared Views & Toolbar
+    // MARK: - Shared Content & Compliant Toolbar (`toolbars.md` & `code-audit.md`)
 
     @ViewBuilder
     private func activeTabContent(for tab: AppTab) -> some View {
@@ -226,8 +219,7 @@ public struct ContentView: View {
                     systemImage: viewModel.autoRefresh ? "pause.circle.fill" : "play.circle"
                 )
             }
-            .tint(viewModel.autoRefresh ? .green : .secondary)
-            .help("Activer/désactiver l'actualisation automatique (⌘L)")
+            .help("Activer ou suspendre l'actualisation automatique (⌘L)")
         }
         #endif
 
@@ -235,10 +227,12 @@ public struct ContentView: View {
             Button {
                 viewModel.showServerSettings = true
             } label: {
-                Image(systemName: viewModel.isDemoMode ? "sparkles" : "server.rack")
-                    .symbolRenderingMode(.hierarchical)
+                Label(
+                    viewModel.isDemoMode ? "Mode Démo" : "Serveur",
+                    systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
+                )
             }
-            .accessibilityLabel("Connexion Serveur et Mode Démo")
+            .help("Configurer le serveur Tailscale Serve ou le Mode Démo (⌘;)")
         }
 
         ToolbarItem(placement: .automatic) {
@@ -246,15 +240,13 @@ public struct ContentView: View {
                 Task { await viewModel.refreshAll(silent: false) }
             } label: {
                 if viewModel.isRefreshing {
-                    ProgressView()
-                        #if os(macOS)
-                        .controlSize(.small)
-                        #endif
+                    Label("Synchronisation…", systemImage: "arrow.clockwise")
                 } else {
-                    Image(systemName: "arrow.clockwise")
+                    Label("Rafraîchir", systemImage: "arrow.clockwise")
                 }
             }
-            .accessibilityLabel("Rafraîchir")
+            .disabled(viewModel.isRefreshing)
+            .help("Rafraîchir toutes les données maintenant (⌘R)")
         }
     }
 }

@@ -11,6 +11,7 @@ private enum UserFilter: String, CaseIterable, Identifiable {
 
 public struct UsersTabView: View {
     public var viewModel: AppViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var filter: UserFilter = .all
     @State private var showCreateSheet = false
     @State private var selectedUser: UnifiedUser?
@@ -49,28 +50,12 @@ public struct UsersTabView: View {
             LazyVStack(spacing: 14) {
                 headerActionsCard
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(UserFilter.allCases) { item in
-                            Button {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
-                                    filter = item
-                                }
-                            } label: {
-                                Text(item.rawValue)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(filter == item ? .white : .primary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        filter == item ? Color.cyan : Color.primary.opacity(0.08),
-                                        in: Capsule()
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
+                Picker("Filtre des comptes", selection: $filter) {
+                    ForEach(UserFilter.allCases) { item in
+                        Text(item.rawValue).tag(item)
                     }
                 }
+                .pickerStyle(.segmented)
 
                 LazyVGrid(columns: adaptiveColumns, spacing: 12) {
                     ForEach(displayedUsers) { user in
@@ -111,22 +96,20 @@ public struct UsersTabView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Jellyfin ↔ Jellyseerr")
                             .font(.headline)
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
                         Text("\(counts?.totalJellyfin ?? 0) comptes • \(counts?.syncedJellyseerr ?? 0) synchronisés")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     }
                     Spacer()
                     Button {
                         showCreateSheet = true
                     } label: {
                         Label("Créer", systemImage: "person.badge.plus")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.cyan.gradient, in: Capsule())
+                            .frame(minHeight: 28)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
 
                 if let unsynced = counts?.unsyncedCount, unsynced > 0 {
@@ -145,12 +128,9 @@ public struct UsersTabView: View {
                             Image(systemName: "chevron.right")
                                 .font(.caption2)
                         }
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(maxWidth: .infinity, minHeight: 30)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
                     .disabled(isSyncing)
                 }
             }
@@ -158,56 +138,63 @@ public struct UsersTabView: View {
     }
 
     private func userRow(_ user: UnifiedUser) -> some View {
-        Button {
+        let teal = DesignTokens.signalTeal(colorScheme)
+        let critical = DesignTokens.critical(colorScheme)
+        let nominal = DesignTokens.nominal(colorScheme)
+        let caution = DesignTokens.caution(colorScheme)
+
+        return Button {
             selectedUser = user
         } label: {
-            GlassCard(padding: 14, cornerRadius: 18) {
+            GlassCard(padding: 14, cornerRadius: 16) {
                 HStack(spacing: 12) {
                     Text(String(user.name.prefix(2)).uppercased())
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(user.isDisabled ? .red : (user.isAdmin ? .cyan : .primary))
+                        .font(.system(.subheadline, design: .monospaced, weight: .bold))
+                        .foregroundStyle(user.isDisabled ? critical : (user.isAdmin ? teal : DesignTokens.primaryText(colorScheme)))
                         .frame(width: 40, height: 40)
                         .background(
-                            (user.isDisabled ? Color.red : (user.isAdmin ? Color.cyan : Color.secondary)).opacity(0.14),
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            DesignTokens.surfaceElevated(colorScheme),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
                             Text(user.name)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
                             if user.isProtected == true {
                                 Image(systemName: "shield.checkmark.fill")
                                     .font(.caption2)
-                                    .foregroundStyle(.indigo)
+                                    .foregroundStyle(teal)
+                                    .accessibilityLabel("Compte propriétaire protégé")
                             }
                             if user.isAdmin {
-                                StatusPill("Admin", color: .cyan)
+                                StatusPill("Admin", color: teal, systemImage: "crown.fill")
                             }
                             if user.isDisabled {
-                                StatusPill("Suspendu", color: .red)
+                                StatusPill("Suspendu", color: critical, systemImage: "nosign")
                             }
                         }
 
                         HStack(spacing: 8) {
                             Text(user.inJellyseerr ? "Jellyseerr: \(user.autoApprove ? "Auto" : "Manuel")" : "Non importé")
                                 .font(.caption2)
-                                .foregroundStyle(user.inJellyseerr ? .green : .orange)
+                                .foregroundStyle(user.inJellyseerr ? nominal : caution)
                             Text("•")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text("Activité: \(ByteFormatters.formatRelativeISO(user.lastActivity))")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
                     }
 
                     Spacer()
 
                     Image(systemName: "slider.horizontal.3")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .font(.subheadline)
                 }
+                .frame(minHeight: 44)
             }
         }
         .buttonStyle(.plain)

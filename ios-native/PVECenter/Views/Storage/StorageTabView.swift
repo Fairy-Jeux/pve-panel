@@ -10,10 +10,19 @@ private struct PoolSlice: Identifiable {
 
 public struct StorageTabView: View {
     public var viewModel: AppViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showHealthyOnly = false
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
+    }
+
+    private var adaptiveColumns: [GridItem] {
+        #if os(macOS)
+        return [GridItem(.adaptive(minimum: 320), spacing: 12)]
+        #else
+        return [GridItem(.flexible())]
+        #endif
     }
 
     public var body: some View {
@@ -42,11 +51,13 @@ public struct StorageTabView: View {
     }
 
     private func poolChartCard(_ pool: MergerfsPoolInfo) -> some View {
+        let teal = DesignTokens.signalTeal(colorScheme)
+        let usedColor = pool.usedPct >= 85 ? DesignTokens.caution(colorScheme) : teal
         let used = max(0, Double(pool.usedBytes))
         let avail = max(0, Double(pool.availBytes))
         let slices: [PoolSlice] = [
-            PoolSlice(id: "used", label: "Utilisé", bytes: used, color: pool.usedPct >= 85 ? .orange : .cyan),
-            PoolSlice(id: "avail", label: "Disponible", bytes: avail, color: .secondary.opacity(0.28)),
+            PoolSlice(id: "used", label: "Utilisé", bytes: used, color: usedColor),
+            PoolSlice(id: "avail", label: "Disponible", bytes: avail, color: DesignTokens.surfaceElevated(colorScheme)),
         ]
 
         return GlassCard {
@@ -55,12 +66,17 @@ public struct StorageTabView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Label(pool.name, systemImage: "square.stack.3d.up.fill")
                             .font(.headline)
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
                         Text("\(pool.fstype) • \(pool.policy) • \(pool.drivesCount) disques")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     }
                     Spacer()
-                    StatusPill(pool.available ? "Monté" : "Indisponible", color: pool.available ? .green : .red)
+                    StatusPill(
+                        pool.available ? "Monté" : "Indisponible",
+                        color: pool.available ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme),
+                        systemImage: pool.available ? "checkmark.circle.fill" : "xmark.octagon.fill"
+                    )
                 }
 
                 HStack(spacing: 18) {
@@ -68,7 +84,7 @@ public struct StorageTabView: View {
                         Chart(slices) { slice in
                             SectorMark(
                                 angle: .value("Octets", slice.bytes),
-                                innerRadius: .ratio(0.66),
+                                innerRadius: .ratio(0.68),
                                 angularInset: 2
                             )
                             .foregroundStyle(slice.color)
@@ -78,17 +94,18 @@ public struct StorageTabView: View {
 
                         VStack(spacing: 1) {
                             Text(String(format: "%.0f %%", pool.usedPct))
-                                .font(.title3.weight(.bold).monospacedDigit())
+                                .font(.system(.title3, design: .monospaced, weight: .bold))
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
                             Text("occupé")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        detailMetric(title: "Capacité totale", value: ByteFormatters.formatDecimalTB(pool.totalBytes), color: .primary)
-                        detailMetric(title: "Espace utilisé", value: ByteFormatters.formatDecimalTB(pool.usedBytes), color: .cyan)
-                        detailMetric(title: "Espace libre", value: ByteFormatters.formatDecimalTB(pool.availBytes), color: .green)
+                        detailMetric(title: "Capacité totale", value: ByteFormatters.formatDecimalTB(pool.totalBytes), color: DesignTokens.primaryText(colorScheme))
+                        detailMetric(title: "Espace utilisé", value: ByteFormatters.formatDecimalTB(pool.usedBytes), color: usedColor)
+                        detailMetric(title: "Espace libre", value: ByteFormatters.formatDecimalTB(pool.availBytes), color: DesignTokens.nominal(colorScheme))
                     }
                     Spacer()
                 }
@@ -100,40 +117,38 @@ public struct StorageTabView: View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
             Text(value)
-                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .font(.system(.subheadline, design: .monospaced, weight: .semibold))
                 .foregroundStyle(color)
         }
     }
 
     private func systemSsdCard(_ ssd: SystemSsdInfo) -> some View {
-        GlassCard(padding: 14, cornerRadius: 18) {
+        let passed = ssd.health.uppercased() == "PASSED"
+        return GlassCard(padding: 14, cornerRadius: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "memorychip.fill")
                     .font(.title2)
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
                     .frame(width: 40, height: 40)
-                    .background(Color.indigo.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(DesignTokens.surfaceElevated(colorScheme), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("SSD Système Proxmox")
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
                     Text("\(ssd.model) • \(ssd.devpath) • \(ByteFormatters.formatBytes(ssd.sizeBytes))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 }
                 Spacer()
-                StatusPill(ssd.health, color: ssd.health.uppercased() == "PASSED" ? .green : .orange)
+                StatusPill(
+                    ssd.health,
+                    color: passed ? DesignTokens.nominal(colorScheme) : DesignTokens.caution(colorScheme),
+                    systemImage: passed ? "checkmark.shield.fill" : "exclamationmark.triangle.fill"
+                )
             }
         }
-    }
-
-    private var adaptiveColumns: [GridItem] {
-        #if os(macOS)
-        return [GridItem(.adaptive(minimum: 320), spacing: 12)]
-        #else
-        return [GridItem(.flexible())]
-        #endif
     }
 
     private func drivesSection(_ drives: [PhysicalDriveInfo]) -> some View {
@@ -152,29 +167,36 @@ public struct StorageTabView: View {
             HStack {
                 Text("Disques physiques (\(filtered.count))")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 Spacer()
-                Toggle("Sains", isOn: $showHealthyOnly)
+                Toggle("Sains uniquement", isOn: $showHealthyOnly)
                     .toggleStyle(.button)
-                    .font(.caption2.weight(.semibold))
+                    .controlSize(.small)
             }
 
             LazyVGrid(columns: adaptiveColumns, spacing: 12) {
-                ForEach(filtered) { drive in
-                    GlassCard(padding: 14, cornerRadius: 18) {
+                ForEach(Array(filtered.enumerated()), id: \.element.id) { idx, drive in
+                    GlassCard(padding: 14, cornerRadius: 16) {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(drive.label)
-                                        .font(.subheadline.weight(.semibold))
+                                    HStack(spacing: 6) {
+                                        Text(String(format: "BAY %02d", idx + 1))
+                                            .font(.system(.caption2, design: .monospaced, weight: .bold))
+                                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                        Text(drive.label)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    }
                                     Text("\(drive.model) • \(drive.type) (\(drive.rpm))")
                                         .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 }
                                 Spacer()
                                 StatusPill(
                                     "SMART \(drive.health)",
-                                    color: drive.isHealthy ? .green : .red
+                                    color: drive.isHealthy ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme),
+                                    systemImage: drive.isHealthy ? "checkmark.circle.fill" : "exclamationmark.octagon.fill"
                                 )
                             }
 
@@ -182,11 +204,12 @@ public struct StorageTabView: View {
 
                             HStack {
                                 Text("\(ByteFormatters.formatDecimalTB(drive.usedBytes)) / \(ByteFormatters.formatDecimalTB(drive.totalBytes))")
-                                    .font(.caption.weight(.medium).monospacedDigit())
+                                    .font(.system(.caption, design: .monospaced, weight: .medium))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                 Spacer()
                                 Text("\(drive.devpath) • \(drive.mount)")
-                                    .font(.caption2.monospaced())
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             }
                         }
                     }
@@ -199,31 +222,33 @@ public struct StorageTabView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Datastores Proxmox VE")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
 
             LazyVGrid(columns: adaptiveColumns, spacing: 12) {
                 ForEach(storages) { storage in
-                    GlassCard(padding: 14, cornerRadius: 18) {
+                    GlassCard(padding: 14, cornerRadius: 16) {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Label(storage.name, systemImage: "internaldrive.fill")
                                     .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                 Text(storage.type)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 Spacer()
                                 Text(String(format: "%.1f %%", storage.usedPct))
-                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .font(.system(.caption, design: .monospaced, weight: .bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
                             }
-                            UsageProgressBar(percentage: storage.usedPct, tint: .indigo)
+                            UsageProgressBar(percentage: storage.usedPct, tint: DesignTokens.signalTeal(colorScheme))
                             HStack {
                                 Text("\(ByteFormatters.formatBytes(storage.usedBytes)) utilisés")
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 Spacer()
                                 Text("Total \(ByteFormatters.formatBytes(storage.totalBytes))")
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             }
                         }
                     }

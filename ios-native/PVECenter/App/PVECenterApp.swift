@@ -64,8 +64,13 @@ public struct PVECenterApp: App {
 private struct MenuBarPanelView: View {
     var viewModel: AppViewModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let teal = DesignTokens.signalTeal(colorScheme)
+        let nominal = DesignTokens.nominal(colorScheme)
+        let caution = DesignTokens.caution(colorScheme)
+
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Label("PVE Center", systemImage: "server.rack")
@@ -73,7 +78,8 @@ private struct MenuBarPanelView: View {
                 Spacer()
                 StatusPill(
                     viewModel.isDemoMode ? "Mode Démo" : (viewModel.pveOverview?.online == true ? "En ligne" : "Hors ligne"),
-                    color: viewModel.isDemoMode ? .indigo : (viewModel.pveOverview?.online == true ? .green : .orange)
+                    color: viewModel.isDemoMode ? teal : (viewModel.pveOverview?.online == true ? nominal : caution),
+                    systemImage: viewModel.isDemoMode ? "sparkles" : (viewModel.pveOverview?.online == true ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 )
             }
 
@@ -84,26 +90,26 @@ private struct MenuBarPanelView: View {
                     HStack {
                         Text("Nœud \(node.name)")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         Spacer()
                         Text("\(viewModel.pveOverview?.counts.running ?? 0)/\(viewModel.pveOverview?.counts.total ?? 0) actifs")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     }
                     HStack {
                         Text("CPU \(String(format: "%.1f %%", node.cpuPct))")
-                            .font(.caption.monospacedDigit())
+                            .font(.system(.caption, design: .monospaced))
                         Spacer()
                         Text("RAM \(String(format: "%.0f %%", node.memPct))")
-                            .font(.caption.monospacedDigit())
+                            .font(.system(.caption, design: .monospaced))
                     }
-                    UsageProgressBar(percentage: node.cpuPct, tint: .cyan)
-                    UsageProgressBar(percentage: node.memPct, tint: .indigo)
+                    UsageProgressBar(percentage: node.cpuPct, tint: teal)
+                    UsageProgressBar(percentage: node.memPct, tint: DesignTokens.secondaryText(colorScheme))
                 }
             } else {
                 Text("Aucune télémétrie chargée. Ouvrez la fenêtre principale ou activez le Mode Démo.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
             }
 
             if let pool = viewModel.pveOverview?.externalStorage?.pool {
@@ -113,8 +119,8 @@ private struct MenuBarPanelView: View {
                         .lineLimit(1)
                     Spacer()
                     Text("\(ByteFormatters.formatDecimalTB(pool.usedBytes)) / \(ByteFormatters.formatDecimalTB(pool.totalBytes))")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 }
             }
 
@@ -124,8 +130,8 @@ private struct MenuBarPanelView: View {
                         .font(.caption)
                     Spacer()
                     Text("↓ \(ByteFormatters.formatSpeed(qbit.dlSpeedBytes))  ↑ \(ByteFormatters.formatSpeed(qbit.upSpeedBytes))")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 }
             }
 
@@ -133,7 +139,7 @@ private struct MenuBarPanelView: View {
                 HStack {
                     Label("Jellyfin", systemImage: "play.tv.fill")
                         .font(.caption)
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(teal)
                     Spacer()
                     Text("\(streams) flux actif\(streams > 1 ? "s" : "")")
                         .font(.caption2.weight(.semibold))
@@ -166,12 +172,12 @@ private struct MenuBarPanelView: View {
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.cyan)
 
                 Button {
                     NSApplication.shared.terminate(nil)
                 } label: {
-                    Image(systemName: "power")
+                    Label("Quitter", systemImage: "power")
+                        .labelStyle(.iconOnly)
                 }
                 .help("Quitter PVE Center")
             }

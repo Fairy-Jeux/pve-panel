@@ -17,9 +17,9 @@ private struct PendingPowerCommand: Identifiable {
 
 public struct ProxmoxTabView: View {
     public var viewModel: AppViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var filter: ResourceFilter = .all
     @State private var pendingCommand: PendingPowerCommand?
-    @Namespace private var filterNamespace
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
@@ -51,7 +51,12 @@ public struct ProxmoxTabView: View {
                     nodeOverviewCard(node)
                 }
 
-                filterBar
+                Picker("Filtre des ressources", selection: $filter) {
+                    ForEach(ResourceFilter.allCases) { item in
+                        Text(item.rawValue).tag(item)
+                    }
+                }
+                .pickerStyle(.segmented)
 
                 LazyVGrid(columns: adaptiveColumns, spacing: 14) {
                     ForEach(displayedResources) { resource in
@@ -102,18 +107,21 @@ public struct ProxmoxTabView: View {
     }
 
     private func nodeOverviewCard(_ node: NodeSummary) -> some View {
-        GlassCard {
+        let teal = DesignTokens.signalTeal(colorScheme)
+
+        return GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(node.name)
                             .font(.headline)
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
                         Text("PVE \(node.pveVersion) • Uptime \(node.uptimeHuman)")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     }
                     Spacer()
-                    StatusPill("CPU \(Int(node.cpuPct)) %", color: .cyan, systemImage: "cpu")
+                    StatusPill("CPU \(Int(node.cpuPct)) %", color: teal, systemImage: "cpu")
                 }
 
                 VStack(spacing: 10) {
@@ -121,13 +129,13 @@ public struct ProxmoxTabView: View {
                         label: "Processeur",
                         value: String(format: "%.1f %% (%d vCPU)", node.cpuPct, node.cpuThreads),
                         pct: node.cpuPct,
-                        tint: .cyan
+                        tint: teal
                     )
                     metricRow(
                         label: "Mémoire RAM",
                         value: "\(ByteFormatters.formatBytes(node.memUsedBytes)) / \(ByteFormatters.formatBytes(node.memTotalBytes))",
                         pct: node.memPct,
-                        tint: .indigo
+                        tint: DesignTokens.secondaryText(colorScheme)
                     )
                     let rootPct = node.rootfsTotalBytes > 0
                         ? (Double(node.rootfsUsedBytes) / Double(node.rootfsTotalBytes)) * 100
@@ -136,7 +144,7 @@ public struct ProxmoxTabView: View {
                         label: "Disque RootFS",
                         value: "\(ByteFormatters.formatBytes(node.rootfsUsedBytes)) / \(ByteFormatters.formatBytes(node.rootfsTotalBytes))",
                         pct: rootPct,
-                        tint: .mint
+                        tint: DesignTokens.nominal(colorScheme)
                     )
                 }
             }
@@ -148,55 +156,29 @@ public struct ProxmoxTabView: View {
             HStack {
                 Text(label)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 Spacer()
                 Text(value)
-                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
             }
             UsageProgressBar(percentage: pct, tint: tint)
         }
     }
 
-    private var filterBar: some View {
-        HStack(spacing: 6) {
-            ForEach(ResourceFilter.allCases) { item in
-                let selected = filter == item
-                Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
-                        filter = item
-                    }
-                } label: {
-                    Text(item.rawValue)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(selected ? .primary : .secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background {
-                            if selected {
-                                Capsule()
-                                    .fill(.regularMaterial)
-                                    .matchedGeometryEffect(id: "pveFilterPill", in: filterNamespace)
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-        }
-        .padding(4)
-        .background(.ultraThinMaterial, in: Capsule())
-    }
-
     private func resourceCard(_ res: PveResource) -> some View {
-        GlassCard(padding: 14, cornerRadius: 20) {
-            VStack(alignment: .leading, spacing: 10) {
+        let nominal = DesignTokens.nominal(colorScheme)
+        let teal = DesignTokens.signalTeal(colorScheme)
+
+        return GlassCard(padding: 14, cornerRadius: 18) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 10) {
                     Image(systemName: res.type.symbolName)
                         .font(.title3)
-                        .foregroundStyle(res.isRunning ? .cyan : .secondary)
-                        .frame(width: 36, height: 36)
+                        .foregroundStyle(res.isRunning ? teal : DesignTokens.secondaryText(colorScheme))
+                        .frame(width: 38, height: 38)
                         .background(
-                            (res.isRunning ? Color.cyan : Color.secondary).opacity(0.14),
+                            DesignTokens.surfaceElevated(colorScheme),
                             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
 
@@ -204,22 +186,20 @@ public struct ProxmoxTabView: View {
                         HStack(spacing: 6) {
                             Text(res.name)
                                 .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
                             Text("#\(res.vmid)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                            if res.isSelf {
-                                StatusPill("Hôte Panel", color: .indigo, systemImage: "lock.fill")
-                            }
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Text(res.type.badgeLabel)
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.secondary)
+                                .font(.system(.caption2, design: .monospaced, weight: .bold))
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text("•")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text(res.isRunning ? "Uptime \(res.uptimeHuman)" : "Arrêté")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
                     }
 
@@ -227,7 +207,8 @@ public struct ProxmoxTabView: View {
 
                     StatusPill(
                         res.isRunning ? "Actif" : "Stop",
-                        color: res.isRunning ? .green : .secondary
+                        color: res.isRunning ? nominal : DesignTokens.secondaryText(colorScheme),
+                        systemImage: res.isRunning ? "checkmark.circle.fill" : "pause.circle.fill"
                     )
                 }
 
@@ -235,30 +216,60 @@ public struct ProxmoxTabView: View {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("CPU \(String(format: "%.1f %%", res.cpuPct))")
-                                .font(.caption2.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                            UsageProgressBar(percentage: res.cpuPct, tint: .cyan)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            UsageProgressBar(percentage: res.cpuPct, tint: teal)
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("RAM \(ByteFormatters.formatBytes(res.memUsedBytes))")
-                                .font(.caption2.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                            UsageProgressBar(percentage: res.memPct, tint: .indigo)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            UsageProgressBar(percentage: res.memPct, tint: DesignTokens.secondaryText(colorScheme))
                         }
                     }
                 }
 
                 HStack(spacing: 8) {
                     if !res.isRunning {
-                        actionButton(resource: res, action: .start, tint: .green)
+                        Button {
+                            pendingCommand = PendingPowerCommand(resource: res, action: .start)
+                        } label: {
+                            Label(PveAction.start.shortLabel, systemImage: PveAction.start.systemImage)
+                                .frame(minHeight: 28)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
                     } else if !res.isSelf {
-                        actionButton(resource: res, action: .reboot, tint: .cyan)
-                        actionButton(resource: res, action: .shutdown, tint: .orange)
-                        actionButton(resource: res, action: .stop, tint: .red)
+                        Button {
+                            pendingCommand = PendingPowerCommand(resource: res, action: .reboot)
+                        } label: {
+                            Label(PveAction.reboot.shortLabel, systemImage: PveAction.reboot.systemImage)
+                                .frame(minHeight: 28)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button {
+                            pendingCommand = PendingPowerCommand(resource: res, action: .shutdown)
+                        } label: {
+                            Label(PveAction.shutdown.shortLabel, systemImage: PveAction.shutdown.systemImage)
+                                .frame(minHeight: 28)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button(role: .destructive) {
+                            pendingCommand = PendingPowerCommand(resource: res, action: .stop)
+                        } label: {
+                            Label(PveAction.stop.shortLabel, systemImage: PveAction.stop.systemImage)
+                                .frame(minHeight: 28)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     } else {
                         Label("Protégé contre l'auto-extinction", systemImage: "shield.checkmark.fill")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     }
                     Spacer()
                 }
@@ -289,19 +300,5 @@ public struct ProxmoxTabView: View {
                 }
             }
         }
-    }
-
-    private func actionButton(resource: PveResource, action: PveAction, tint: Color) -> some View {
-        Button {
-            pendingCommand = PendingPowerCommand(resource: resource, action: action)
-        } label: {
-            Label(action.shortLabel, systemImage: action.systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(tint.opacity(0.14), in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 }
