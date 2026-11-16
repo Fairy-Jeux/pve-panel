@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -6,6 +6,7 @@ import {
   HardDrive,
   LayoutGrid,
   Server,
+  SlidersHorizontal,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -14,9 +15,11 @@ import { ConfirmModal } from './components/ConfirmModal';
 import { Header } from './components/Header';
 import { OperationsSection } from './components/OperationsSection';
 import { ProxmoxSection } from './components/ProxmoxSection';
+import { ServerConfigModal } from './components/ServerConfigModal';
 import { ServiceCard } from './components/ServiceCard';
 import { StorageSection } from './components/StorageSection';
 import { UsersSection } from './components/UsersSection';
+import { getServerUrl, isDemoMode, isNativePlatform } from './lib/apiClient';
 import type {
   AuthUser,
   OpsOverview,
@@ -43,6 +46,11 @@ export function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [serverModalOpen, setServerModalOpen] = useState<boolean>(
+    () => isNativePlatform() && !getServerUrl() && !isDemoMode()
+  );
+  const [serverModalHint, setServerModalHint] = useState<string | null>(null);
+  const hasLoadedOnceRef = useRef(false);
 
   const [pendingAction, setPendingAction] = useState<{
     resource: PveResource;
@@ -65,6 +73,14 @@ export function App() {
   }, []);
 
   const fetchAllData = useCallback(async () => {
+    if (isNativePlatform() && !getServerUrl() && !isDemoMode()) {
+      setServerModalHint(
+        'Configurez votre URL Tailscale Serve ou activez le Mode Démo interactif pour explorer l’application.'
+      );
+      setServerModalOpen(true);
+      return;
+    }
+
     setIsRefreshing(true);
     try {
       const [meResp, pveResp, svcResp, widResp, usrResp, opsResp] = await Promise.all([
@@ -82,7 +98,11 @@ export function App() {
         return;
       }
 
-      if (meResp.ok) setUser(await meResp.json());
+      if (!meResp.ok) {
+        throw new Error(`HTTP ${meResp.status}`);
+      }
+
+      setUser(await meResp.json());
       if (pveResp.ok) setPveOverview(await pveResp.json());
       if (svcResp.ok) {
         const svcData = await svcResp.json();
@@ -92,13 +112,22 @@ export function App() {
       if (usrResp.ok) setUsersOverview(await usrResp.json());
       if (opsResp.ok) setOpsOverview(await opsResp.json());
 
+      hasLoadedOnceRef.current = true;
       setLastUpdated(new Date());
       setAuthError(null);
+      setServerModalHint(null);
     } catch {
-      setToast({
-        type: 'error',
-        message: 'Impossible de joindre le backend FastAPI.',
-      });
+      if (!hasLoadedOnceRef.current) {
+        setServerModalHint(
+          'Impossible de joindre le serveur. Vérifiez Tailscale ou passez en Mode Démo interactif.'
+        );
+        setServerModalOpen(true);
+      } else {
+        setToast({
+          type: 'error',
+          message: 'Impossible de joindre le backend FastAPI.',
+        });
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -151,14 +180,34 @@ export function App() {
 
   if (authError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
-        <div className="max-w-md rounded-2xl border border-rose-500/30 bg-slate-900 p-6 text-center">
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="liquid-glass-elevated max-w-md rounded-3xl p-6 text-center">
           <AlertCircle className="mx-auto h-10 w-10 text-rose-400" />
-          <h1 className="mt-3 text-lg font-semibold text-slate-100">
+          <h1 className="mt-3 text-lg font-semibold text-white">
             Accès strictement réservé
           </h1>
-          <p className="mt-2 text-sm text-slate-400">{authError}</p>
+          <p className="mt-2 text-sm text-slate-300">{authError}</p>
+          <button
+            type="button"
+            onClick={() => setServerModalOpen(true)}
+            className="mt-5 inline-flex items-center gap-2 rounded-2xl border border-cyan-400/40 bg-cyan-500/20 px-4 py-2.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-500/30 active:scale-[0.98]"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Configurer serveur ou Mode Démo
+          </button>
         </div>
+
+        <ServerConfigModal
+          open={serverModalOpen}
+          initialMessage={serverModalHint}
+          onClose={() => setServerModalOpen(false)}
+          onApplied={() => {
+            setServerModalOpen(false);
+            setAuthError(null);
+            hasLoadedOnceRef.current = false;
+            void fetchAllData();
+          }}
+        />
       </div>
     );
   }
@@ -190,27 +239,39 @@ export function App() {
   const navTabs: Array<{
     id: ActiveTab;
     label: string;
+    shortLabel: string;
     icon: typeof LayoutGrid;
     badge?: string;
+    dot?: boolean;
   }> = [
-    { id: 'all', label: "Vue d'ensemble", icon: LayoutGrid },
-    { id: 'storage', label: 'Stockage & Disques', icon: HardDrive, badge: poolBadge },
-    { id: 'proxmox', label: 'Proxmox (LXC / VM)', icon: Server },
-    { id: 'services', label: 'Services & Widgets', icon: Sparkles },
+    { id: 'all', label: "Vue d'ensemble", shortLabel: 'Accueil', icon: LayoutGrid },
+    {
+      id: 'storage',
+      label: 'Stockage & Disques',
+      shortLabel: 'Stockage',
+      icon: HardDrive,
+      badge: poolBadge,
+    },
+    { id: 'proxmox', label: 'Proxmox (LXC / VM)', shortLabel: 'Proxmox', icon: Server },
+    { id: 'services', label: 'Services & Widgets', shortLabel: 'Services', icon: Sparkles },
     {
       id: 'ops',
       label: 'Activité & Actions',
+      shortLabel: 'Actions',
       icon: Activity,
       badge: pendingSeerrCount > 0 ? `${pendingSeerrCount} en attente` : undefined,
+      dot: pendingSeerrCount > 0,
     },
-    { id: 'users', label: 'Utilisateurs', icon: Users },
+    { id: 'users', label: 'Utilisateurs', shortLabel: 'Comptes', icon: Users },
   ];
 
   const showSection = (tab: Exclude<ActiveTab, 'all'>) =>
     activeTab === 'all' || activeTab === tab;
 
+  const demoActive = isDemoMode();
+
   return (
-    <div className="min-h-screen pb-14">
+    <div className="min-h-screen pb-28 md:pb-14">
       <Header
         user={user}
         search={search}
@@ -220,10 +281,13 @@ export function App() {
         isRefreshing={isRefreshing}
         onRefreshNow={fetchAllData}
         lastUpdated={lastUpdated}
+        demoActive={demoActive}
+        onOpenServerConfig={() => setServerModalOpen(true)}
       />
 
-      <div className="border-b border-slate-800/70 bg-slate-950/60 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-1.5 overflow-x-auto px-4 py-2.5 sm:px-6">
+      {/* Barre d'onglets Liquid Glass (Desktop / iPad) */}
+      <div className="hidden border-b border-white/10 bg-slate-950/35 backdrop-blur-xl md:block">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-2.5 sm:px-6">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -232,20 +296,20 @@ export function App() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium transition active:scale-95 ${
                   active
-                    ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200 shadow-sm shadow-cyan-500/10'
-                    : 'border-transparent bg-transparent text-slate-400 hover:border-slate-800 hover:bg-slate-900 hover:text-slate-200'
+                    ? 'border-white/25 bg-gradient-to-b from-white/20 to-cyan-500/20 text-white shadow-inner shadow-white/15'
+                    : 'border-transparent bg-transparent text-slate-400 hover:border-white/10 hover:bg-white/[0.06] hover:text-slate-100'
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className={`h-3.5 w-3.5 ${active ? 'text-cyan-300' : ''}`} />
                 <span>{tab.label}</span>
                 {tab.badge && (
                   <span
                     className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                       active
-                        ? 'bg-cyan-500/20 text-cyan-200'
-                        : 'bg-slate-800 text-slate-400'
+                        ? 'bg-cyan-400/25 text-cyan-100'
+                        : 'bg-white/10 text-slate-300'
                     }`}
                   >
                     {tab.badge}
@@ -256,6 +320,40 @@ export function App() {
           })}
         </div>
       </div>
+
+      {/* Floating Liquid Glass Bottom Tab Bar (iPhone / iOS 26) */}
+      <nav
+        aria-label="Navigation principale iPhone"
+        className="safe-bottom-dock fixed inset-x-3 z-40 md:hidden"
+      >
+        <div className="liquid-glass-dock mx-auto flex max-w-md items-center justify-between gap-1 rounded-[28px] p-1.5">
+          {navTabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[10px] font-medium transition active:scale-95 ${
+                  active
+                    ? 'border border-white/20 bg-gradient-to-b from-white/20 to-cyan-400/20 text-white shadow-inner'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${active ? 'text-cyan-300' : ''}`} />
+                <span className="truncate leading-none">{tab.shortLabel}</span>
+                {tab.dot && (
+                  <span className="absolute right-2.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       <main className="mx-auto max-w-7xl space-y-10 px-4 pt-6 sm:px-6">
         <AlertsBanner
@@ -341,14 +439,26 @@ export function App() {
         />
       )}
 
+      <ServerConfigModal
+        open={serverModalOpen}
+        initialMessage={serverModalHint}
+        onClose={() => setServerModalOpen(false)}
+        onApplied={() => {
+          setServerModalOpen(false);
+          setAuthError(null);
+          hasLoadedOnceRef.current = false;
+          void fetchAllData();
+        }}
+      />
+
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900/95 px-4 py-3 text-sm text-slate-100 shadow-2xl backdrop-blur">
+        <div className="liquid-glass-elevated fixed bottom-24 left-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl px-4 py-3 text-sm text-white sm:left-auto sm:right-5 md:bottom-5">
           {toast.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
           ) : (
-            <AlertCircle className="h-4 w-4 text-rose-400" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
           )}
-          <span>{toast.message}</span>
+          <span className="min-w-0 flex-1">{toast.message}</span>
         </div>
       )}
     </div>

@@ -42,7 +42,7 @@ export function ProxmoxSection({
 
   if (!overview) {
     return (
-      <section className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-6">
+      <section className="liquid-glass rounded-3xl p-6">
         <div className="animate-pulse text-sm text-slate-400">
           Connexion à l’API Proxmox VE…
         </div>
@@ -87,7 +87,7 @@ export function ProxmoxSection({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/80 p-1 text-xs">
+        <div className="liquid-pill flex items-center gap-1.5 rounded-full p-1 text-xs">
           <button
             type="button"
             onClick={() => setStatusFilter('all')}
@@ -126,7 +126,7 @@ export function ProxmoxSection({
 
       {/* KPIs Nœud Proxmox */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 backdrop-blur">
+        <div className="liquid-glass rounded-3xl p-4">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
               <Cpu className="h-4 w-4 text-cyan-400" />
@@ -148,7 +148,7 @@ export function ProxmoxSection({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 backdrop-blur">
+        <div className="liquid-glass rounded-3xl p-4">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
               <MemoryStick className="h-4 w-4 text-indigo-400" />
@@ -170,7 +170,7 @@ export function ProxmoxSection({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 backdrop-blur">
+        <div className="liquid-glass rounded-3xl p-4">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
               <HardDrive className="h-4 w-4 text-amber-400" />
@@ -198,7 +198,7 @@ export function ProxmoxSection({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 backdrop-blur">
+        <div className="liquid-glass rounded-3xl p-4">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
               <Clock className="h-4 w-4 text-emerald-400" />
@@ -222,7 +222,7 @@ export function ProxmoxSection({
       </div>
 
       {/* Liste des LXC & VMs */}
-      <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur">
+      <div className="liquid-glass overflow-hidden rounded-3xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>

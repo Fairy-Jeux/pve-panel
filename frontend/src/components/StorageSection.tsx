@@ -81,7 +81,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
 
   if (!overview) {
     return (
-      <section className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-6">
+      <section className="liquid-glass rounded-3xl p-6">
         <div className="animate-pulse text-sm text-slate-400">
           Chargement des métriques de stockage et des disques physiques…
         </div>
@@ -238,7 +238,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
           {node.storages.map((st) => (
             <div
               key={st.name}
-              className="rounded-2xl border border-slate-800/80 bg-slate-900/65 p-4 backdrop-blur"
+              className="liquid-glass rounded-3xl p-4"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -269,7 +269,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
             </div>
           ))}
 
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/65 p-4 backdrop-blur">
+          <div className="liquid-glass rounded-3xl p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-cyan-400" />
@@ -302,7 +302,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/65 p-4 backdrop-blur">
+          <div className="liquid-glass rounded-3xl p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Disc className="h-4 w-4 text-amber-400" />
@@ -347,7 +347,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
             </h3>
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/80 p-1 text-xs">
+          <div className="liquid-pill flex items-center gap-1.5 rounded-full p-1 text-xs">
             <button
               type="button"
               onClick={() => setSortBy('usage')}
@@ -388,7 +388,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
           {filteredDrives.map((drive) => (
             <div
               key={drive.mount}
-              className="flex flex-col justify-between rounded-2xl border border-slate-800/80 bg-slate-900/65 p-4 backdrop-blur"
+              className="liquid-glass flex flex-col justify-between rounded-3xl p-4"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
@@ -477,7 +477,7 @@ export function StorageSection({ overview, search }: StorageSectionProps) {
             return (
               <div
                 key={`${res.type}-${res.vmid}`}
-                className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3 backdrop-blur"
+                className="liquid-glass rounded-2xl p-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">

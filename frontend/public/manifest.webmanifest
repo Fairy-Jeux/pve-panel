@@ -1,0 +1,19 @@
+{
+  "name": "PVE Command Center",
+  "short_name": "PVE Center",
+  "description": "Supervision Proxmox VE, stockage et services auto-hébergés en Liquid Glass.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#030712",
+  "theme_color": "#030712",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

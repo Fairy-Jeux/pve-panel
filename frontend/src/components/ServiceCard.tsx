@@ -65,7 +65,7 @@ function MetricPill({
   highlight?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-slate-800/80 bg-slate-950/60 px-2.5 py-1.5">
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div
         className={`mt-0.5 font-mono text-xs font-semibold ${
@@ -192,7 +192,7 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
     }
     return (
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-slate-800/80 bg-slate-950/60 px-2.5 py-1.5">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
           <div className="flex items-center gap-1 text-[10px] uppercase text-slate-500">
             <ArrowDown className="h-3 w-3 text-emerald-400" />
             DL
@@ -201,7 +201,7 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
             {formatSpeed(data.dl_speed_bytes)}
           </div>
         </div>
-        <div className="rounded-lg border border-slate-800/80 bg-slate-950/60 px-2.5 py-1.5">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
           <div className="flex items-center gap-1 text-[10px] uppercase text-slate-500">
             <ArrowUp className="h-3 w-3 text-cyan-400" />
             UP
@@ -251,7 +251,7 @@ export function ServiceCard({ service, widgets }: ServiceCardProps) {
       href={service.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex flex-col justify-between rounded-2xl border border-slate-800/80 bg-slate-900/65 p-4 backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-cyan-500/40 hover:bg-slate-900"
+      className="liquid-glass group flex flex-col justify-between rounded-3xl p-4 transition duration-200 hover:-translate-y-0.5 hover:!border-cyan-400/40 active:scale-[0.985]"
     >
       <div>
         <div className="flex items-start justify-between gap-3">

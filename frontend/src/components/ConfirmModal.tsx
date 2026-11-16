@@ -49,15 +49,24 @@ export function ConfirmModal({
   const meta = ACTION_META[action];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="ios-sheet safe-bottom-sheet w-full max-w-md rounded-t-[32px] p-5 sm:rounded-3xl sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex justify-center sm:hidden">
+          <div className="ios-grabber" />
+        </div>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800">
+            <div className="liquid-pill flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl">
               <AlertTriangle className={`h-5 w-5 ${meta.tone}`} />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-white">
                 {meta.label} {resource.type.toUpperCase()} {resource.vmid}
               </h3>
               <p className="text-sm text-slate-400">{resource.name}</p>
@@ -67,22 +76,22 @@ export function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            className="liquid-pill rounded-full p-2 text-slate-300 hover:text-white active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="mt-4 rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-sm text-slate-300">
+        <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-sm text-slate-200">
           {meta.warning}
         </p>
 
-        <div className="mt-5 flex items-center justify-end gap-2.5">
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700 disabled:opacity-50"
+            className="liquid-pill rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:text-white active:scale-[0.98] disabled:opacity-50"
           >
             Annuler
           </button>
@@ -90,7 +99,7 @@ export function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${meta.buttonClass}`}
+            className={`rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-lg transition active:scale-[0.98] disabled:opacity-50 ${meta.buttonClass}`}
           >
             {busy ? 'Exécution…' : `Confirmer (${meta.label})`}
           </button>

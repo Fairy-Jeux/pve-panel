@@ -146,7 +146,7 @@ export function AlertsBanner({
               key={alert.id}
               type="button"
               onClick={() => onJumpToTab(alert.tab)}
-              className="flex items-center justify-between gap-2 rounded-xl border border-slate-800/80 bg-slate-950/70 px-3 py-1.5 text-left text-xs text-slate-200 transition hover:border-cyan-500/40 hover:bg-slate-900"
+              className="liquid-pill flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left text-xs text-slate-100 transition hover:!border-cyan-400/40 active:scale-[0.98]"
             >
               <span className="truncate">{alert.text}</span>
               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-500" />

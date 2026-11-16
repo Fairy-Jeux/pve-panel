@@ -9,3 +9,11 @@ frontend/node_modules/
 frontend/dist/
 *.tsbuildinfo
 *.log
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+frontend/ios/DerivedData/
+*.ipa
+*.xcarchive
+*.mobileprovision
+*.p12
+*.p8

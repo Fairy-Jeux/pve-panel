@@ -89,7 +89,7 @@ export function OperationsSection({
 
   if (!ops) {
     return (
-      <section className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-6">
+      <section className="liquid-glass rounded-3xl p-6">
         <div className="animate-pulse text-sm text-slate-400">
           Chargement du centre d’activité et des actions rapides…
         </div>
@@ -142,7 +142,7 @@ export function OperationsSection({
   return (
     <section className="space-y-6">
       {/* Barre d'actions rapides Médias & Torrents */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/65 p-4 backdrop-blur">
+      <div className="liquid-glass flex flex-wrap items-center justify-between gap-3 rounded-3xl p-4">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
             Actions Rapides Médias &amp; Téléchargements
@@ -219,7 +219,7 @@ export function OperationsSection({
       {/* Demandes Jellyseerr & Contrôle Torrents */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Colonne 1 : Demandes Jellyseerr */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 backdrop-blur">
+        <div className="liquid-glass rounded-3xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-indigo-400" />
@@ -304,7 +304,7 @@ export function OperationsSection({
         </div>
 
         {/* Colonne 2 : Torrents qBittorrent récents */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 backdrop-blur">
+        <div className="liquid-glass rounded-3xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Download className="h-4 w-4 text-emerald-400" />
@@ -398,7 +398,7 @@ export function OperationsSection({
       </div>
 
       {/* Journal des tâches Proxmox VE */}
-      <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur">
+      <div className="liquid-glass overflow-hidden rounded-3xl">
         <div className="flex items-center gap-2 border-b border-slate-800/80 px-4 py-3">
           <History className="h-4 w-4 text-cyan-400" />
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">

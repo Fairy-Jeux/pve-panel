@@ -466,17 +466,20 @@ function ManageUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <div className="ios-sheet safe-bottom-sheet max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[32px] p-5 sm:rounded-3xl sm:p-6">
+        <div className="mb-4 flex justify-center sm:hidden">
+          <div className="ios-grabber" />
+        </div>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold ${
                 isDisabled
                   ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
                   : isAdmin
                     ? 'border-cyan-500/30 bg-cyan-500/15 text-cyan-300'
-                    : 'border-slate-700 bg-slate-800 text-slate-200'
+                    : 'border-white/15 bg-white/10 text-slate-200'
               }`}
             >
               {user.name.slice(0, 2).toUpperCase()}
@@ -826,15 +829,18 @@ function CreateUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <div className="ios-sheet safe-bottom-sheet max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[32px] p-5 sm:rounded-3xl sm:p-6">
+        <div className="mb-4 flex justify-center sm:hidden">
+          <div className="ios-grabber" />
+        </div>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-white">
                 Nouvel utilisateur média
               </h3>
               <p className="text-xs text-slate-400">
@@ -988,7 +994,7 @@ export function UsersSection({
 
   if (!overview) {
     return (
-      <section className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-6">
+      <section className="liquid-glass rounded-3xl p-6">
         <div className="animate-pulse text-sm text-slate-400">
           Chargement des comptes Jellyfin &amp; Jellyseerr…
         </div>
@@ -1142,15 +1148,15 @@ export function UsersSection({
       </div>
 
       {expanded && (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredUsers.map((u) => (
             <div
               key={u.jellyfin_id}
               onClick={() => setManagedUserId(u.jellyfin_id)}
-              className={`flex cursor-pointer flex-col justify-between rounded-xl border p-3 backdrop-blur transition ${
+              className={`liquid-glass flex cursor-pointer flex-col justify-between rounded-3xl p-3.5 transition active:scale-[0.98] ${
                 u.is_disabled
-                  ? 'border-rose-500/30 bg-slate-900/45 hover:border-rose-400/50'
-                  : 'border-slate-800/80 bg-slate-900/60 hover:border-cyan-500/35 hover:bg-slate-900/80'
+                  ? '!border-rose-500/30 hover:!border-rose-400/50'
+                  : 'hover:!border-cyan-400/40'
               }`}
             >
               <div>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#071124" />
+      <stop offset="52%" stop-color="#030712" />
+      <stop offset="100%" stop-color="#0c1026" />
+    </linearGradient>
+    <radialGradient id="topGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(320 180) rotate(50) scale(720)">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.34" />
+      <stop offset="55%" stop-color="#6366f1" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#030712" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="glassSurface" x1="180" y1="180" x2="844" y2="844" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18" />
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02" />
+    </linearGradient>
+    <linearGradient id="glassStroke" x1="180" y1="160" x2="844" y2="860" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.48" />
+      <stop offset="50%" stop-color="#67e8f9" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#818cf8" stop-opacity="0.28" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="290" y1="300" x2="734" y2="720" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" fill="url(#bgGrad)" />
+  <rect width="1024" height="1024" rx="224" fill="url(#topGlow)" />
+
+  <!-- Outer Liquid Glass Tile -->
+  <rect x="164" y="164" width="696" height="696" rx="184" fill="url(#glassSurface)" stroke="url(#glassStroke)" stroke-width="6" />
+  <path d="M268 176 H756" stroke="#ffffff" stroke-opacity="0.42" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Three stacked server blades -->
+  <rect x="284" y="302" width="456" height="108" rx="34" fill="#0f172a" fill-opacity="0.72" stroke="url(#accentGrad)" stroke-width="5" />
+  <circle cx="352" cy="356" r="14" fill="#22d3ee" />
+  <rect x="394" y="346" width="176" height="20" rx="10" fill="#e2e8f0" fill-opacity="0.82" />
+  <circle cx="678" cy="356" r="10" fill="#34d399" />
+
+  <rect x="284" y="458" width="456" height="108" rx="34" fill="#0f172a" fill-opacity="0.72" stroke="#ffffff" stroke-opacity="0.26" stroke-width="4" />
+  <circle cx="352" cy="512" r="14" fill="#818cf8" />
+  <rect x="394" y="502" width="214" height="20" rx="10" fill="#cbd5e1" fill-opacity="0.7" />
+  <circle cx="678" cy="512" r="10" fill="#38bdf8" />
+
+  <rect x="284" y="614" width="456" height="108" rx="34" fill="#0f172a" fill-opacity="0.72" stroke="#ffffff" stroke-opacity="0.22" stroke-width="4" />
+  <circle cx="352" cy="668" r="14" fill="#34d399" />
+  <rect x="394" y="658" width="144" height="20" rx="10" fill="#cbd5e1" fill-opacity="0.62" />
+  <circle cx="678" cy="668" r="10" fill="#22d3ee" />
+</svg>
