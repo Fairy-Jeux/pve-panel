@@ -9,9 +9,31 @@ public struct OperationsTabView: View {
         self.viewModel = viewModel
     }
 
+    private enum Layout {
+        #if os(tvOS)
+        static let sectionSpacing: CGFloat = 22
+        static let cardSpacing: CGFloat = 16
+        static let actionSpacing: CGFloat = 14
+        static let cardPadding: CGFloat = 20
+        static let rowPadding: CGFloat = 14
+        static let buttonMinHeight: CGFloat = 40
+        static let smallButtonMinHeight: CGFloat = 36
+        static let taskRowVerticalPadding: CGFloat = 6
+        #else
+        static let sectionSpacing: CGFloat = 16
+        static let cardSpacing: CGFloat = 12
+        static let actionSpacing: CGFloat = 10
+        static let cardPadding: CGFloat = 16
+        static let rowPadding: CGFloat = 10
+        static let buttonMinHeight: CGFloat = 32
+        static let smallButtonMinHeight: CGFloat = 28
+        static let taskRowVerticalPadding: CGFloat = 3
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: Layout.sectionSpacing) {
                 quickActionsCard
                 seerrRequestsSection
                 qbitSection
@@ -27,61 +49,75 @@ public struct OperationsTabView: View {
     }
 
     private var quickActionsCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
+        GlassCard(padding: Layout.cardPadding) {
+            VStack(alignment: .leading, spacing: Layout.cardSpacing) {
                 Label("Indexation des médiathèques", systemImage: "bolt.fill")
                     .font(.headline)
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                    .lineLimit(1)
 
-                GlassEffectContainer(spacing: 10) {
-                    HStack(spacing: 10) {
-                        Button {
-                            Task {
-                                scanningTarget = "jellyfin"
-                                await viewModel.triggerMediaScan(target: "jellyfin")
-                                scanningTarget = nil
-                            }
-                        } label: {
-                            Label(
-                                scanningTarget == "jellyfin" ? "Scan en cours…" : "Scanner Jellyfin",
-                                systemImage: "arrow.triangle.2.circlepath"
-                            )
-                            .frame(maxWidth: .infinity, minHeight: 32)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .tint(DesignTokens.signalTeal(colorScheme))
-                        .disabled(scanningTarget != nil)
-
-                        Button {
-                            Task {
-                                scanningTarget = "plex"
-                                await viewModel.triggerMediaScan(target: "plex")
-                                scanningTarget = nil
-                            }
-                        } label: {
-                            Label(
-                                scanningTarget == "plex" ? "Scan en cours…" : "Scanner Plex",
-                                systemImage: "arrow.clockwise"
-                            )
-                            .frame(maxWidth: .infinity, minHeight: 32)
-                        }
-                        .buttonStyle(.glass)
-                        .disabled(scanningTarget != nil)
+                GlassEffectContainer(spacing: Layout.actionSpacing) {
+                    HStack(spacing: Layout.actionSpacing) {
+                        scanButton(
+                            target: "jellyfin",
+                            title: "Scanner Jellyfin",
+                            systemImage: "arrow.triangle.2.circlepath",
+                            prominent: true
+                        )
+                        scanButton(
+                            target: "plex",
+                            title: "Scanner Plex",
+                            systemImage: "arrow.clockwise",
+                            prominent: false
+                        )
                     }
                 }
             }
         }
     }
 
+    @ViewBuilder
+    private func scanButton(target: String, title: String, systemImage: String, prominent: Bool) -> some View {
+        let button = Button {
+            Task {
+                scanningTarget = target
+                await viewModel.triggerMediaScan(target: target)
+                scanningTarget = nil
+            }
+        } label: {
+            Label(
+                scanningTarget == target ? "Scan en cours…" : title,
+                systemImage: systemImage
+            )
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .frame(maxWidth: .infinity, minHeight: Layout.buttonMinHeight)
+        }
+        .disabled(scanningTarget != nil)
+
+        #if os(tvOS)
+        button.buttonStyle(.glass)
+        #else
+        if prominent {
+            button
+                .buttonStyle(.glassProminent)
+                .tint(DesignTokens.signalTeal(colorScheme))
+        } else {
+            button.buttonStyle(.glass)
+        }
+        #endif
+    }
+
     private var seerrRequestsSection: some View {
         let requests = viewModel.opsOverview?.seerrRequests ?? []
 
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
+        return GlassCard(padding: Layout.cardPadding) {
+            VStack(alignment: .leading, spacing: Layout.cardSpacing) {
                 HStack {
                     Label("Demandes Jellyseerr", systemImage: "film.stack.fill")
                         .font(.headline)
                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        .lineLimit(1)
                     Spacer()
                     if viewModel.pendingRequestsCount > 0 {
                         StatusPill(
@@ -98,19 +134,23 @@ public struct OperationsTabView: View {
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 } else {
                     ForEach(requests) { req in
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
+                        VStack(alignment: .leading, spacing: Layout.cardSpacing) {
+                            HStack(spacing: 10) {
                                 Image(systemName: req.mediaType == "tv" ? "tv" : "film")
                                     .foregroundStyle(DesignTokens.signalTeal(colorScheme))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(req.title)
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                     Text("Demandé par \(req.requestedBy)")
                                         .font(.caption2)
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                 }
-                                Spacer()
+                                Spacer(minLength: 6)
                                 StatusPill(
                                     req.statusLabel,
                                     color: req.status == 1
@@ -123,16 +163,22 @@ public struct OperationsTabView: View {
                             }
 
                             if req.isPending {
-                                GlassEffectContainer(spacing: 8) {
-                                    HStack(spacing: 8) {
+                                GlassEffectContainer(spacing: Layout.actionSpacing) {
+                                    HStack(spacing: Layout.actionSpacing) {
                                         Button {
                                             Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
                                         } label: {
                                             Label("Approuver", systemImage: "checkmark")
-                                                .frame(maxWidth: .infinity, minHeight: 28)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.82)
+                                                .frame(maxWidth: .infinity, minHeight: Layout.smallButtonMinHeight)
                                         }
+                                        #if os(tvOS)
+                                        .buttonStyle(.glass)
+                                        #else
                                         .buttonStyle(.glassProminent)
                                         .tint(DesignTokens.nominal(colorScheme))
+                                        #endif
                                         .adaptiveSmallControlSize()
 
                                         Button(role: .destructive) {
@@ -140,7 +186,9 @@ public struct OperationsTabView: View {
                                         } label: {
                                             Label("Refuser", systemImage: "xmark")
                                                 .foregroundStyle(DesignTokens.critical(colorScheme))
-                                                .frame(maxWidth: .infinity, minHeight: 28)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.82)
+                                                .frame(maxWidth: .infinity, minHeight: Layout.smallButtonMinHeight)
                                         }
                                         .buttonStyle(.glass)
                                         .adaptiveSmallControlSize()
@@ -148,7 +196,7 @@ public struct OperationsTabView: View {
                                 }
                             }
                         }
-                        .padding(10)
+                        .padding(Layout.rowPadding)
                         .background(
                             DesignTokens.surfaceElevated(colorScheme),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -162,13 +210,15 @@ public struct OperationsTabView: View {
     @ViewBuilder
     private var qbitSection: some View {
         if let qbit = viewModel.opsOverview?.qbitControl, qbit.available {
-            GlassCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
+            GlassCard(padding: Layout.cardPadding) {
+                VStack(alignment: .leading, spacing: Layout.cardSpacing) {
+                    HStack(spacing: 10) {
                         Label("qBittorrent", systemImage: "arrow.down.circle.fill")
                             .font(.headline)
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                        Spacer()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                        Spacer(minLength: 6)
                         Button {
                             Task { await viewModel.toggleQbitSpeedMode() }
                         } label: {
@@ -177,6 +227,8 @@ public struct OperationsTabView: View {
                                 systemImage: qbit.altSpeedEnabled ? "tortoise.fill" : "hare.fill"
                             )
                             .foregroundStyle(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
                         }
                         .buttonStyle(.glass)
                         .adaptiveSmallControlSize()
@@ -184,17 +236,20 @@ public struct OperationsTabView: View {
 
                     ForEach(qbit.torrents) { torrent in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(torrent.name)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                         .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                     Text("\(String(format: "%.1f %%", torrent.progressPct)) • ↓ \(ByteFormatters.formatSpeed(torrent.dlspeed)) • ↑ \(ByteFormatters.formatSpeed(torrent.upspeed)) • ETA \(ByteFormatters.formatETA(torrent.eta))")
                                         .font(.system(.caption2, design: .monospaced))
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.82)
                                 }
-                                Spacer()
+                                Spacer(minLength: 6)
                                 Button {
                                     Task {
                                         await viewModel.controlTorrent(
@@ -208,7 +263,7 @@ public struct OperationsTabView: View {
                                         systemImage: torrent.isPaused ? "play.fill" : "pause.fill"
                                     )
                                     .labelStyle(.iconOnly)
-                                    .frame(minWidth: 32, minHeight: 32)
+                                    .frame(minWidth: Layout.buttonMinHeight, minHeight: Layout.buttonMinHeight)
                                 }
                                 .buttonStyle(.glass)
                                 .adaptiveSmallControlSize()
@@ -218,7 +273,7 @@ public struct OperationsTabView: View {
                                 tint: torrent.isPaused ? DesignTokens.caution(colorScheme) : DesignTokens.signalTeal(colorScheme)
                             )
                         }
-                        .padding(10)
+                        .padding(Layout.rowPadding)
                         .background(
                             DesignTokens.surfaceElevated(colorScheme),
                             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -232,11 +287,13 @@ public struct OperationsTabView: View {
     private var pveTasksSection: some View {
         let tasks = viewModel.opsOverview?.pveTasks ?? []
 
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
+        return GlassCard(padding: Layout.cardPadding) {
+            VStack(alignment: .leading, spacing: Layout.cardSpacing) {
                 Label("Journal des tâches Proxmox", systemImage: "list.bullet.clipboard.fill")
                     .font(.headline)
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 if tasks.isEmpty {
                     Text("Aucune tâche récente.")
@@ -244,25 +301,30 @@ public struct OperationsTabView: View {
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 } else {
                     ForEach(tasks.prefix(8)) { task in
-                        HStack {
+                        HStack(spacing: 10) {
                             Image(systemName: task.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                 .foregroundStyle(task.isSuccess ? DesignTokens.nominal(colorScheme) : DesignTokens.caution(colorScheme))
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text("\(task.type.uppercased()) \(task.vmid.isEmpty ? "" : "#\(task.vmid)")")
                                     .font(.system(.caption, design: .monospaced, weight: .semibold))
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
                                 Text("\(task.user) • \(ByteFormatters.formatTimestamp(task.starttime))")
                                     .font(.caption2)
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
                             }
-                            Spacer()
+                            Spacer(minLength: 6)
                             if let sec = task.durationSec {
                                 Text("\(sec)s")
                                     .font(.system(.caption2, design: .monospaced))
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                    .lineLimit(1)
                             }
                         }
-                        .padding(.vertical, 3)
+                        .padding(.vertical, Layout.taskRowVerticalPadding)
                     }
                 }
             }

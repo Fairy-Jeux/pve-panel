@@ -19,11 +19,19 @@ public struct StorageTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        return [GridItem(.adaptive(minimum: 560), spacing: 20)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 320), spacing: 12)]
         #else
         return [GridItem(.flexible())]
+        #endif
+    }
+
+    private var gridSpacing: CGFloat {
+        #if os(tvOS)
+        return 20
+        #else
+        return 12
         #endif
     }
 
@@ -63,6 +71,14 @@ public struct StorageTabView: View {
             PoolSlice(id: "avail", label: "Disponible", bytes: avail, color: DesignTokens.surfaceElevated(colorScheme)),
         ]
 
+        #if os(tvOS)
+        let donutSize: CGFloat = 196
+        let donutRowSpacing: CGFloat = 28
+        #else
+        let donutSize: CGFloat = 112
+        let donutRowSpacing: CGFloat = 18
+        #endif
+
         return GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
@@ -70,19 +86,24 @@ public struct StorageTabView: View {
                         Label(pool.name, systemImage: "square.stack.3d.up.fill")
                             .font(.headline)
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                            .lineLimit(1)
                         Text("\(pool.fstype) • \(pool.policy) • \(pool.drivesCount) disques")
                             .font(.caption)
                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
                     StatusPill(
                         pool.available ? "Monté" : "Indisponible",
                         color: pool.available ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme),
                         systemImage: pool.available ? "checkmark.circle.fill" : "xmark.octagon.fill"
                     )
+                    .lineLimit(1)
+                    .fixedSize()
                 }
 
-                HStack(spacing: 18) {
+                HStack(spacing: donutRowSpacing) {
                     ZStack {
                         Chart(slices) { slice in
                             SectorMark(
@@ -93,16 +114,21 @@ public struct StorageTabView: View {
                             .foregroundStyle(slice.color)
                             .cornerRadius(4)
                         }
-                        .frame(width: 112, height: 112)
+                        .frame(width: donutSize, height: donutSize)
 
                         VStack(spacing: 1) {
                             Text(String(format: "%.0f %%", pool.usedPct))
                                 .font(.system(.title3, design: .monospaced, weight: .bold))
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
                             Text("occupé")
                                 .font(.caption2)
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
                         }
+                        .frame(maxWidth: donutSize * 0.62)
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -121,9 +147,12 @@ public struct StorageTabView: View {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                .lineLimit(1)
             Text(value)
                 .font(.system(.subheadline, design: .monospaced, weight: .semibold))
                 .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
     }
 
@@ -140,16 +169,22 @@ public struct StorageTabView: View {
                     Text("SSD Système Proxmox")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     Text("\(ssd.model) • \(ssd.devpath) • \(ByteFormatters.formatBytes(ssd.sizeBytes))")
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
-                Spacer()
+                Spacer(minLength: 8)
                 StatusPill(
                     ssd.health,
                     color: passed ? DesignTokens.nominal(colorScheme) : DesignTokens.caution(colorScheme),
                     systemImage: passed ? "checkmark.shield.fill" : "exclamationmark.triangle.fill"
                 )
+                .lineLimit(1)
+                .fixedSize()
             }
         }
     }
@@ -172,49 +207,79 @@ public struct StorageTabView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 Spacer()
+                #if os(tvOS)
+                Button {
+                    showHealthyOnly.toggle()
+                } label: {
+                    Label(
+                        showHealthyOnly ? "Sains uniquement" : "Tous (SMART)",
+                        systemImage: showHealthyOnly ? "checkmark.shield.fill" : "line.3.horizontal.decrease.circle"
+                    )
+                    .lineLimit(1)
+                }
+                .buttonStyle(.glass)
+                .tint(showHealthyOnly ? DesignTokens.nominal(colorScheme) : nil)
+                .fixedSize()
+                #else
                 Toggle("Sains uniquement", isOn: $showHealthyOnly)
-                    #if !os(tvOS)
                     .toggleStyle(.button)
                     .controlSize(.small)
-                    #endif
+                #endif
             }
 
-            LazyVGrid(columns: adaptiveColumns, spacing: 12) {
+            LazyVGrid(columns: adaptiveColumns, spacing: gridSpacing) {
                 ForEach(Array(filtered.enumerated()), id: \.element.id) { idx, drive in
+                    #if os(tvOS)
+                    let smartText = drive.health
+                    #else
+                    let smartText = "SMART \(drive.health)"
+                    #endif
                     GlassCard(padding: 14, cornerRadius: 16) {
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .top) {
+                            HStack(alignment: .top, spacing: 10) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 6) {
                                         Text(String(format: "BAY %02d", idx + 1))
                                             .font(.system(.caption2, design: .monospaced, weight: .bold))
                                             .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                            .lineLimit(1)
+                                            .fixedSize(horizontal: true, vertical: false)
                                         Text(drive.label)
                                             .font(.subheadline.weight(.semibold))
                                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.82)
                                     }
                                     Text("\(drive.model) • \(drive.type) (\(drive.rpm))")
                                         .font(.caption2)
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.82)
                                 }
-                                Spacer()
+                                Spacer(minLength: 8)
                                 StatusPill(
-                                    "SMART \(drive.health)",
+                                    smartText,
                                     color: drive.isHealthy ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme),
                                     systemImage: drive.isHealthy ? "checkmark.circle.fill" : "exclamationmark.octagon.fill"
                                 )
+                                .lineLimit(1)
+                                .fixedSize()
                             }
 
                             UsageProgressBar(percentage: drive.usedPct)
 
-                            HStack {
+                            HStack(spacing: 8) {
                                 Text("\(ByteFormatters.formatDecimalTB(drive.usedBytes)) / \(ByteFormatters.formatDecimalTB(drive.totalBytes))")
                                     .font(.system(.caption, design: .monospaced, weight: .medium))
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                                Spacer()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
+                                Spacer(minLength: 8)
                                 Text("\(drive.devpath) • \(drive.mount)")
                                     .font(.system(.caption2, design: .monospaced))
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
                             }
                         }
                     }
@@ -229,31 +294,39 @@ public struct StorageTabView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
 
-            LazyVGrid(columns: adaptiveColumns, spacing: 12) {
+            LazyVGrid(columns: adaptiveColumns, spacing: gridSpacing) {
                 ForEach(storages) { storage in
                     GlassCard(padding: 14, cornerRadius: 16) {
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack {
+                            HStack(spacing: 8) {
                                 Label(storage.name, systemImage: "internaldrive.fill")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
                                 Text(storage.type)
                                     .font(.system(.caption2, design: .monospaced))
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                                Spacer()
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
                                 Text(String(format: "%.1f %%", storage.usedPct))
                                     .font(.system(.caption, design: .monospaced, weight: .bold))
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
                             }
                             UsageProgressBar(percentage: storage.usedPct, tint: DesignTokens.signalTeal(colorScheme))
-                            HStack {
+                            HStack(spacing: 8) {
                                 Text("\(ByteFormatters.formatBytes(storage.usedBytes)) utilisés")
                                     .font(.caption2)
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                                Spacer()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                                Spacer(minLength: 8)
                                 Text("Total \(ByteFormatters.formatBytes(storage.totalBytes))")
                                     .font(.caption2)
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
                             }
                         }
                     }

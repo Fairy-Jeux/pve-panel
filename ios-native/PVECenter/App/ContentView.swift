@@ -77,6 +77,8 @@ public struct ContentView: View {
     private var toastBottomPadding: CGFloat {
         #if os(macOS)
         return 22
+        #elseif os(tvOS)
+        return 36
         #else
         return 64
         #endif
@@ -143,7 +145,6 @@ public struct ContentView: View {
                 tvOSTabScreen(for: tab)
             }
         }
-        .tint(Color(red: 0.220, green: 0.824, blue: 0.910))
     }
 
     @ViewBuilder
@@ -161,12 +162,19 @@ public struct ContentView: View {
         .tag(tab)
     }
 
+    private var tvOSServerButtonTitle: String {
+        if viewModel.isDemoMode { return "Mode Démo" }
+        if viewModel.serverBaseURL.isEmpty { return "Connecter" }
+        return "Serveur : \(truncatedServerName(maxLength: 16))"
+    }
+
     private func tvOSHeaderBar(for tab: AppTab) -> some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(tab.title)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(DesignTokens.primaryText(.dark))
+                    .lineLimit(1)
                 HStack(spacing: 8) {
                     Circle()
                         .fill(
@@ -182,6 +190,7 @@ public struct ContentView: View {
                     )
                     .font(.caption.weight(.medium))
                     .foregroundStyle(DesignTokens.secondaryText(.dark))
+                    .lineLimit(1)
                 }
             }
 
@@ -193,6 +202,8 @@ public struct ContentView: View {
                         Task { await viewModel.configureConnection(baseURL: "", demoMode: true) }
                     } label: {
                         Label("Mode Démo", systemImage: "sparkles")
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                             .padding(.horizontal, 10)
                     }
                     .buttonStyle(.glassProminent)
@@ -203,23 +214,28 @@ public struct ContentView: View {
                     viewModel.showServerSettings = true
                 } label: {
                     Label(
-                        viewModel.isDemoMode
-                            ? "Connexion"
-                            : (viewModel.serverBaseURL.isEmpty ? "Connecter un serveur" : viewModel.activeServerName),
+                        tvOSServerButtonTitle,
                         systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
                     )
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.horizontal, 10)
                 }
                 .buttonStyle(.glass)
 
                 Button {
+                    // Guard instead of .disabled so 5s silent auto-refresh never drops tvOS focus.
+                    guard !viewModel.isRefreshing else { return }
                     Task { await viewModel.refreshAll(silent: false) }
                 } label: {
-                    Label(viewModel.isRefreshing ? "Synchro…" : "Actualiser", systemImage: "arrow.clockwise")
+                    Label("Actualiser", systemImage: "arrow.clockwise")
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .opacity(viewModel.isRefreshing ? 0.65 : 1.0)
                         .padding(.horizontal, 10)
                 }
                 .buttonStyle(.glass)
-                .disabled(viewModel.isRefreshing)
+                .accessibilityLabel(viewModel.isRefreshing ? "Synchronisation…" : "Actualiser")
             }
         }
         .padding(.horizontal, DesignTokens.pageHorizontalPadding)
@@ -392,8 +408,12 @@ public struct ContentView: View {
     private var shortServerButtonTitle: String {
         if viewModel.isDemoMode { return "Démo" }
         if viewModel.serverBaseURL.isEmpty { return "Serveur" }
+        return truncatedServerName(maxLength: 14)
+    }
+
+    private func truncatedServerName(maxLength: Int) -> String {
         let name = viewModel.activeServerName
-        if name.count <= 14 { return name }
-        return String(name.prefix(13)) + "…"
+        guard name.count > maxLength, maxLength > 1 else { return name }
+        return String(name.prefix(maxLength - 1)) + "…"
     }
 }

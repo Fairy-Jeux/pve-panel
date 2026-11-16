@@ -92,12 +92,14 @@ public struct OverviewTabView: View {
                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             .lineLimit(1)
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
                     StatusPill(
                         pve.online ? "En ligne" : "Hors ligne",
                         color: pve.online ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme),
                         systemImage: pve.online ? "checkmark.circle.fill" : "xmark.octagon.fill"
                     )
+                    .lineLimit(1)
+                    .fixedSize()
                 }
 
                 Chart(points) { item in
@@ -115,16 +117,24 @@ public struct OverviewTabView: View {
                 }
                 .chartXScale(domain: 0...100)
                 .chartXAxis(.hidden)
+                #if os(tvOS)
+                .frame(height: 164)
+                #else
                 .frame(height: 108)
+                #endif
 
                 HStack {
                     Text("Loadavg \(pve.node.loadavg.prefix(3).joined(separator: " / "))")
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                    Spacer()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                    Spacer(minLength: 8)
                     Text("\(ByteFormatters.formatBytes(pve.node.memUsedBytes)) / \(ByteFormatters.formatBytes(pve.node.memTotalBytes)) RAM")
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
         }
@@ -132,7 +142,7 @@ public struct OverviewTabView: View {
 
     private var quickStatsColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        return [GridItem(.adaptive(minimum: 520), spacing: 20)]
         #else
         return [GridItem(.adaptive(minimum: 168), spacing: 12)]
         #endif
@@ -140,9 +150,25 @@ public struct OverviewTabView: View {
 
     private var servicePreviewColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        return [GridItem(.adaptive(minimum: 480), spacing: 16)]
         #else
         return [GridItem(.adaptive(minimum: 145), spacing: 8)]
+        #endif
+    }
+
+    private var quickStatsGridSpacing: CGFloat {
+        #if os(tvOS)
+        return 20
+        #else
+        return 12
+        #endif
+    }
+
+    private var servicePreviewGridSpacing: CGFloat {
+        #if os(tvOS)
+        return 16
+        #else
+        return 8
         #endif
     }
 
@@ -153,7 +179,7 @@ public struct OverviewTabView: View {
         let qbit = viewModel.widgets?.qbittorrent
         let teal = DesignTokens.signalTeal(colorScheme)
 
-        return LazyVGrid(columns: quickStatsColumns, spacing: 12) {
+        return LazyVGrid(columns: quickStatsColumns, spacing: quickStatsGridSpacing) {
             statTile(
                 title: "Machines",
                 value: "\(pve?.counts.running ?? 0) / \(pve?.counts.total ?? 0)",
@@ -242,7 +268,7 @@ public struct OverviewTabView: View {
                         Label("Services hébergés (\(services.count))", systemImage: "app.connected.to.app.below.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                        Spacer()
+                        Spacer(minLength: 8)
                         #if os(iOS)
                         if horizontalSizeClass == .compact {
                             NavigationLink {
@@ -253,21 +279,27 @@ public struct OverviewTabView: View {
                                 Label("Tout voir", systemImage: "chevron.right")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                    .lineLimit(1)
                             }
+                            .fixedSize()
                         } else {
                             Button("Tout voir") { viewModel.selectedTab = .services }
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                .lineLimit(1)
+                                .fixedSize()
                         }
                         #else
                         Button("Tout voir") { viewModel.selectedTab = .services }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .lineLimit(1)
                             .buttonStyle(.glass)
+                            .fixedSize()
                         #endif
                     }
 
-                    LazyVGrid(columns: servicePreviewColumns, spacing: 8) {
+                    LazyVGrid(columns: servicePreviewColumns, spacing: servicePreviewGridSpacing) {
                         ForEach(services.prefix(6)) { svc in
                             HStack(spacing: 8) {
                                 Image(systemName: svc.online ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -277,11 +309,14 @@ public struct OverviewTabView: View {
                                     .font(.caption.weight(.medium))
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                     .lineLimit(1)
-                                Spacer()
+                                    .minimumScaleFactor(0.85)
+                                Spacer(minLength: 4)
                                 if let ms = svc.latencyMs, svc.online {
                                     Text("\(Int(ms))ms")
                                         .font(.system(.caption2, design: .monospaced))
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .fixedSize(horizontal: true, vertical: false)
                                 }
                             }
                             .padding(.horizontal, 10)
@@ -308,12 +343,15 @@ public struct OverviewTabView: View {
                         Label("Lectures en cours (Jellyfin)", systemImage: "play.tv.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                        Spacer()
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
                         StatusPill(
                             "\(streams.count) actif\(streams.count > 1 ? "s" : "")",
                             color: DesignTokens.signalTeal(colorScheme),
                             systemImage: "play.fill"
                         )
+                        .lineLimit(1)
+                        .fixedSize()
                     }
 
                     ForEach(streams) { stream in
@@ -329,6 +367,8 @@ public struct OverviewTabView: View {
                                 Text("\(stream.user) • \(stream.device) (\(stream.playMethod))")
                                     .font(.caption2)
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
                             }
                             Spacer()
                         }

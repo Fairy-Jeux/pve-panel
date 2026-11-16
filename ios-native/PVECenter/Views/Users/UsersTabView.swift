@@ -39,7 +39,7 @@ public struct UsersTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        return [GridItem(.adaptive(minimum: 560), spacing: 18)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 310), spacing: 12)]
         #else
@@ -47,15 +47,32 @@ public struct UsersTabView: View {
         #endif
     }
 
+    private var gridRowSpacing: CGFloat {
+        #if os(tvOS)
+        return 18
+        #else
+        return 12
+        #endif
+    }
+
+    private var sectionSpacing: CGFloat {
+        #if os(tvOS)
+        return 20
+        #else
+        return 14
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
-            LazyVStack(spacing: 14) {
+            LazyVStack(spacing: sectionSpacing) {
                 headerActionsCard
 
                 HStack(spacing: 12) {
                     Text("Comptes (\(displayedUsers.count))")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        .lineLimit(1)
                     Spacer()
                     Picker("Filtre des comptes", selection: $filter) {
                         ForEach(UserFilter.allCases) { item in
@@ -71,7 +88,7 @@ public struct UsersTabView: View {
                     #endif
                 }
 
-                LazyVGrid(columns: adaptiveColumns, spacing: 12) {
+                LazyVGrid(columns: adaptiveColumns, spacing: gridRowSpacing) {
                     ForEach(displayedUsers) { user in
                         userRow(user)
                     }
@@ -112,19 +129,28 @@ public struct UsersTabView: View {
                         Text("Jellyfin ↔ Jellyseerr")
                             .font(.headline)
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                            .lineLimit(1)
                         Text("\(counts?.totalJellyfin ?? 0) comptes • \(counts?.syncedJellyseerr ?? 0) synchronisés")
                             .font(.caption)
                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
                     Spacer()
                     Button {
                         showCreateSheet = true
                     } label: {
                         Label("Créer", systemImage: "person.badge.plus")
+                            .lineLimit(1)
+                            .fixedSize()
                             .frame(minHeight: 28)
                     }
+                    #if os(tvOS)
+                    .buttonStyle(.glass)
+                    #else
                     .buttonStyle(.glassProminent)
                     .tint(DesignTokens.signalTeal(colorScheme))
+                    #endif
                     .adaptiveSmallControlSize()
                 }
 
@@ -140,6 +166,8 @@ public struct UsersTabView: View {
                             Image(systemName: "arrow.triangle.2.circlepath")
                             Text(isSyncing ? "Synchronisation…" : "Importer \(unsynced) compte(s) vers Jellyseerr")
                                 .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption2)
@@ -173,11 +201,13 @@ public struct UsersTabView: View {
                             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
 
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             Text(user.name)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
                             if user.isProtected == true {
                                 Image(systemName: "shield.checkmark.fill")
                                     .font(.caption2)
@@ -192,19 +222,26 @@ public struct UsersTabView: View {
                             }
                         }
 
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Text(user.inJellyseerr ? "Jellyseerr: \(user.autoApprove ? "Auto" : "Manuel")" : "Non importé")
                                 .font(.caption2)
                                 .foregroundStyle(user.inJellyseerr ? nominal : caution)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
                             Text("•")
+                                .font(.caption2)
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text("Activité: \(ByteFormatters.formatRelativeISO(user.lastActivity))")
                                 .font(.caption2)
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
                         }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     Image(systemName: "slider.horizontal.3")
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))

@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct AlertsBannerView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     public let alerts: [SmartAlert]
     public let onSelectTab: (AppTab) -> Void
@@ -10,6 +11,14 @@ public struct AlertsBannerView: View {
     public init(alerts: [SmartAlert], onSelectTab: @escaping (AppTab) -> Void) {
         self.alerts = alerts
         self.onSelectTab = onSelectTab
+    }
+
+    private var subtitleColor: Color {
+        #if os(tvOS)
+        return DesignTokens.secondaryText(colorScheme, highContrast: true)
+        #else
+        return DesignTokens.secondaryText(colorScheme, highContrast: contrast == .increased)
+        #endif
     }
 
     private func color(for severity: SmartAlert.Severity) -> Color {
@@ -54,56 +63,83 @@ public struct AlertsBannerView: View {
                                 Text("\(alerts.count) point\(alerts.count > 1 ? "s" : "") d'attention")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                    .multilineTextAlignment(.leading)
                                 if !isExpanded, let first = alerts.first {
                                     Text(first.title)
                                         .font(.caption)
-                                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .foregroundStyle(subtitleColor)
+                                        .lineLimit(1)
+                                        .multilineTextAlignment(.leading)
                                 }
                             }
-                            Spacer()
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .foregroundStyle(subtitleColor)
                         }
+                        #if os(tvOS)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        #endif
                         .frame(minHeight: 36)
                         .contentShape(Rectangle())
                     }
-                    .cardButtonStyle()
+                    .cardButtonStyle(cornerRadius: 12)
 
                     if isExpanded {
-                        VStack(spacing: 8) {
+                        #if os(tvOS)
+                        let rowSpacing: CGFloat = 10
+                        let hSpacing: CGFloat = 14
+                        let hPadding: CGFloat = 16
+                        let vPadding: CGFloat = 12
+                        let rowMinHeight: CGFloat = 54
+                        #else
+                        let rowSpacing: CGFloat = 8
+                        let hSpacing: CGFloat = 10
+                        let hPadding: CGFloat = 12
+                        let vPadding: CGFloat = 10
+                        let rowMinHeight: CGFloat = 44
+                        #endif
+
+                        VStack(spacing: rowSpacing) {
                             ForEach(alerts) { alert in
                                 let alertColor = color(for: alert.severity)
                                 Button {
                                     onSelectTab(alert.targetTab)
                                 } label: {
-                                    HStack(spacing: 10) {
+                                    HStack(spacing: hSpacing) {
                                         Image(systemName: icon(for: alert.severity))
-                                            .font(.subheadline)
+                                            .font(.subheadline.weight(.semibold))
                                             .foregroundStyle(alertColor)
-                                        VStack(alignment: .leading, spacing: 2) {
+                                        VStack(alignment: .leading, spacing: 3) {
                                             Text(alert.title)
                                                 .font(.caption.weight(.semibold))
                                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                                .lineLimit(2)
+                                                .multilineTextAlignment(.leading)
+                                                .fixedSize(horizontal: false, vertical: true)
                                             Text(alert.subtitle)
                                                 .font(.caption2)
-                                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                                .foregroundStyle(subtitleColor)
                                                 .lineLimit(2)
+                                                .multilineTextAlignment(.leading)
+                                                .fixedSize(horizontal: false, vertical: true)
                                         }
-                                        Spacer()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         Image(systemName: "arrow.right")
-                                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                            .foregroundStyle(subtitleColor)
                                             .font(.caption.weight(.semibold))
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
-                                    .frame(minHeight: 44)
+                                    .padding(.horizontal, hPadding)
+                                    .padding(.vertical, vPadding)
+                                    .frame(minHeight: rowMinHeight)
                                     .background(
                                         DesignTokens.surfaceElevated(colorScheme),
                                         in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     )
                                 }
-                                .cardButtonStyle()
+                                .cardButtonStyle(cornerRadius: 12)
                             }
                         }
                     }

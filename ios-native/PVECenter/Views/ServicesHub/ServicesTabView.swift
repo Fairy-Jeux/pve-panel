@@ -2,7 +2,9 @@ import SwiftUI
 
 public struct ServicesTabView: View {
     public var viewModel: AppViewModel
+    #if !os(tvOS)
     @Environment(\.openURL) private var openURL
+    #endif
     @Environment(\.colorScheme) private var colorScheme
 
     public init(viewModel: AppViewModel) {
@@ -11,7 +13,7 @@ public struct ServicesTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 420), spacing: 24)]
+        return [GridItem(.adaptive(minimum: 560), spacing: 20)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 310), spacing: 14)]
         #else
@@ -19,22 +21,40 @@ public struct ServicesTabView: View {
         #endif
     }
 
+    private var gridRowSpacing: CGFloat {
+        #if os(tvOS)
+        return 20
+        #else
+        return 14
+        #endif
+    }
+
+    private var categorySpacing: CGFloat {
+        #if os(tvOS)
+        return 24
+        #else
+        return 18
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 18) {
+            LazyVStack(alignment: .leading, spacing: categorySpacing) {
                 ForEach(viewModel.filteredCategories) { category in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text(category.name)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .lineLimit(1)
                             Spacer()
                             Text("\(category.services.filter(\.online).count)/\(category.services.count) en ligne")
                                 .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .lineLimit(1)
                         }
 
-                        LazyVGrid(columns: adaptiveColumns, spacing: 14) {
+                        LazyVGrid(columns: adaptiveColumns, spacing: gridRowSpacing) {
                             ForEach(category.services) { service in
                                 serviceCard(service)
                             }
@@ -93,11 +113,13 @@ public struct ServicesTabView: View {
                         )
 
                     VStack(alignment: .leading, spacing: 3) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Text(service.name)
                                 .font(.headline)
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                            Spacer()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                            Spacer(minLength: 4)
                             if let latency = service.latencyMs, service.online {
                                 StatusPill(String(format: "%.0f ms", latency), color: nominal, systemImage: "checkmark.circle.fill")
                             } else {
@@ -119,6 +141,7 @@ public struct ServicesTabView: View {
                     widgetStrip(for: widgetKey)
                 }
 
+                #if !os(tvOS)
                 if let url = URL(string: service.url) {
                     Button {
                         openURL(url)
@@ -134,6 +157,15 @@ public struct ServicesTabView: View {
                     }
                     .buttonStyle(.glass)
                 }
+                #else
+                if !service.url.isEmpty {
+                    Label(service.url, systemImage: "network")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                #endif
             }
         }
     }
@@ -197,9 +229,13 @@ public struct ServicesTabView: View {
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
             Text(value)
                 .font(.system(.caption, design: .monospaced, weight: .semibold))
                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)

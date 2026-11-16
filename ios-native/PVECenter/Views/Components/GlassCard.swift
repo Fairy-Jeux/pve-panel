@@ -65,9 +65,9 @@ public enum DesignTokens {
 
 public extension View {
     @ViewBuilder
-    func cardButtonStyle() -> some View {
+    func cardButtonStyle(cornerRadius: CGFloat = 16) -> some View {
         #if os(tvOS)
-        self.buttonStyle(.card)
+        self.buttonStyle(TVGlassCardButtonStyle(cornerRadius: cornerRadius))
         #else
         self.buttonStyle(.plain)
         #endif
@@ -82,6 +82,82 @@ public extension View {
         #endif
     }
 }
+
+#if os(tvOS)
+/// Custom dark-glass focus style replacing tvOS `.buttonStyle(.card)` so card
+/// buttons keep deep dark contrast and show a luminous cyan focus ring.
+public struct TVGlassCardButtonStyle: ButtonStyle {
+    public var cornerRadius: CGFloat
+
+    public init(cornerRadius: CGFloat = 16) {
+        self.cornerRadius = cornerRadius
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        TVGlassCardButtonBody(
+            configuration: configuration,
+            cornerRadius: cornerRadius
+        )
+    }
+}
+
+private struct TVGlassCardButtonBody: View {
+    @Environment(\.isFocused) private var isFocused
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let configuration: ButtonStyleConfiguration
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let teal = DesignTokens.signalTeal(colorScheme)
+        let fillColor: Color = reduceTransparency
+            ? (isFocused ? Color(red: 0.082, green: 0.118, blue: 0.196) : DesignTokens.surface(colorScheme))
+            : (isFocused
+                ? Color(red: 0.055, green: 0.090, blue: 0.165).opacity(0.86)
+                : Color(red: 0.035, green: 0.051, blue: 0.098).opacity(0.62))
+
+        configuration.label
+            .background(shape.fill(fillColor))
+            .overlay(
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.06),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.85
+                )
+                .opacity(isFocused ? 0 : 1)
+            )
+            .overlay(
+                shape.strokeBorder(teal, lineWidth: 3)
+                    .opacity(isFocused ? 1 : 0)
+            )
+            .contentShape(shape)
+            .shadow(
+                color: isFocused ? teal.opacity(0.45) : .clear,
+                radius: isFocused ? 14 : 0,
+                x: 0,
+                y: isFocused ? 4 : 0
+            )
+            .scaleEffect(configuration.isPressed ? 0.985 : (isFocused ? 1.02 : 1.0))
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.82),
+                value: isFocused
+            )
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.12),
+                value: configuration.isPressed
+            )
+    }
+}
+#endif
 
 // MARK: - Native Apple Liquid Glass Panel Container (`macOS 26` / `iOS 26`)
 
@@ -205,10 +281,13 @@ public struct StatusPill: View {
         let base = Label {
             Text(title)
                 .font(.caption.weight(.semibold))
+                .lineLimit(1)
         } icon: {
             Image(systemName: systemImage)
                 .font(.caption2.weight(.bold))
         }
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
         .foregroundStyle(color)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -260,10 +339,33 @@ public struct RackBayMatrixView: View {
 
     private var driveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 150), spacing: 10)]
+        return [GridItem(.adaptive(minimum: 155), spacing: 10)]
         #else
         return [GridItem(.adaptive(minimum: 84), spacing: 6)]
         #endif
+    }
+
+    private func sectionHeaderButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+            }
+            #if os(tvOS)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            #endif
+            .frame(minHeight: 26)
+            .contentShape(Rectangle())
+        }
+        .cardButtonStyle(cornerRadius: 10)
     }
 
     public var body: some View {
@@ -279,9 +381,13 @@ public struct RackBayMatrixView: View {
                         Text("BAIE PROXMOX • \(node.name.uppercased())")
                             .font(.system(.caption, design: .monospaced, weight: .bold))
                             .foregroundStyle(teal)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                         Text("PVE \(node.pveVersion) • Uptime \(node.uptimeHuman)")
                             .font(.caption)
                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
                     Spacer()
                     StatusPill("Nominal", color: nominal, systemImage: "checkmark.circle.fill")
@@ -289,19 +395,10 @@ public struct RackBayMatrixView: View {
 
                 if !resources.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Button(action: onSelectMachines) {
-                            HStack {
-                                Text("NŒUDS & CONTENEURS (\(resources.filter(\.isRunning).count)/\(resources.count))")
-                                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                            }
-                            .frame(minHeight: 26)
-                        }
-                        .cardButtonStyle()
+                        sectionHeaderButton(
+                            "NŒUDS & CONTENEURS (\(resources.filter(\.isRunning).count)/\(resources.count))",
+                            action: onSelectMachines
+                        )
 
                         LazyVGrid(columns: resourceColumns, spacing: 8) {
                             ForEach(resources) { res in
@@ -312,10 +409,14 @@ public struct RackBayMatrixView: View {
                                     Text("#\(res.vmid)")
                                         .font(.system(.caption2, design: .monospaced, weight: .semibold))
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
                                     Spacer(minLength: 0)
                                     Text(res.type.badgeLabel)
                                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
                                 }
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
@@ -331,19 +432,10 @@ public struct RackBayMatrixView: View {
 
                 if !drives.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Button(action: onSelectStorage) {
-                            HStack {
-                                Text("BAIES DISQUES (\(drives.count) MONTÉS)")
-                                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                            }
-                            .frame(minHeight: 26)
-                        }
-                        .cardButtonStyle()
+                        sectionHeaderButton(
+                            "BAIES DISQUES (\(drives.count) MONTÉS)",
+                            action: onSelectStorage
+                        )
 
                         LazyVGrid(columns: driveColumns, spacing: 8) {
                             ForEach(Array(drives.enumerated()), id: \.element.id) { idx, drive in
@@ -358,11 +450,15 @@ public struct RackBayMatrixView: View {
                                         Text(String(format: "B%02d", idx + 1))
                                             .font(.system(.caption2, design: .monospaced, weight: .bold))
                                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
                                     }
                                     UsageProgressBar(percentage: drive.usedPct, tint: bayColor)
                                     Text(String(format: "%.0f %%", drive.usedPct))
                                         .font(.system(.caption2, design: .monospaced))
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
                                 }
                                 .padding(8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
