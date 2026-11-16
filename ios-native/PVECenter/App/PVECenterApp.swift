@@ -50,10 +50,12 @@ public struct PVECenterApp: App {
         #if os(macOS)
         Settings {
             ServerSettingsSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
         }
 
         MenuBarExtra("PVE Center", systemImage: "server.rack") {
             MenuBarPanelView(viewModel: viewModel)
+                .preferredColorScheme(.dark)
         }
         .menuBarExtraStyle(.window)
         #endif

@@ -23,12 +23,14 @@ public struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .preferredColorScheme(.dark)
         .animation(
             reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
             value: viewModel.toast?.id
         )
         .sheet(isPresented: $viewModel.showServerSettings) {
             ServerSettingsSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
         }
         .sensoryFeedback(.success, trigger: viewModel.hapticSuccessTrigger)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: viewModel.hapticImpactTrigger)
@@ -45,7 +47,7 @@ public struct ContentView: View {
         #endif
     }
 
-    // MARK: - macOS Native Split View (`sidebars.md` & `designing-for-macos.md`)
+    // MARK: - macOS 26 Native Liquid Glass Split View
 
     #if os(macOS)
     private var sidebarSelectionBinding: Binding<AppTab?> {
@@ -73,21 +75,20 @@ public struct ContentView: View {
             .navigationSplitViewColumnWidth(min: 205, ideal: 230, max: 270)
         } detail: {
             NavigationStack {
-                ZStack {
-                    AmbientBackgroundView()
-                    activeTabContent(for: viewModel.selectedTab)
-                }
-                .navigationTitle(viewModel.selectedTab.title)
-                .searchable(
-                    text: $viewModel.searchText,
-                    placement: .toolbar,
-                    prompt: "Filtrer LXC, VM, disques, services…"
-                )
-                .toolbar {
-                    commonToolbarItems
-                }
+                activeTabContent(for: viewModel.selectedTab)
+                    .background { AmbientBackgroundView() }
+                    .navigationTitle(viewModel.selectedTab.title)
+                    .searchable(
+                        text: $viewModel.searchText,
+                        placement: .toolbar,
+                        prompt: "Filtrer LXC, VM, disques, services…"
+                    )
+                    .toolbar {
+                        commonToolbarItems
+                    }
             }
         }
+        .tint(Color(red: 0.220, green: 0.824, blue: 0.910))
     }
 
     private func sidebarRow(for tab: AppTab, badge: Int = 0) -> some View {
@@ -97,7 +98,7 @@ public struct ContentView: View {
     }
     #endif
 
-    // MARK: - iOS / iPadOS Size-Class Adaptive Layout (`layout.md` & `tab-bars.md`)
+    // MARK: - iOS / iPadOS 26 Native Liquid Glass Layout
 
     #if !os(macOS)
     @ViewBuilder
@@ -125,19 +126,16 @@ public struct ContentView: View {
                 .navigationTitle("PVE Center")
             } detail: {
                 NavigationStack {
-                    ZStack {
-                        AmbientBackgroundView()
-                        activeTabContent(for: viewModel.selectedTab)
-                    }
-                    .navigationTitle(viewModel.selectedTab.title)
-                    .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
-                    .toolbar {
-                        commonToolbarItems
-                    }
+                    activeTabContent(for: viewModel.selectedTab)
+                        .background { AmbientBackgroundView() }
+                        .navigationTitle(viewModel.selectedTab.title)
+                        .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
+                        .toolbar {
+                            commonToolbarItems
+                        }
                 }
             }
         } else {
-            // Compact iPhone: exactement 5 onglets sans débordement "Plus" (`tab-bars.md`)
             TabView(selection: compactTabBinding) {
                 ForEach(AppTab.compactTabs) { tab in
                     tabScreen(
@@ -170,14 +168,12 @@ public struct ContentView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            ZStack {
-                AmbientBackgroundView()
-                content()
-            }
-            .navigationTitle(tab.title)
-            .toolbar {
-                commonToolbarItems
-            }
+            content()
+                .background { AmbientBackgroundView() }
+                .navigationTitle(tab.title)
+                .toolbar {
+                    commonToolbarItems
+                }
         }
         .tabItem {
             Label(tab.title, systemImage: tab.systemImage)
@@ -187,7 +183,7 @@ public struct ContentView: View {
     }
     #endif
 
-    // MARK: - Shared Content & Compliant Toolbar (`toolbars.md` & `code-audit.md`)
+    // MARK: - Shared Views & Toolbar
 
     @ViewBuilder
     private func activeTabContent(for tab: AppTab) -> some View {
@@ -239,11 +235,10 @@ public struct ContentView: View {
             Button {
                 Task { await viewModel.refreshAll(silent: false) }
             } label: {
-                if viewModel.isRefreshing {
-                    Label("Synchronisation…", systemImage: "arrow.clockwise")
-                } else {
-                    Label("Rafraîchir", systemImage: "arrow.clockwise")
-                }
+                Label(
+                    viewModel.isRefreshing ? "Synchronisation…" : "Rafraîchir",
+                    systemImage: "arrow.clockwise"
+                )
             }
             .disabled(viewModel.isRefreshing)
             .help("Rafraîchir toutes les données maintenant (⌘R)")

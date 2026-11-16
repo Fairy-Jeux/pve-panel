@@ -51,12 +51,20 @@ public struct ProxmoxTabView: View {
                     nodeOverviewCard(node)
                 }
 
-                Picker("Filtre des ressources", selection: $filter) {
-                    ForEach(ResourceFilter.allCases) { item in
-                        Text(item.rawValue).tag(item)
+                HStack(spacing: 12) {
+                    Text("Conteneurs & VMs (\(displayedResources.count))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    Spacer()
+                    Picker("Filtre des ressources", selection: $filter) {
+                        ForEach(ResourceFilter.allCases) { item in
+                            Text(item.rawValue).tag(item)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 300)
                 }
-                .pickerStyle(.segmented)
 
                 LazyVGrid(columns: adaptiveColumns, spacing: 14) {
                     ForEach(displayedResources) { resource in
@@ -77,6 +85,7 @@ public struct ProxmoxTabView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
@@ -221,57 +230,63 @@ public struct ProxmoxTabView: View {
                             UsageProgressBar(percentage: res.cpuPct, tint: teal)
                         }
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("RAM \(ByteFormatters.formatBytes(res.memUsedBytes))")
+                            Text("RAM \(ByteFormatters.formatBytes(res.memUsedBytes)) / \(ByteFormatters.formatBytes(res.memTotalBytes)) (\(Int(res.memPct)) %)")
                                 .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .lineLimit(1)
                             UsageProgressBar(percentage: res.memPct, tint: DesignTokens.secondaryText(colorScheme))
                         }
                     }
                 }
 
-                HStack(spacing: 8) {
-                    if !res.isRunning {
-                        Button {
-                            pendingCommand = PendingPowerCommand(resource: res, action: .start)
-                        } label: {
-                            Label(PveAction.start.shortLabel, systemImage: PveAction.start.systemImage)
-                                .frame(minHeight: 28)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                    } else if !res.isSelf {
-                        Button {
-                            pendingCommand = PendingPowerCommand(resource: res, action: .reboot)
-                        } label: {
-                            Label(PveAction.reboot.shortLabel, systemImage: PveAction.reboot.systemImage)
-                                .frame(minHeight: 28)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                GlassEffectContainer(spacing: 8) {
+                    HStack(spacing: 8) {
+                        if !res.isRunning {
+                            Button {
+                                pendingCommand = PendingPowerCommand(resource: res, action: .start)
+                            } label: {
+                                Label(PveAction.start.shortLabel, systemImage: PveAction.start.systemImage)
+                                    .frame(minHeight: 26)
+                            }
+                            .buttonStyle(.glassProminent)
+                            .tint(DesignTokens.signalTeal(colorScheme))
+                            .controlSize(.small)
+                        } else if !res.isSelf {
+                            Button {
+                                pendingCommand = PendingPowerCommand(resource: res, action: .reboot)
+                            } label: {
+                                Label(PveAction.reboot.shortLabel, systemImage: PveAction.reboot.systemImage)
+                                    .frame(minHeight: 26)
+                            }
+                            .buttonStyle(.glass)
+                            .controlSize(.small)
 
-                        Button {
-                            pendingCommand = PendingPowerCommand(resource: res, action: .shutdown)
-                        } label: {
-                            Label(PveAction.shutdown.shortLabel, systemImage: PveAction.shutdown.systemImage)
-                                .frame(minHeight: 28)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                            Button {
+                                pendingCommand = PendingPowerCommand(resource: res, action: .shutdown)
+                            } label: {
+                                Label(PveAction.shutdown.shortLabel, systemImage: PveAction.shutdown.systemImage)
+                                    .foregroundStyle(DesignTokens.caution(colorScheme))
+                                    .frame(minHeight: 26)
+                            }
+                            .buttonStyle(.glass)
+                            .controlSize(.small)
 
-                        Button(role: .destructive) {
-                            pendingCommand = PendingPowerCommand(resource: res, action: .stop)
-                        } label: {
-                            Label(PveAction.stop.shortLabel, systemImage: PveAction.stop.systemImage)
-                                .frame(minHeight: 28)
+                            Button(role: .destructive) {
+                                pendingCommand = PendingPowerCommand(resource: res, action: .stop)
+                            } label: {
+                                Label(PveAction.stop.shortLabel, systemImage: PveAction.stop.systemImage)
+                                    .foregroundStyle(DesignTokens.critical(colorScheme))
+                                    .frame(minHeight: 26)
+                            }
+                            .buttonStyle(.glass)
+                            .controlSize(.small)
+                        } else {
+                            Label("Protégé contre l'auto-extinction", systemImage: "shield.checkmark.fill")
+                                .font(.caption2)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    } else {
-                        Label("Protégé contre l'auto-extinction", systemImage: "shield.checkmark.fill")
-                            .font(.caption2)
-                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        Spacer()
                     }
-                    Spacer()
                 }
             }
         }

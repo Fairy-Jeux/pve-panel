@@ -50,12 +50,20 @@ public struct UsersTabView: View {
             LazyVStack(spacing: 14) {
                 headerActionsCard
 
-                Picker("Filtre des comptes", selection: $filter) {
-                    ForEach(UserFilter.allCases) { item in
-                        Text(item.rawValue).tag(item)
+                HStack(spacing: 12) {
+                    Text("Comptes (\(displayedUsers.count))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    Spacer()
+                    Picker("Filtre des comptes", selection: $filter) {
+                        ForEach(UserFilter.allCases) { item in
+                            Text(item.rawValue).tag(item)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 360)
                 }
-                .pickerStyle(.segmented)
 
                 LazyVGrid(columns: adaptiveColumns, spacing: 12) {
                     ForEach(displayedUsers) { user in
@@ -76,6 +84,7 @@ public struct UsersTabView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
@@ -108,7 +117,8 @@ public struct UsersTabView: View {
                         Label("Créer", systemImage: "person.badge.plus")
                             .frame(minHeight: 28)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.glassProminent)
+                    .tint(DesignTokens.signalTeal(colorScheme))
                     .controlSize(.small)
                 }
 
@@ -130,7 +140,7 @@ public struct UsersTabView: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 30)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.glass)
                     .disabled(isSyncing)
                 }
             }

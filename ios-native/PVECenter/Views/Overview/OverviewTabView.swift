@@ -53,6 +53,7 @@ public struct OverviewTabView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
@@ -225,11 +226,9 @@ public struct OverviewTabView: View {
                         #if !os(macOS)
                         if horizontalSizeClass == .compact {
                             NavigationLink {
-                                ZStack {
-                                    AmbientBackgroundView()
-                                    ServicesTabView(viewModel: viewModel)
-                                }
-                                .navigationTitle("Services")
+                                ServicesTabView(viewModel: viewModel)
+                                    .background { AmbientBackgroundView() }
+                                    .navigationTitle("Services")
                             } label: {
                                 Label("Tout voir", systemImage: "chevron.right")
                                     .font(.caption.weight(.semibold))

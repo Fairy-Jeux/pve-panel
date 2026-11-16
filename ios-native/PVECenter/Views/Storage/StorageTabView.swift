@@ -45,6 +45,7 @@ public struct StorageTabView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }

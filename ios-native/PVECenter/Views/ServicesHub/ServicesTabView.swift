@@ -53,6 +53,7 @@ public struct ServicesTabView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
@@ -129,7 +130,7 @@ public struct ServicesTabView: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 28)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.glass)
                 }
             }
         }

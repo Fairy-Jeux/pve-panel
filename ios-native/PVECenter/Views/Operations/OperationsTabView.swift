@@ -20,6 +20,7 @@ public struct OperationsTabView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
@@ -32,38 +33,41 @@ public struct OperationsTabView: View {
                     .font(.headline)
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
-                HStack(spacing: 10) {
-                    Button {
-                        Task {
-                            scanningTarget = "jellyfin"
-                            await viewModel.triggerMediaScan(target: "jellyfin")
-                            scanningTarget = nil
+                GlassEffectContainer(spacing: 10) {
+                    HStack(spacing: 10) {
+                        Button {
+                            Task {
+                                scanningTarget = "jellyfin"
+                                await viewModel.triggerMediaScan(target: "jellyfin")
+                                scanningTarget = nil
+                            }
+                        } label: {
+                            Label(
+                                scanningTarget == "jellyfin" ? "Scan en cours…" : "Scanner Jellyfin",
+                                systemImage: "arrow.triangle.2.circlepath"
+                            )
+                            .frame(maxWidth: .infinity, minHeight: 32)
                         }
-                    } label: {
-                        Label(
-                            scanningTarget == "jellyfin" ? "Scan en cours…" : "Scanner Jellyfin",
-                            systemImage: "arrow.triangle.2.circlepath"
-                        )
-                        .frame(maxWidth: .infinity, minHeight: 32)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(scanningTarget != nil)
+                        .buttonStyle(.glassProminent)
+                        .tint(DesignTokens.signalTeal(colorScheme))
+                        .disabled(scanningTarget != nil)
 
-                    Button {
-                        Task {
-                            scanningTarget = "plex"
-                            await viewModel.triggerMediaScan(target: "plex")
-                            scanningTarget = nil
+                        Button {
+                            Task {
+                                scanningTarget = "plex"
+                                await viewModel.triggerMediaScan(target: "plex")
+                                scanningTarget = nil
+                            }
+                        } label: {
+                            Label(
+                                scanningTarget == "plex" ? "Scan en cours…" : "Scanner Plex",
+                                systemImage: "arrow.clockwise"
+                            )
+                            .frame(maxWidth: .infinity, minHeight: 32)
                         }
-                    } label: {
-                        Label(
-                            scanningTarget == "plex" ? "Scan en cours…" : "Scanner Plex",
-                            systemImage: "arrow.clockwise"
-                        )
-                        .frame(maxWidth: .infinity, minHeight: 32)
+                        .buttonStyle(.glass)
+                        .disabled(scanningTarget != nil)
                     }
-                    .buttonStyle(.bordered)
-                    .disabled(scanningTarget != nil)
                 }
             }
         }
@@ -119,24 +123,28 @@ public struct OperationsTabView: View {
                             }
 
                             if req.isPending {
-                                HStack(spacing: 8) {
-                                    Button {
-                                        Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
-                                    } label: {
-                                        Label("Approuver", systemImage: "checkmark")
-                                            .frame(maxWidth: .infinity, minHeight: 28)
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .controlSize(.small)
+                                GlassEffectContainer(spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Button {
+                                            Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
+                                        } label: {
+                                            Label("Approuver", systemImage: "checkmark")
+                                                .frame(maxWidth: .infinity, minHeight: 28)
+                                        }
+                                        .buttonStyle(.glassProminent)
+                                        .tint(DesignTokens.nominal(colorScheme))
+                                        .controlSize(.small)
 
-                                    Button(role: .destructive) {
-                                        Task { await viewModel.decideSeerrRequest(id: req.id, approve: false) }
-                                    } label: {
-                                        Label("Refuser", systemImage: "xmark")
-                                            .frame(maxWidth: .infinity, minHeight: 28)
+                                        Button(role: .destructive) {
+                                            Task { await viewModel.decideSeerrRequest(id: req.id, approve: false) }
+                                        } label: {
+                                            Label("Refuser", systemImage: "xmark")
+                                                .foregroundStyle(DesignTokens.critical(colorScheme))
+                                                .frame(maxWidth: .infinity, minHeight: 28)
+                                        }
+                                        .buttonStyle(.glass)
+                                        .controlSize(.small)
                                     }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
                                 }
                             }
                         }
@@ -168,9 +176,9 @@ public struct OperationsTabView: View {
                                 qbit.altSpeedEnabled ? "Tortue ON" : "Vitesse Max",
                                 systemImage: qbit.altSpeedEnabled ? "tortoise.fill" : "hare.fill"
                             )
+                            .foregroundStyle(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
                         }
-                        .buttonStyle(.bordered)
-                        .tint(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
+                        .buttonStyle(.glass)
                         .controlSize(.small)
                     }
 
@@ -202,7 +210,7 @@ public struct OperationsTabView: View {
                                     .labelStyle(.iconOnly)
                                     .frame(minWidth: 32, minHeight: 32)
                                 }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(.glass)
                                 .controlSize(.small)
                             }
                             UsageProgressBar(

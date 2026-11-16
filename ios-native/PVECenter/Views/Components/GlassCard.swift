@@ -1,63 +1,58 @@
 import SwiftUI
 
-// MARK: - Studio Token System (Aluminium / Rack Obsidian)
+// MARK: - Studio Dark & Luminous Palette for Apple Liquid Glass (.glassEffect)
 
 public enum DesignTokens {
     public static func canvas(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.043, green: 0.047, blue: 0.055) : Color(red: 0.961, green: 0.961, blue: 0.969)
+        Color(red: 0.020, green: 0.031, blue: 0.067)
     }
 
     public static func surface(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.082, green: 0.090, blue: 0.110) : Color.white
+        Color(red: 0.075, green: 0.094, blue: 0.145)
     }
 
     public static func surfaceElevated(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.114, green: 0.125, blue: 0.157) : Color(red: 0.933, green: 0.933, blue: 0.949)
+        Color.white.opacity(0.065)
     }
 
     public static func primaryText(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.949, green: 0.957, blue: 0.973) : Color(red: 0.067, green: 0.071, blue: 0.082)
+        Color(red: 0.949, green: 0.957, blue: 0.973)
     }
 
     public static func secondaryText(_ scheme: ColorScheme, highContrast: Bool = false) -> Color {
         if highContrast {
-            return primaryText(scheme).opacity(0.85)
+            return primaryText(scheme).opacity(0.88)
         }
-        return scheme == .dark ? Color(red: 0.608, green: 0.639, blue: 0.706) : Color(red: 0.322, green: 0.345, blue: 0.400)
+        return Color(red: 0.620, green: 0.667, blue: 0.753)
     }
 
     public static func hairBorder(_ scheme: ColorScheme, highContrast: Bool = false) -> Color {
-        if highContrast {
-            return scheme == .dark ? Color.white.opacity(0.32) : Color.black.opacity(0.28)
-        }
-        return scheme == .dark ? Color.white.opacity(0.11) : Color.black.opacity(0.09)
+        Color.white.opacity(highContrast ? 0.34 : 0.14)
     }
 
-    /// Teal technique à contraste WCAG AA vérifié (> 6.4:1 en clair, > 10:1 en sombre).
     public static func signalTeal(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.220, green: 0.824, blue: 0.910) : Color(red: 0.000, green: 0.400, blue: 0.467)
+        Color(red: 0.220, green: 0.824, blue: 0.910)
     }
 
     public static func nominal(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.239, green: 0.839, blue: 0.549) : Color(red: 0.078, green: 0.424, blue: 0.263)
+        Color(red: 0.239, green: 0.839, blue: 0.549)
     }
 
     public static func caution(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.961, green: 0.651, blue: 0.137) : Color(red: 0.561, green: 0.322, blue: 0.000)
+        Color(red: 0.961, green: 0.651, blue: 0.137)
     }
 
     public static func critical(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 1.000, green: 0.420, blue: 0.420) : Color(red: 0.769, green: 0.137, blue: 0.137)
+        Color(red: 1.000, green: 0.420, blue: 0.420)
     }
 }
 
-// MARK: - Content Surface Card (Opaque Rack Surface — zero glass in content layer)
+// MARK: - Native Apple Liquid Glass Panel Container (`macOS 26` / `iOS 26`)
 
-/// Conteneur structuré de la couche de contenu, conforme à `liquid-glass.md`
-/// (aucun matériau verre dans les cartes ou rangées de liste).
 public struct GlassCard<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     private let padding: CGFloat
     private let cornerRadius: CGFloat
     private let elevated: Bool
@@ -65,7 +60,7 @@ public struct GlassCard<Content: View>: View {
 
     public init(
         padding: CGFloat = 16,
-        cornerRadius: CGFloat = 16,
+        cornerRadius: CGFloat = 20,
         elevated: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
@@ -75,44 +70,88 @@ public struct GlassCard<Content: View>: View {
         self.content = content()
     }
 
-    private var isHighContrast: Bool {
-        contrast == .increased
-    }
-
     public var body: some View {
-        content
-            .padding(padding)
-            .background(
-                elevated ? DesignTokens.surfaceElevated(colorScheme) : DesignTokens.surface(colorScheme),
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        DesignTokens.hairBorder(colorScheme, highContrast: isHighContrast),
-                        lineWidth: isHighContrast ? 1.5 : 1
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if reduceTransparency {
+            content
+                .padding(padding)
+                .background(DesignTokens.surface(colorScheme), in: shape)
+                .overlay(
+                    shape.strokeBorder(
+                        DesignTokens.hairBorder(colorScheme, highContrast: contrast == .increased),
+                        lineWidth: 1.5
                     )
-            )
+                )
+        } else {
+            content
+                .padding(padding)
+                .background(Color.white.opacity(elevated ? 0.05 : 0.025), in: shape)
+                .glassEffect(.regular, in: shape)
+                .overlay(
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.24),
+                                Color.white.opacity(0.06),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.85
+                    )
+                )
+        }
     }
 }
 
-/// Fond plein opaque haute précision sans dégradé parasite (`liquid-glass.md`).
+/// Arrière-plan atmosphérique profond permettant aux surfaces Liquid Glass
+/// de réfracter naturellement lumière et couleur sans jamais masquer le contenu.
 public struct AmbientBackgroundView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     public init() {}
 
     public var body: some View {
-        DesignTokens.canvas(colorScheme)
-            .ignoresSafeArea()
+        ZStack {
+            Color(red: 0.020, green: 0.031, blue: 0.067)
+
+            RadialGradient(
+                colors: [
+                    Color(red: 0.055, green: 0.647, blue: 0.914).opacity(0.22),
+                    Color.clear,
+                ],
+                center: .topLeading,
+                startRadius: 20,
+                endRadius: 560
+            )
+
+            RadialGradient(
+                colors: [
+                    Color(red: 0.388, green: 0.400, blue: 0.945).opacity(0.20),
+                    Color.clear,
+                ],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 520
+            )
+
+            RadialGradient(
+                colors: [
+                    Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.10),
+                    Color.clear,
+                ],
+                center: .bottom,
+                startRadius: 20,
+                endRadius: 480
+            )
+        }
+        .ignoresSafeArea()
     }
 }
 
-// MARK: - Accessible Status Badge (Never color alone)
+// MARK: - Native Liquid Glass Status Pill
 
 public struct StatusPill: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     public let title: String
     public let color: Color
     public let systemImage: String
@@ -124,7 +163,7 @@ public struct StatusPill: View {
     }
 
     public var body: some View {
-        Label {
+        let base = Label {
             Text(title)
                 .font(.caption.weight(.semibold))
         } icon: {
@@ -132,20 +171,24 @@ public struct StatusPill: View {
                 .font(.caption2.weight(.bold))
         }
         .foregroundStyle(color)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4)
-        .background(color.opacity(colorScheme == .dark ? 0.16 : 0.10), in: Capsule())
-        .overlay(
-            Capsule()
-                .strokeBorder(color.opacity(contrast == .increased ? 0.70 : 0.30), lineWidth: 1)
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+
+        if reduceTransparency {
+            base
+                .background(color.opacity(0.18), in: Capsule())
+                .overlay(Capsule().strokeBorder(color.opacity(0.45), lineWidth: 1))
+        } else {
+            base
+                .background(color.opacity(0.14), in: Capsule())
+                .glassEffect(.regular, in: Capsule())
+                .overlay(Capsule().strokeBorder(color.opacity(0.32), lineWidth: 0.75))
+        }
     }
 }
 
 // MARK: - Signature Component : Baie Télémétrique Rack 2U
 
-/// Élément signature identitaire de PVE Center : représente le châssis matériel
-/// des ressources actives (LXC/VM) et disques physiques en typographie tabulaire `SF Mono`.
 public struct RackBayMatrixView: View {
     @Environment(\.colorScheme) private var colorScheme
     public let node: NodeSummary
@@ -174,7 +217,7 @@ public struct RackBayMatrixView: View {
         let caution = DesignTokens.caution(colorScheme)
         let critical = DesignTokens.critical(colorScheme)
 
-        GlassCard(padding: 16, cornerRadius: 18) {
+        GlassCard(padding: 16, cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -189,7 +232,6 @@ public struct RackBayMatrixView: View {
                     StatusPill("Nominal", color: nominal, systemImage: "checkmark.circle.fill")
                 }
 
-                // Tiroirs Machines (LXC / VM)
                 if !resources.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Button(action: onSelectMachines) {
@@ -202,11 +244,11 @@ public struct RackBayMatrixView: View {
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             }
-                            .frame(minHeight: 28)
+                            .frame(minHeight: 26)
                         }
                         .buttonStyle(.plain)
 
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 6)], spacing: 6) {
                             ForEach(resources) { res in
                                 HStack(spacing: 5) {
                                     Image(systemName: res.isRunning ? "power.circle.fill" : "pause.circle")
@@ -223,7 +265,7 @@ public struct RackBayMatrixView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .background(
-                                    DesignTokens.surfaceElevated(colorScheme),
+                                    Color.white.opacity(0.06),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                                 .accessibilityLabel("\(res.type.badgeLabel) \(res.vmid) \(res.name), \(res.isRunning ? "en ligne" : "arrêté")")
@@ -232,7 +274,6 @@ public struct RackBayMatrixView: View {
                     }
                 }
 
-                // Tiroirs Disques Physiques (S.M.A.R.T.)
                 if !drives.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Button(action: onSelectStorage) {
@@ -245,11 +286,11 @@ public struct RackBayMatrixView: View {
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             }
-                            .frame(minHeight: 28)
+                            .frame(minHeight: 26)
                         }
                         .buttonStyle(.plain)
 
-                        HStack(spacing: 6) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
                             ForEach(Array(drives.enumerated()), id: \.element.id) { idx, drive in
                                 let bayColor: Color = !drive.isHealthy
                                     ? critical
@@ -271,7 +312,7 @@ public struct RackBayMatrixView: View {
                                 .padding(8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
-                                    DesignTokens.surfaceElevated(colorScheme),
+                                    Color.white.opacity(0.06),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                                 .accessibilityLabel("Baie \(idx + 1) \(drive.label), utilisé à \(Int(drive.usedPct)) pourcent, SMART \(drive.health)")
@@ -305,9 +346,9 @@ public struct UsageProgressBar: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(DesignTokens.primaryText(colorScheme).opacity(0.11))
+                    .fill(Color.white.opacity(0.12))
                 Capsule()
-                    .fill(resolvedColor)
+                    .fill(resolvedColor.gradient)
                     .frame(width: max(4, geo.size.width * (percentage / 100)))
             }
         }
@@ -316,7 +357,6 @@ public struct UsageProgressBar: View {
     }
 }
 
-/// Toast appartenant à la couche fonctionnelle flottante (matériau régulier avec repli Reduce Transparency).
 public struct ToastOverlayView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorScheme) private var colorScheme
@@ -328,7 +368,7 @@ public struct ToastOverlayView: View {
 
     public var body: some View {
         let iconColor = toast.isError ? DesignTokens.critical(colorScheme) : DesignTokens.nominal(colorScheme)
-        HStack(spacing: 10) {
+        let label = HStack(spacing: 10) {
             Image(systemName: toast.isError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                 .foregroundStyle(iconColor)
                 .font(.body.weight(.semibold))
@@ -339,18 +379,17 @@ public struct ToastOverlayView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background {
-            if reduceTransparency {
-                Capsule().fill(DesignTokens.surface(colorScheme))
-            } else {
-                Capsule().fill(.regularMaterial)
-            }
+
+        if reduceTransparency {
+            label
+                .background(DesignTokens.surface(colorScheme), in: Capsule())
+                .overlay(Capsule().strokeBorder(DesignTokens.hairBorder(colorScheme, highContrast: true), lineWidth: 1.5))
+                .padding(.horizontal, 20)
+        } else {
+            label
+                .glassEffect(.regular, in: Capsule())
+                .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
+                .padding(.horizontal, 20)
         }
-        .overlay(
-            Capsule()
-                .strokeBorder(DesignTokens.hairBorder(colorScheme, highContrast: reduceTransparency), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.12), radius: 14, y: 6)
-        .padding(.horizontal, 20)
     }
 }
