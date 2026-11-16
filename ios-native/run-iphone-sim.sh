@@ -26,17 +26,25 @@ fi
 DEVICE_LINE="$(xcrun simctl list devices available | grep "$UDID" | head -n 1 | xargs)"
 echo "Simulateur sélectionné : $DEVICE_LINE"
 
-echo "Démarrage du simulateur..."
+echo "Fermeture des éventuels simulateurs Apple TV actifs..."
+while IFS= read -r TV_UDID; do
+    if [[ -n "$TV_UDID" ]]; then
+        xcrun simctl shutdown "$TV_UDID" 2>/dev/null || true
+    fi
+done < <(xcrun simctl list devices booted | grep "Apple TV" | sed -nE 's/.*\(([0-9A-F-]{36})\).*/\1/p')
+
+echo "Démarrage du simulateur iPhone..."
 xcrun simctl boot "$UDID" 2>/dev/null || true
+xcrun simctl bootstatus "$UDID" -b
+
 DEV_APP_DIR="$(dirname "$(dirname "$(xcode-select -p)")")/Applications"
 if [[ -d "$DEV_APP_DIR/DeviceHub.app" ]]; then
-    open "$DEV_APP_DIR/DeviceHub.app" || true
+    open "devices://device/open?id=$UDID" 2>/dev/null || open "$DEV_APP_DIR/DeviceHub.app" || true
 elif [[ -d "$(xcode-select -p)/Applications/Simulator.app" ]]; then
     open "$(xcode-select -p)/Applications/Simulator.app" --args -CurrentDeviceUDID "$UDID" || true
 else
-    open -a Simulator 2>/dev/null || open -a DeviceHub 2>/dev/null || true
+    open "devices://device/open?id=$UDID" 2>/dev/null || open -a Simulator 2>/dev/null || open -a DeviceHub 2>/dev/null || true
 fi
-xcrun simctl bootstatus "$UDID" -b
 
 echo "Compilation de PVE Center pour iphonesimulator..."
 xcodebuild \

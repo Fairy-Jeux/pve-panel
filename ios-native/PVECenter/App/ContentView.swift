@@ -275,9 +275,7 @@ public struct ContentView: View {
                 viewModel.showServerSettings = true
             } label: {
                 Label(
-                    viewModel.isDemoMode
-                        ? "Mode Démo"
-                        : (viewModel.serverBaseURL.isEmpty ? "Serveur" : viewModel.activeServerName),
+                    shortServerButtonTitle,
                     systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
                 )
             }
@@ -290,15 +288,28 @@ public struct ContentView: View {
             Button {
                 Task { await viewModel.refreshAll(silent: false) }
             } label: {
+                #if os(macOS)
                 Label(
                     viewModel.isRefreshing ? "Synchronisation…" : "Rafraîchir",
                     systemImage: "arrow.clockwise"
                 )
+                #else
+                Image(systemName: "arrow.clockwise")
+                #endif
             }
             .disabled(viewModel.isRefreshing)
+            .accessibilityLabel(viewModel.isRefreshing ? "Synchronisation…" : "Rafraîchir")
             #if !os(tvOS)
             .help("Rafraîchir toutes les données maintenant (⌘R)")
             #endif
         }
+    }
+
+    private var shortServerButtonTitle: String {
+        if viewModel.isDemoMode { return "Démo" }
+        if viewModel.serverBaseURL.isEmpty { return "Serveur" }
+        let name = viewModel.activeServerName
+        if name.count <= 14 { return name }
+        return String(name.prefix(13)) + "…"
     }
 }

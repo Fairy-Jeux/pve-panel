@@ -23,14 +23,14 @@ public struct ServerSettingsSheet: View {
                     savedServersSection
                 }
 
+                demoModeSection
                 addServerSection
                 deepLinkPairingSection
                 serverWizardSection
-                demoModeSection
                 refreshOptionsSection
             }
             .formStyle(.grouped)
-            .navigationTitle("Serveurs & Connexion")
+            .navigationTitle("Connexion")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -46,6 +46,8 @@ public struct ServerSettingsSheet: View {
         }
         #if os(macOS)
         .frame(minWidth: 520, idealWidth: 580, minHeight: 560)
+        #elseif os(tvOS)
+        .frame(maxWidth: 900, maxHeight: 820)
         #endif
     }
 
@@ -200,6 +202,7 @@ public struct ServerSettingsSheet: View {
                         systemImage: "play.fill"
                     )
                     .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                 }
