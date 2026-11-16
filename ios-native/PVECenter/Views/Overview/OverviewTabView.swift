@@ -191,7 +191,7 @@ public struct OverviewTabView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            GlassCard(padding: 14, cornerRadius: 16) {
+            GlassCard(padding: 14, cornerRadius: 16, interactive: true) {
                 VStack(alignment: .leading, spacing: 6) {
                     Label(title, systemImage: icon)
                         .font(.caption.weight(.semibold))

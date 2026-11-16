@@ -56,17 +56,20 @@ public struct GlassCard<Content: View>: View {
     private let padding: CGFloat
     private let cornerRadius: CGFloat
     private let elevated: Bool
+    private let interactive: Bool
     private let content: Content
 
     public init(
         padding: CGFloat = 16,
         cornerRadius: CGFloat = 20,
         elevated: Bool = false,
+        interactive: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.padding = padding
         self.cornerRadius = cornerRadius
         self.elevated = elevated
+        self.interactive = interactive
         self.content = content()
     }
 
@@ -86,7 +89,7 @@ public struct GlassCard<Content: View>: View {
             content
                 .padding(padding)
                 .background(Color.white.opacity(elevated ? 0.05 : 0.025), in: shape)
-                .glassEffect(.regular, in: shape)
+                .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
                 .overlay(
                     shape.strokeBorder(
                         LinearGradient(
@@ -181,7 +184,7 @@ public struct StatusPill: View {
         } else {
             base
                 .background(color.opacity(0.14), in: Capsule())
-                .glassEffect(.regular, in: Capsule())
+                .glassEffect(.regular.interactive(), in: Capsule())
                 .overlay(Capsule().strokeBorder(color.opacity(0.32), lineWidth: 0.75))
         }
     }

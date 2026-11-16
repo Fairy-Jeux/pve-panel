@@ -156,7 +156,7 @@ public struct UsersTabView: View {
         return Button {
             selectedUser = user
         } label: {
-            GlassCard(padding: 14, cornerRadius: 16) {
+            GlassCard(padding: 14, cornerRadius: 16, interactive: true) {
                 HStack(spacing: 12) {
                     Text(String(user.name.prefix(2)).uppercased())
                         .font(.system(.subheadline, design: .monospaced, weight: .bold))

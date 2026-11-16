@@ -76,6 +76,7 @@ public struct ContentView: View {
         } detail: {
             NavigationStack {
                 activeTabContent(for: viewModel.selectedTab)
+                    .scrollEdgeEffectStyle(.soft, for: .top)
                     .background { AmbientBackgroundView() }
                     .navigationTitle(viewModel.selectedTab.title)
                     .searchable(
@@ -127,6 +128,7 @@ public struct ContentView: View {
             } detail: {
                 NavigationStack {
                     activeTabContent(for: viewModel.selectedTab)
+                        .scrollEdgeEffectStyle(.soft, for: .top)
                         .background { AmbientBackgroundView() }
                         .navigationTitle(viewModel.selectedTab.title)
                         .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
@@ -146,6 +148,9 @@ public struct ContentView: View {
                     }
                 }
             }
+            #if os(iOS)
+            .tabBarMinimizeBehavior(.onScrollDown)
+            #endif
             .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
         }
     }
@@ -169,6 +174,7 @@ public struct ContentView: View {
     ) -> some View {
         NavigationStack {
             content()
+                .scrollEdgeEffectStyle(.soft, for: .top)
                 .background { AmbientBackgroundView() }
                 .navigationTitle(tab.title)
                 .toolbar {

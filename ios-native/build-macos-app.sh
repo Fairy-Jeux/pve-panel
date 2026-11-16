@@ -67,7 +67,7 @@ cat <<EOF > "$APP_BUNDLE/Contents/Info.plist"
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>26.0</string>
+	<string>27.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSPrincipalClass</key>
