@@ -26,7 +26,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>CFBundleURLName</key>
-			<string>io.github.pvepanel.app.connect</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).connect</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>pvecenter</string>

@@ -53,10 +53,15 @@ flowchart LR
 
 ### Démarrage rapide en une commande (`./install.sh`)
 ```bash
-git clone <url-de-votre-depot> pve-panel
+git clone https://github.com/Fairy-Jeux/pve-panel.git pve-panel
 cd pve-panel
 chmod +x install.sh
 sudo ./install.sh
+```
+Ou directement depuis Proxmox VE / Linux :
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fairy-Jeux/pve-panel/main/install.sh -o install.sh
+chmod +x install.sh && sudo ./install.sh
 ```
 Le script détecte automatiquement votre environnement :
 - **Mode A — Hôte Proxmox VE (`pveversion` détecté)** : propose de créer un conteneur LXC Debian 12 dédié (`pve-panel`), crée le rôle restreint `PanelRole` et génère le token API `root@pam!pve-panel` via `pveum`, monte `/mnt` en lecture seule (`/host_mnt`), copie le projet dans `/opt/pve-panel`, installe Docker + Tailscale (`--advertise-tags=tag:panel` + `tailscale serve --bg http://127.0.0.1:8000`) et pré-remplit `.env`.
@@ -84,7 +89,7 @@ En cliquant sur **« Enregistrer & Appliquer à chaud »**, le backend écrit de
 
 #### 1. Préparer la configuration
 ```bash
-git clone <url-de-votre-depot> pve-panel
+git clone https://github.com/Fairy-Jeux/pve-panel.git pve-panel
 cd pve-panel
 cp .env.example .env
 cp services.example.yaml services.yaml

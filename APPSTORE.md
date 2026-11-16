@@ -6,7 +6,7 @@ PVE Command Center propose une **application Apple 100 % native multi-plateforme
 
 ## 1. Architecture Apple 100 % Native (`ios-native/`)
 
-- **Projet Xcode universel :** `ios-native/PVECenter.xcodeproj` (schéma `PVECenter`, Bundle ID par défaut `io.github.pvepanel.app`, `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx appletvos appletvsimulator"`, `TARGETED_DEVICE_FAMILY = "1,2,3"`, `TVOS_DEPLOYMENT_TARGET = 27.0`) et `ios-native/Package.swift` (`.iOS("27.0")`, `.macOS("27.0")`, `.tvOS("27.0")`).
+- **Projet Xcode universel :** `ios-native/PVECenter.xcodeproj` (schéma `PVECenter`, Bundle ID par défaut `io.ac.pvepanel.app`, `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx appletvos appletvsimulator"`, `TARGETED_DEVICE_FAMILY = "1,2,3"`, `TVOS_DEPLOYMENT_TARGET = 27.0`) et `ios-native/Package.swift` (`.iOS("27.0")`, `.macOS("27.0")`, `.tvOS("27.0")`).
 - **Technologies Apple natives :**
   - **Swift 6** + **SwiftUI** (`NavigationStack`, `NavigationSplitView` sur iPad/Mac, `TabView` adaptée iOS & 10-foot UI sur Apple TV `tvOS 27.0`, `.searchable`, `.refreshable`, `.confirmationDialog`, `.contextMenu`, `.sheet`)
   - **Observation Framework** (`@Observable`, `@Bindable`) + **Swift Concurrency** (`async/await`, `actor APIClient`, `actor DemoDataStore`)

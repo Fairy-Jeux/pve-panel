@@ -145,7 +145,7 @@ jobs:
         if: steps.check_secrets.outputs.signed == 'true'
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APP_BUNDLE_ID: io.github.pvepanel.app
+          APP_BUNDLE_ID: io.ac.pvepanel.app
           PROVISIONING_PROFILE_SPECIFIER: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
         run: |
           cat <<EOF > "$RUNNER_TEMP/ExportOptions.plist"

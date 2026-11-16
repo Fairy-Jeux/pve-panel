@@ -106,5 +106,8 @@ fi
 echo "Installation sur l'appareil $DEVICE_ID..."
 xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"
 
-echo "Lancement de PVE Center sur l'appareil $DEVICE_ID..."
-xcrun devicectl device process launch --device "$DEVICE_ID" io.github.pvepanel.app || true
+BUNDLE_ID="$(xcodebuild -project PVECenter.xcodeproj -scheme PVECenter -showBuildSettings 2>/dev/null | awk -F' = ' '/PRODUCT_BUNDLE_IDENTIFIER/ {print $2; exit}' || true)"
+BUNDLE_ID="${BUNDLE_ID:-io.ac.pvepanel.app}"
+
+echo "Lancement de PVE Center ($BUNDLE_ID) sur l'appareil $DEVICE_ID..."
+xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE_ID" || true

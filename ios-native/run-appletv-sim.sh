@@ -5,7 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 DEFAULT_UDID="7D619120-5B14-4E52-9016-4ACF37A0D8E7"
-BUNDLE_ID="io.github.pvepanel.app"
+BUNDLE_ID="$(xcodebuild -project PVECenter.xcodeproj -scheme PVECenter -showBuildSettings 2>/dev/null | awk -F' = ' '/PRODUCT_BUNDLE_IDENTIFIER/ {print $2; exit}' || true)"
+BUNDLE_ID="${BUNDLE_ID:-io.ac.pvepanel.app}"
 APP_NAME="PVE Center.app"
 DERIVED_DATA="build/tvsim-dd"
 
