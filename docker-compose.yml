@@ -1,0 +1,17 @@
+services:
+  pve-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pve-panel
+    restart: unless-stopped
+    # network_mode: host + --host 127.0.0.1 garantit que :
+    # 1. Le serveur écoute exclusivement sur l'interface loopback locale (jamais 0.0.0.0 ni LAN)
+    # 2. request.client.host vaut strictement 127.0.0.1 / ::1 pour la vérification anti-spoofing
+    network_mode: host
+    command: ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--no-proxy-headers"]
+    env_file:
+      - .env
+    volumes:
+      - ./services.yaml:/app/services.yaml:ro
+      - /host_mnt:/host_mnt:ro

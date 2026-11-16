@@ -1,0 +1,80 @@
+categories:
+  - name: Médias & Streaming
+    services:
+      - id: jellyfin
+        name: Jellyfin
+        description: Cinéma & Séries (transcodage matériel)
+        url: https://jellyfin.example.com
+        ping_url: http://192.168.1.26:8096/health
+        icon: Film
+        widget: jellyfin
+
+      - id: plex
+        name: Plex Media Server
+        description: Serveur multimédia
+        url: https://app.plex.tv
+        ping_url: http://192.168.1.30:32400/identity
+        icon: Play
+        widget: plex
+
+      - id: jellyseerr
+        name: Jellyseerr
+        description: Demandes de films & séries
+        url: https://requests.example.com
+        ping_url: http://192.168.1.31:5055
+        icon: Sparkles
+
+  - name: Téléchargements & Indexeurs
+    services:
+      - id: radarr
+        name: Radarr
+        description: Gestion automatisée des films
+        url: http://192.168.1.27:7878
+        ping_url: http://192.168.1.27:7878/ping
+        icon: Clapperboard
+        widget: radarr
+
+      - id: sonarr
+        name: Sonarr
+        description: Séries TV & Animes
+        url: http://192.168.1.28:8989
+        ping_url: http://192.168.1.28:8989/ping
+        icon: Tv
+        widget: sonarr
+
+      - id: prowlarr
+        name: Prowlarr
+        description: Indexeurs centralisés
+        url: http://192.168.1.29:9696
+        ping_url: http://192.168.1.29:9696/ping
+        icon: Radar
+        widget: prowlarr
+
+      - id: qbittorrent
+        name: qBittorrent
+        description: Client BitTorrent sous VPN
+        url: http://192.168.1.32:8090
+        ping_url: http://192.168.1.32:8090
+        icon: Download
+        widget: qbittorrent
+
+  - name: Infrastructure
+    services:
+      - id: proxmox
+        name: Proxmox VE
+        description: Hyperviseur PVE
+        url: https://192.168.1.10:8006
+        ping_url: https://192.168.1.10:8006
+        icon: Server
+
+# Optionnel : étiquettes et WWN pour associer vos disques /mnt/* aux infos SMART Proxmox.
+# Si omis, les sous-dossiers montés dans /host_mnt sont détectés automatiquement.
+storage_mounts:
+  - mount: /mnt/disk1
+    subpath: disk1
+    wwn: "0x5000000000000001"
+    label: Disque 4 To (Exemple)
+  - mount: /mnt/disk2
+    subpath: disk2
+    wwn: "0x5000000000000002"
+    label: Disque 2 To (Exemple)
