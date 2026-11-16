@@ -3,36 +3,74 @@ name: iOS App Store & TestFlight Build
 on:
   workflow_dispatch:
     inputs:
+      project_mode:
+        description: 'Cible Xcode à compiler : native (SwiftUI 6) ou capacitor (Web hybride)'
+        required: false
+        default: 'native'
+        type: choice
+        options:
+          - native
+          - capacitor
       upload_testflight:
         description: 'Signer et envoyer vers TestFlight / App Store Connect (nécessite les secrets Apple)'
         required: false
         default: false
         type: boolean
   push:
-    tags:
-      - 'v*-ios'
+    branches: [main]
+    paths:
+      - 'ios-native/**'
+      - '.github/workflows/ios-appstore.yml'
+  tags:
+    - 'v*-ios'
 
 jobs:
-  build-ios:
-    name: Archive & Package iOS (PVE Center)
+  swift-verify:
+    name: Verify Native Swift 6 Package
     runs-on: macos-15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
+      - name: Compile Swift 6 Package
+        working-directory: ios-native
+        run: swift build -c release
+
+  build-ios:
+    name: Archive & Package iOS (PVE Center)
+    runs-on: macos-15
+    needs: [swift-verify]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 (Capacitor mode)
+        if: github.event.inputs.project_mode == 'capacitor'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies & build web bundle
+      - name: Build Capacitor Web Assets (Capacitor mode)
+        if: github.event.inputs.project_mode == 'capacitor'
         working-directory: frontend
         run: |
           npm ci
           npm run build
           npx cap sync ios
+
+      - name: Resolve Xcode Project & Scheme
+        id: xcode_target
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.project_mode }}" = "capacitor" ]; then
+            echo "project=frontend/ios/App/App.xcodeproj" >> "$GITHUB_OUTPUT"
+            echo "scheme=App" >> "$GITHUB_OUTPUT"
+          else
+            echo "project=ios-native/PVECenter.xcodeproj" >> "$GITHUB_OUTPUT"
+            echo "scheme=PVECenter" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check App Store signing secrets
         id: check_secrets
@@ -76,8 +114,8 @@ jobs:
           PROVISIONING_PROFILE_SPECIFIER: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
         run: |
           xcodebuild \
-            -project frontend/ios/App/App.xcodeproj \
-            -scheme App \
+            -project "${{ steps.xcode_target.outputs.project }}" \
+            -scheme "${{ steps.xcode_target.outputs.scheme }}" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/PVECenter.xcarchive" \
@@ -148,8 +186,8 @@ jobs:
         if: steps.check_secrets.outputs.signed == 'false'
         run: |
           xcodebuild \
-            -project frontend/ios/App/App.xcodeproj \
-            -scheme App \
+            -project "${{ steps.xcode_target.outputs.project }}" \
+            -scheme "${{ steps.xcode_target.outputs.scheme }}" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/PVECenter-unsigned.xcarchive" \

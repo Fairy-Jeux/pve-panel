@@ -1,0 +1,716 @@
+import Foundation
+
+/// Thread-safe in-memory state used when Demo Mode is active (or during App Store Review).
+public actor DemoDataStore {
+    public static let shared = DemoDataStore()
+
+    private let gb: Int64 = 1024 * 1024 * 1024
+    private let tb: Int64 = 1024 * 1024 * 1024 * 1024
+
+    private var resources: [PveResource]
+    private var pveTasks: [PveTaskItem]
+    private var seerrRequests: [SeerrRequestItem]
+    private var qbitAltSpeed: Bool = false
+    private var qbitTorrents: [QbitTorrentItem]
+    private var users: [UnifiedUser]
+
+    public init() {
+        let nowSec = Int(Date().timeIntervalSince1970)
+        self.resources = [
+            PveResource(
+                vmid: 101,
+                name: "ct-reverse-proxy",
+                type: .lxc,
+                status: "running",
+                cpuPct: 4.2,
+                cpus: 2,
+                memUsedBytes: 420 * 1024 * 1024,
+                memTotalBytes: 2 * 1024 * 1024 * 1024,
+                memPct: 21.0,
+                diskUsedBytes: 4 * 1024 * 1024 * 1024,
+                diskTotalBytes: 16 * 1024 * 1024 * 1024,
+                uptimeSeconds: 1_842_300,
+                uptimeHuman: "21j 7h",
+                tags: ["network", "prod"],
+                isSelf: false
+            ),
+            PveResource(
+                vmid: 102,
+                name: "ct-media-server",
+                type: .lxc,
+                status: "running",
+                cpuPct: 31.4,
+                cpus: 8,
+                memUsedBytes: 7 * 1024 * 1024 * 1024,
+                memTotalBytes: 16 * 1024 * 1024 * 1024,
+                memPct: 43.7,
+                diskUsedBytes: 28 * 1024 * 1024 * 1024,
+                diskTotalBytes: 64 * 1024 * 1024 * 1024,
+                uptimeSeconds: 914_520,
+                uptimeHuman: "10j 14h",
+                tags: ["media", "gpu"],
+                isSelf: false
+            ),
+            PveResource(
+                vmid: 103,
+                name: "vm-docker-host",
+                type: .qemu,
+                status: "running",
+                cpuPct: 18.6,
+                cpus: 6,
+                memUsedBytes: 11 * 1024 * 1024 * 1024,
+                memTotalBytes: 16 * 1024 * 1024 * 1024,
+                memPct: 68.8,
+                diskUsedBytes: 54 * 1024 * 1024 * 1024,
+                diskTotalBytes: 120 * 1024 * 1024 * 1024,
+                uptimeSeconds: 1_408_120,
+                uptimeHuman: "16j 7h",
+                tags: ["docker", "prod"],
+                isSelf: false
+            ),
+            PveResource(
+                vmid: 104,
+                name: "ct-backup-node",
+                type: .lxc,
+                status: "stopped",
+                cpuPct: 0,
+                cpus: 4,
+                memUsedBytes: 0,
+                memTotalBytes: 4 * 1024 * 1024 * 1024,
+                memPct: 0,
+                diskUsedBytes: 14 * 1024 * 1024 * 1024,
+                diskTotalBytes: 40 * 1024 * 1024 * 1024,
+                uptimeSeconds: 0,
+                uptimeHuman: "Arrêté",
+                tags: ["backup"],
+                isSelf: false
+            ),
+            PveResource(
+                vmid: 116,
+                name: "pve-panel",
+                type: .lxc,
+                status: "running",
+                cpuPct: 1.8,
+                cpus: 2,
+                memUsedBytes: 360 * 1024 * 1024,
+                memTotalBytes: 2 * 1024 * 1024 * 1024,
+                memPct: 17.5,
+                diskUsedBytes: 2 * 1024 * 1024 * 1024,
+                diskTotalBytes: 8 * 1024 * 1024 * 1024,
+                uptimeSeconds: 604_800,
+                uptimeHuman: "7j 0h",
+                tags: ["panel", "tailscale"],
+                isSelf: true
+            ),
+        ]
+
+        self.pveTasks = [
+            PveTaskItem(
+                upid: "UPID:pve-node-01:demo-vzdump-102",
+                type: "vzdump",
+                vmid: "102",
+                user: "root@pam",
+                status: "OK",
+                starttime: nowSec - 3200,
+                endtime: nowSec - 2810,
+                durationSec: 390
+            ),
+            PveTaskItem(
+                upid: "UPID:pve-node-01:demo-aptupdate",
+                type: "aptupdate",
+                vmid: "",
+                user: "root@pam",
+                status: "OK",
+                starttime: nowSec - 14_400,
+                endtime: nowSec - 14_350,
+                durationSec: 50
+            ),
+            PveTaskItem(
+                upid: "UPID:pve-node-01:demo-vzstart-101",
+                type: "vzstart",
+                vmid: "101",
+                user: "root@pam",
+                status: "OK",
+                starttime: nowSec - 86_400,
+                endtime: nowSec - 86_392,
+                durationSec: 8
+            ),
+        ]
+
+        self.seerrRequests = [
+            SeerrRequestItem(
+                id: 401,
+                status: 1,
+                mediaType: "movie",
+                title: "Dune : Deuxième Partie (2024)",
+                requestedBy: "Alex",
+                createdAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-1500)),
+                mediaStatus: 2
+            ),
+            SeerrRequestItem(
+                id: 402,
+                status: 2,
+                mediaType: "tv",
+                title: "Severance - Saison 2",
+                requestedBy: "Camille",
+                createdAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-18_000)),
+                mediaStatus: 4
+            ),
+        ]
+
+        self.qbitTorrents = [
+            QbitTorrentItem(
+                hash: "demo-hash-ubuntu-2404",
+                name: "ubuntu-24.04.2-live-server-amd64.iso",
+                state: "downloading",
+                progressPct: 74.2,
+                dlspeed: 24_800_000,
+                upspeed: 3_100_000,
+                size: 3_100_000_000,
+                eta: 32
+            ),
+            QbitTorrentItem(
+                hash: "demo-hash-debian-12",
+                name: "debian-12.9.0-amd64-netinst.iso",
+                state: "uploading",
+                progressPct: 100,
+                dlspeed: 0,
+                upspeed: 5_400_000,
+                size: 730_000_000,
+                eta: 8_640_000
+            ),
+        ]
+
+        self.users = [
+            UnifiedUser(
+                jellyfinId: "demo-admin-01",
+                name: "Admin Démo",
+                isAdmin: true,
+                isProtected: true,
+                isDisabled: false,
+                enableAllFolders: true,
+                enabledFolders: [],
+                enableDownloading: true,
+                maxActiveSessions: 0,
+                lastActivity: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-120)),
+                inJellyseerr: true,
+                jellyseerrId: 1,
+                requestCount: 14,
+                autoApprove: true
+            ),
+            UnifiedUser(
+                jellyfinId: "demo-guest-02",
+                name: "Alex",
+                isAdmin: false,
+                isProtected: false,
+                isDisabled: false,
+                enableAllFolders: false,
+                enabledFolders: ["lib-movies", "lib-series"],
+                enableDownloading: true,
+                maxActiveSessions: 2,
+                lastActivity: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-10_800)),
+                inJellyseerr: true,
+                jellyseerrId: 2,
+                requestCount: 6,
+                autoApprove: true
+            ),
+            UnifiedUser(
+                jellyfinId: "demo-guest-03",
+                name: "Camille",
+                isAdmin: false,
+                isProtected: false,
+                isDisabled: false,
+                enableAllFolders: true,
+                enabledFolders: [],
+                enableDownloading: false,
+                maxActiveSessions: 2,
+                lastActivity: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-93_600)),
+                inJellyseerr: false,
+                jellyseerrId: nil,
+                requestCount: 0,
+                autoApprove: false
+            ),
+        ]
+    }
+
+    public func currentUser() -> AuthUser {
+        AuthUser(
+            login: "demo@pve-center.app",
+            name: "Mode Démo App Store",
+            profilePic: nil,
+            authMode: "demo"
+        )
+    }
+
+    public func pveOverview() -> PveOverview {
+        let running = resources.filter(\.isRunning).count
+        let lxcCount = resources.filter { $0.type == .lxc }.count
+        let qemuCount = resources.filter { $0.type == .qemu }.count
+
+        return PveOverview(
+            online: true,
+            node: NodeSummary(
+                name: "pve-node-01",
+                cpuPct: 23.8,
+                cpuModel: "AMD Ryzen / EPYC Virtualization Host",
+                cpuThreads: 16,
+                loadavg: ["1.18", "1.05", "0.94"],
+                memUsedBytes: 28 * gb,
+                memTotalBytes: 64 * gb,
+                memPct: 43.8,
+                swapUsedBytes: 512 * 1024 * 1024,
+                swapTotalBytes: 8 * gb,
+                rootfsUsedBytes: 42 * gb,
+                rootfsTotalBytes: 120 * gb,
+                uptimeSeconds: 1_842_310,
+                uptimeHuman: "21j 7h 45m",
+                pveVersion: "8.3.2",
+                storages: [
+                    StorageInfo(
+                        name: "local-lvm",
+                        type: "lvmthin",
+                        active: true,
+                        usedBytes: 412 * gb,
+                        totalBytes: 1000 * gb,
+                        usedPct: 41.2
+                    ),
+                    StorageInfo(
+                        name: "local",
+                        type: "dir",
+                        active: true,
+                        usedBytes: 88 * gb,
+                        totalBytes: 240 * gb,
+                        usedPct: 36.7
+                    ),
+                ]
+            ),
+            counts: PveCounts(
+                total: resources.count,
+                running: running,
+                stopped: resources.count - running,
+                lxc: lxcCount,
+                qemu: qemuCount
+            ),
+            resources: resources,
+            externalStorage: ExternalStorageOverview(
+                pool: MergerfsPoolInfo(
+                    name: "Pool MergerFS (32 To)",
+                    mount: "/mnt/storage",
+                    fstype: "fuse.mergerfs",
+                    policy: "mfs (most free space)",
+                    drivesCount: 3,
+                    available: true,
+                    totalBytes: 32 * tb,
+                    usedBytes: 20 * tb,
+                    availBytes: 12 * tb,
+                    usedPct: 62.5
+                ),
+                drives: [
+                    PhysicalDriveInfo(
+                        mount: "/mnt/disk1",
+                        label: "Disque 1 • 16 To",
+                        wwn: "wwn-0x5000demo00000001",
+                        devpath: "/dev/sda",
+                        model: "Seagate IronWolf Pro 16TB",
+                        vendor: "ATA",
+                        serial: "DEMO-16TB-01",
+                        type: "HDD",
+                        rpm: "7200 rpm",
+                        health: "PASSED",
+                        sizeBytes: 16 * tb,
+                        totalBytes: 16 * tb,
+                        usedBytes: 10 * tb,
+                        availBytes: 6 * tb,
+                        usedPct: 62.5
+                    ),
+                    PhysicalDriveInfo(
+                        mount: "/mnt/disk2",
+                        label: "Disque 2 • 16 To",
+                        wwn: "wwn-0x5000demo00000002",
+                        devpath: "/dev/sdb",
+                        model: "Seagate IronWolf Pro 16TB",
+                        vendor: "ATA",
+                        serial: "DEMO-16TB-02",
+                        type: "HDD",
+                        rpm: "7200 rpm",
+                        health: "PASSED",
+                        sizeBytes: 16 * tb,
+                        totalBytes: 16 * tb,
+                        usedBytes: 9 * tb,
+                        availBytes: 7 * tb,
+                        usedPct: 56.3
+                    ),
+                    PhysicalDriveInfo(
+                        mount: "/mnt/disk3",
+                        label: "Cache NVMe • 2 To",
+                        wwn: "wwn-0x5000demo00000003",
+                        devpath: "/dev/nvme0n1",
+                        model: "Samsung 990 PRO 2TB",
+                        vendor: "NVMe",
+                        serial: "DEMO-NVME-01",
+                        type: "SSD",
+                        rpm: "NVMe",
+                        health: "PASSED",
+                        sizeBytes: 2 * tb,
+                        totalBytes: 2 * tb,
+                        usedBytes: 840 * gb,
+                        availBytes: 1160 * gb,
+                        usedPct: 42.0
+                    ),
+                ],
+                systemSsd: SystemSsdInfo(
+                    devpath: "/dev/nvme1n1",
+                    model: "Enterprise Boot NVMe 512GB",
+                    serial: "DEMO-SYS-01",
+                    health: "PASSED",
+                    sizeBytes: 512 * gb
+                )
+            )
+        )
+    }
+
+    public func performPveAction(type: PveResourceType, vmid: Int, action: PveAction) throws {
+        guard let idx = resources.firstIndex(where: { $0.vmid == vmid && $0.type == type }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Ressource introuvable en mode démo.")
+        }
+        if resources[idx].isSelf && action != .start {
+            throw APIError.serverError(
+                statusCode: 400,
+                detail: "Action bloquée : impossible d'arrêter ou redémarrer le conteneur hébergeant le panel."
+            )
+        }
+        switch action {
+        case .stop, .shutdown:
+            resources[idx].status = "stopped"
+            resources[idx].cpuPct = 0
+            resources[idx].memUsedBytes = 0
+            resources[idx].memPct = 0
+            resources[idx].uptimeSeconds = 0
+            resources[idx].uptimeHuman = "Arrêté"
+        case .start, .reboot:
+            resources[idx].status = "running"
+            resources[idx].cpuPct = 8.4
+            resources[idx].memUsedBytes = Int64(Double(resources[idx].memTotalBytes) * 0.35)
+            resources[idx].memPct = 35.0
+            resources[idx].uptimeSeconds = 60
+            resources[idx].uptimeHuman = "1m"
+        }
+
+        let now = Int(Date().timeIntervalSince1970)
+        pveTasks.insert(
+            PveTaskItem(
+                upid: "UPID:pve-node-01:demo-\(action.rawValue)-\(vmid)-\(now)",
+                type: "\(type == .lxc ? "vz" : "qm")\(action.rawValue)",
+                vmid: "\(vmid)",
+                user: "demo@pve",
+                status: "OK",
+                starttime: now,
+                endtime: now + 1,
+                durationSec: 1
+            ),
+            at: 0
+        )
+    }
+
+    public func servicesCategories() -> [ServiceCategory] {
+        [
+            ServiceCategory(
+                name: "Médias & Streaming",
+                services: [
+                    ServiceItem(
+                        id: "jellyfin",
+                        name: "Jellyfin",
+                        description: "Serveur multimédia 4K HDR & transcodage matériel",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "film",
+                        widget: "jellyfin",
+                        online: true,
+                        latencyMs: 8.2,
+                        statusCode: 200
+                    ),
+                    ServiceItem(
+                        id: "jellyseerr",
+                        name: "Jellyseerr",
+                        description: "Portail de demandes de films et séries",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "sparkles",
+                        widget: nil,
+                        online: true,
+                        latencyMs: 11.4,
+                        statusCode: 200
+                    ),
+                ]
+            ),
+            ServiceCategory(
+                name: "Téléchargements & Automation",
+                services: [
+                    ServiceItem(
+                        id: "radarr",
+                        name: "Radarr",
+                        description: "Gestion automatisée de la vidéothèque Films",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "clapperboard",
+                        widget: "radarr",
+                        online: true,
+                        latencyMs: 12.1,
+                        statusCode: 200
+                    ),
+                    ServiceItem(
+                        id: "sonarr",
+                        name: "Sonarr",
+                        description: "Suivi et téléchargement des séries TV",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "tv",
+                        widget: "sonarr",
+                        online: true,
+                        latencyMs: 13.0,
+                        statusCode: 200
+                    ),
+                    ServiceItem(
+                        id: "prowlarr",
+                        name: "Prowlarr",
+                        description: "Gestionnaire centralisé d'indexeurs",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "search",
+                        widget: "prowlarr",
+                        online: true,
+                        latencyMs: 9.6,
+                        statusCode: 200
+                    ),
+                    ServiceItem(
+                        id: "qbittorrent",
+                        name: "qBittorrent",
+                        description: "Client BitTorrent haute vitesse",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "download",
+                        widget: "qbittorrent",
+                        online: true,
+                        latencyMs: 7.4,
+                        statusCode: 200
+                    ),
+                ]
+            ),
+            ServiceCategory(
+                name: "Infrastructure & Sécurité",
+                services: [
+                    ServiceItem(
+                        id: "proxmox",
+                        name: "Proxmox VE",
+                        description: "Hyperviseur principal KVM / LXC",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "server",
+                        widget: nil,
+                        online: true,
+                        latencyMs: 3.1,
+                        statusCode: 200
+                    ),
+                    ServiceItem(
+                        id: "vaultwarden",
+                        name: "Vaultwarden",
+                        description: "Coffre-fort de mots de passe chiffré",
+                        url: "https://panel.example.ts.net",
+                        pingUrl: nil,
+                        icon: "shield",
+                        widget: nil,
+                        online: true,
+                        latencyMs: 9.2,
+                        statusCode: 200
+                    ),
+                ]
+            ),
+        ]
+    }
+
+    public func widgets() -> WidgetsMap {
+        let dlTotal = qbitTorrents.reduce(Int64(0)) { $0 + ($1.isPaused ? 0 : $1.dlspeed) }
+        let upTotal = qbitTorrents.reduce(Int64(0)) { $0 + ($1.isPaused ? 0 : $1.upspeed) }
+        let factor = qbitAltSpeed ? 0.25 : 1.0
+
+        return WidgetsMap(
+            jellyfin: JellyfinWidget(
+                status: "ok",
+                activeStreamsCount: 2,
+                activeStreams: [
+                    JellyfinStream(
+                        user: "Alex",
+                        title: "Dune : Deuxième Partie",
+                        device: "Apple TV 4K",
+                        playMethod: "DirectPlay",
+                        isPaused: false
+                    ),
+                    JellyfinStream(
+                        user: "Camille",
+                        title: "Severance S02E03",
+                        device: "iPhone 16 Pro",
+                        playMethod: "Transcode",
+                        isPaused: false
+                    ),
+                ],
+                moviesCount: 418,
+                seriesCount: 64,
+                episodesCount: 1840
+            ),
+            plex: nil,
+            radarr: RadarrWidget(
+                status: "ok",
+                moviesTotal: 418,
+                moviesDownloaded: 414,
+                moviesMissing: 4,
+                queueCount: 1,
+                upcoming: [UpcomingItem(title: "Mickey 17", date: "2026-11-22")]
+            ),
+            sonarr: SonarrWidget(
+                status: "ok",
+                seriesTotal: 64,
+                episodesDownloaded: 1840,
+                queueCount: 2,
+                upcoming: [UpcomingItem(title: "Severance S02E04", date: "2026-11-20")]
+            ),
+            prowlarr: ProwlarrWidget(
+                status: "ok",
+                indexersEnabled: 8,
+                indexersTotal: 8,
+                queries: 1420,
+                grabs: 86
+            ),
+            qbittorrent: QbittorrentWidget(
+                status: "ok",
+                dlSpeedBytes: Int64(Double(dlTotal) * factor),
+                upSpeedBytes: Int64(Double(upTotal) * factor),
+                dlTotalBytes: 2 * tb,
+                upTotalBytes: 6 * tb,
+                downloadingCount: qbitTorrents.filter { $0.state == "downloading" }.count,
+                seedingCount: qbitTorrents.filter { $0.state == "uploading" }.count,
+                torrentsTotal: qbitTorrents.count
+            )
+        )
+    }
+
+    public func opsOverview() -> OpsOverview {
+        OpsOverview(
+            pveTasks: Array(pveTasks.prefix(12)),
+            seerrRequests: seerrRequests,
+            qbitControl: QbitControlOverview(
+                available: true,
+                altSpeedEnabled: qbitAltSpeed,
+                torrents: qbitTorrents
+            )
+        )
+    }
+
+    public func decideSeerrRequest(id: Int, approve: Bool) throws {
+        guard let idx = seerrRequests.firstIndex(where: { $0.id == id }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Demande introuvable.")
+        }
+        seerrRequests[idx].status = approve ? 2 : 3
+    }
+
+    public func toggleQbitSpeedMode() -> Bool {
+        qbitAltSpeed.toggle()
+        return qbitAltSpeed
+    }
+
+    public func controlTorrent(hash: String, pause: Bool) throws {
+        guard let idx = qbitTorrents.firstIndex(where: { $0.hash == hash }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Torrent introuvable.")
+        }
+        let completed = qbitTorrents[idx].progressPct >= 100
+        qbitTorrents[idx].state = pause ? (completed ? "pausedUP" : "pausedDL") : (completed ? "uploading" : "downloading")
+    }
+
+    public func usersOverview() -> UsersOverview {
+        let total = users.count
+        let synced = users.filter(\.inJellyseerr).count
+        let disabled = users.filter(\.isDisabled).count
+
+        return UsersOverview(
+            counts: UsersCounts(
+                totalJellyfin: total,
+                syncedJellyseerr: synced,
+                unsyncedCount: total - synced,
+                disabledCount: disabled
+            ),
+            libraries: [
+                JellyfinLibrary(id: "lib-movies", name: "Films 4K & HD"),
+                JellyfinLibrary(id: "lib-series", name: "Séries TV"),
+                JellyfinLibrary(id: "lib-anime", name: "Animation"),
+            ],
+            users: users
+        )
+    }
+
+    public func createUser(_ req: CreateUserRequest) throws -> UnifiedUser {
+        let trimmed = req.username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            throw APIError.serverError(statusCode: 400, detail: "Nom d'utilisateur invalide.")
+        }
+        let created = UnifiedUser(
+            jellyfinId: "demo-user-\(Int(Date().timeIntervalSince1970))",
+            name: trimmed,
+            isAdmin: false,
+            isProtected: false,
+            isDisabled: false,
+            enableAllFolders: req.enableAllFolders,
+            enabledFolders: req.enabledFolders,
+            enableDownloading: req.enableDownloading,
+            maxActiveSessions: req.maxActiveSessions,
+            lastActivity: nil,
+            inJellyseerr: req.syncJellyseerr,
+            jellyseerrId: req.syncJellyseerr ? (users.count + 10) : nil,
+            requestCount: 0,
+            autoApprove: req.autoApprove
+        )
+        users.append(created)
+        return created
+    }
+
+    public func syncUsers(_ req: SyncUsersRequest) -> Int {
+        var count = 0
+        for idx in users.indices {
+            let match = req.jellyfinUserIds?.contains(users[idx].jellyfinId) ?? !users[idx].inJellyseerr
+            if match {
+                users[idx].inJellyseerr = true
+                users[idx].jellyseerrId = users[idx].jellyseerrId ?? (idx + 10)
+                users[idx].autoApprove = req.autoApprove
+                count += 1
+            }
+        }
+        return count
+    }
+
+    public func updateUser(id: String, req: UpdateUserRequest) throws {
+        guard let idx = users.firstIndex(where: { $0.jellyfinId == id }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Utilisateur introuvable.")
+        }
+        if users[idx].isProtected == true && (req.isDisabled == true || req.isAdmin == false) {
+            throw APIError.serverError(
+                statusCode: 400,
+                detail: "Impossible de désactiver ou rétrograder le compte propriétaire protégé."
+            )
+        }
+        if let v = req.isDisabled { users[idx].isDisabled = v }
+        if let v = req.isAdmin { users[idx].isAdmin = v }
+        if let v = req.enableAllFolders { users[idx].enableAllFolders = v }
+        if let v = req.enabledFolders { users[idx].enabledFolders = v }
+        if let v = req.enableDownloading { users[idx].enableDownloading = v }
+        if let v = req.maxActiveSessions { users[idx].maxActiveSessions = v }
+        if let v = req.autoApprove { users[idx].autoApprove = v }
+    }
+
+    public func deleteUser(id: String) throws {
+        guard let target = users.first(where: { $0.jellyfinId == id }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Utilisateur introuvable.")
+        }
+        if target.isProtected == true {
+            throw APIError.serverError(statusCode: 400, detail: "Suppression du compte propriétaire protégé interdite.")
+        }
+        users.removeAll { $0.jellyfinId == id }
+    }
+}
