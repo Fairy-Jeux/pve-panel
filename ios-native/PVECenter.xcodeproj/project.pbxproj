@@ -30,7 +30,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		B00000010000000000000001 /* PVECenter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PVECenter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000010000000000000001 /* PVE Center.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PVE Center.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000001 /* PVECenterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PVECenterApp.swift; sourceTree = "<group>"; };
 		B10000020000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B10000030000000000000001 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
