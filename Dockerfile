@@ -8,12 +8,19 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: Runtime Python 3.12 léger (FastAPI sert l'API et les fichiers statiques)
+# Stage 2: Runtime Python 3.12 léger (FastAPI sert l'API, WebSockets/SSE et le frontend)
 FROM python:3.12-slim AS runtime
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends iputils-ping ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app/config
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    CONFIG_PATH=/app/config/config.yaml \
+    STATE_DB_PATH=/app/config/state.db \
     STATIC_DIR=/app/static \
     SERVICES_CONFIG_PATH=/app/services.yaml
 
@@ -25,4 +32,4 @@ COPY --from=frontend-builder /build/dist ./static
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host ${LISTEN_HOST:-0.0.0.0} --port ${LISTEN_PORT:-8000} --no-proxy-headers"]

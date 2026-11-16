@@ -27,6 +27,18 @@
 		A10000120000000000000001 /* ServerSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000120000000000000001 /* ServerSettingsSheet.swift */; };
 		A10000130000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000130000000000000001 /* Assets.xcassets */; };
 		A10000140000000000000001 /* ServerSetupWizardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000150000000000000001 /* ServerSetupWizardSheet.swift */; };
+		A10000150000000000000001 /* SwiftDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000160000000000000001 /* SwiftDataModels.swift */; };
+		A10000160000000000000001 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000170000000000000001 /* KeychainStore.swift */; };
+		A10000170000000000000001 /* BonjourDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000180000000000000001 /* BonjourDiscoveryService.swift */; };
+		A10000180000000000000001 /* PairingCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000190000000000000001 /* PairingCryptoService.swift */; };
+		A10000190000000000000001 /* RealtimeEventsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001A0000000000000001 /* RealtimeEventsClient.swift */; };
+		A100001A0000000000000001 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001B0000000000000001 /* PushNotificationManager.swift */; };
+		A100001B0000000000000001 /* CustomServiceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001C0000000000000001 /* CustomServiceEditorSheet.swift */; };
+		A100001C0000000000000001 /* YAMLConfigEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001D0000000000000001 /* YAMLConfigEditorView.swift */; };
+		A100001D0000000000000001 /* NotificationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001E0000000000000001 /* NotificationsSettingsView.swift */; };
+		A100001E0000000000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001F0000000000000001 /* OnboardingFlowView.swift */; };
+		A100001F0000000000000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000200000000000000001 /* QRScannerView.swift */; };
+		A10000200000000000000001 /* AppleTVPairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000210000000000000001 /* AppleTVPairingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +64,18 @@
 		B10000130000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000140000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10000150000000000000001 /* ServerSetupWizardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupWizardSheet.swift; sourceTree = "<group>"; };
+		B10000160000000000000001 /* SwiftDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataModels.swift; sourceTree = "<group>"; };
+		B10000170000000000000001 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		B10000180000000000000001 /* BonjourDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourDiscoveryService.swift; sourceTree = "<group>"; };
+		B10000190000000000000001 /* PairingCryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingCryptoService.swift; sourceTree = "<group>"; };
+		B100001A0000000000000001 /* RealtimeEventsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeEventsClient.swift; sourceTree = "<group>"; };
+		B100001B0000000000000001 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
+		B100001C0000000000000001 /* CustomServiceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomServiceEditorSheet.swift; sourceTree = "<group>"; };
+		B100001D0000000000000001 /* YAMLConfigEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YAMLConfigEditorView.swift; sourceTree = "<group>"; };
+		B100001E0000000000000001 /* NotificationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsView.swift; sourceTree = "<group>"; };
+		B100001F0000000000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
+		B10000200000000000000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		B10000210000000000000001 /* AppleTVPairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTVPairingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000030000000000000001 /* DomainModels.swift */,
+				B10000160000000000000001 /* SwiftDataModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -108,6 +133,11 @@
 			children = (
 				B10000040000000000000001 /* APIClient.swift */,
 				B10000050000000000000001 /* DemoDataStore.swift */,
+				B10000170000000000000001 /* KeychainStore.swift */,
+				B10000180000000000000001 /* BonjourDiscoveryService.swift */,
+				B10000190000000000000001 /* PairingCryptoService.swift */,
+				B100001A0000000000000001 /* RealtimeEventsClient.swift */,
+				B100001B0000000000000001 /* PushNotificationManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -173,6 +203,7 @@
 			isa = PBXGroup;
 			children = (
 				B100000D0000000000000001 /* ServicesTabView.swift */,
+				B100001C0000000000000001 /* CustomServiceEditorSheet.swift */,
 			);
 			path = ServicesHub;
 			sourceTree = "<group>";
@@ -209,6 +240,11 @@
 			children = (
 				B10000120000000000000001 /* ServerSettingsSheet.swift */,
 				B10000150000000000000001 /* ServerSetupWizardSheet.swift */,
+				B100001D0000000000000001 /* YAMLConfigEditorView.swift */,
+				B100001E0000000000000001 /* NotificationsSettingsView.swift */,
+				B100001F0000000000000001 /* OnboardingFlowView.swift */,
+				B10000200000000000000001 /* QRScannerView.swift */,
+				B10000210000000000000001 /* AppleTVPairingView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -305,6 +341,18 @@
 				A10000110000000000000001 /* ManageUserSheet.swift in Sources */,
 				A10000120000000000000001 /* ServerSettingsSheet.swift in Sources */,
 				A10000140000000000000001 /* ServerSetupWizardSheet.swift in Sources */,
+				A10000150000000000000001 /* SwiftDataModels.swift in Sources */,
+				A10000160000000000000001 /* KeychainStore.swift in Sources */,
+				A10000170000000000000001 /* BonjourDiscoveryService.swift in Sources */,
+				A10000180000000000000001 /* PairingCryptoService.swift in Sources */,
+				A10000190000000000000001 /* RealtimeEventsClient.swift in Sources */,
+				A100001A0000000000000001 /* PushNotificationManager.swift in Sources */,
+				A100001B0000000000000001 /* CustomServiceEditorSheet.swift in Sources */,
+				A100001C0000000000000001 /* YAMLConfigEditorView.swift in Sources */,
+				A100001D0000000000000001 /* NotificationsSettingsView.swift in Sources */,
+				A100001E0000000000000001 /* OnboardingFlowView.swift in Sources */,
+				A100001F0000000000000001 /* QRScannerView.swift in Sources */,
+				A10000200000000000000001 /* AppleTVPairingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

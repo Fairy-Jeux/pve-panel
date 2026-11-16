@@ -1,4 +1,6 @@
+#if canImport(Charts)
 import Charts
+#endif
 import SwiftUI
 
 private struct PoolSlice: Identifiable {
@@ -59,6 +61,9 @@ public struct StorageTabView: View {
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: showHealthyOnly)
+        #endif
     }
 
     private func poolChartCard(_ pool: MergerfsPoolInfo) -> some View {
@@ -66,9 +71,12 @@ public struct StorageTabView: View {
         let usedColor = pool.usedPct >= 85 ? DesignTokens.caution(colorScheme) : teal
         let used = max(0, Double(pool.usedBytes))
         let avail = max(0, Double(pool.availBytes))
+        let availSliceColor = colorScheme == .light
+            ? Color(red: 0.067, green: 0.098, blue: 0.173).opacity(0.11)
+            : DesignTokens.surfaceElevated(colorScheme)
         let slices: [PoolSlice] = [
             PoolSlice(id: "used", label: "Utilisé", bytes: used, color: usedColor),
-            PoolSlice(id: "avail", label: "Disponible", bytes: avail, color: DesignTokens.surfaceElevated(colorScheme)),
+            PoolSlice(id: "avail", label: "Disponible", bytes: avail, color: availSliceColor),
         ]
 
         #if os(tvOS)

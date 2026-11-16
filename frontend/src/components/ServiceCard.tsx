@@ -1,31 +1,45 @@
-import type { ComponentType } from 'react';
+import { useState, type ComponentType } from 'react';
 import {
   Activity,
   ArrowDown,
   ArrowUp,
+  BellOff,
+  Check,
   Clapperboard,
   Cloud,
+  Copy,
+  Cpu,
+  Database,
   Download,
   ExternalLink,
   Film,
   Gamepad2,
   Globe,
+  HardDrive,
   LayoutGrid,
+  Loader2,
+  Pencil,
   Play,
   Radar,
   Router,
   Server,
   Shield,
   Sparkles,
+  Trash2,
   Tv,
+  Wifi,
 } from 'lucide-react';
+import { getServerUrl } from '../lib/apiClient';
 import type {
+  CustomServiceItem,
+  CustomServiceTestResponse,
   JellyfinWidget,
   PlexWidget,
   ProwlarrWidget,
   QbittorrentWidget,
   RadarrWidget,
   ServiceItem,
+  ServiceProtocol,
   SonarrWidget,
   WidgetsMap,
 } from '../types';
@@ -46,6 +60,33 @@ const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   Activity,
   LayoutGrid,
   Router,
+  Database,
+  Cpu,
+  HardDrive,
+  Wifi,
+};
+
+const PROTOCOL_BADGE: Record<ServiceProtocol, { label: string; cls: string }> = {
+  http_rest: {
+    label: 'HTTP',
+    cls: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
+  },
+  tcp_port: {
+    label: 'TCP',
+    cls: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
+  },
+  icmp_ping: {
+    label: 'ICMP',
+    cls: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  },
+  json_metrics: {
+    label: 'JSON',
+    cls: 'border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300',
+  },
+  webhook_ingest: {
+    label: 'WEBHOOK',
+    cls: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  },
 };
 
 function formatSpeed(bytesPerSec: number | undefined): string {
@@ -65,11 +106,15 @@ function MetricPill({
   highlight?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
-      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+    <div className="liquid-subcard rounded-xl px-2.5 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        {label}
+      </div>
       <div
         className={`mt-0.5 font-mono text-xs font-semibold ${
-          highlight ? 'text-cyan-300' : 'text-slate-200'
+          highlight
+            ? 'text-cyan-700 dark:text-cyan-300'
+            : 'text-slate-800 dark:text-slate-200'
         }`}
       >
         {value}
@@ -99,14 +144,14 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
           <MetricPill label="Séries" value={data.series_count ?? 0} />
         </div>
         {streams.length > 0 && (
-          <div className="space-y-1 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-2 text-[11px]">
+          <div className="space-y-1 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-2 text-[11px]">
             {streams.map((s, idx) => (
               <div key={idx} className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium text-cyan-200">
+                <span className="truncate font-medium text-cyan-800 dark:text-cyan-200">
                   {s.is_paused ? '⏸ ' : '▶ '}
                   {s.title}
                 </span>
-                <span className="shrink-0 text-slate-400">{s.user}</span>
+                <span className="shrink-0 text-slate-600 dark:text-slate-400">{s.user}</span>
               </div>
             ))}
           </div>
@@ -150,9 +195,10 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
           />
         </div>
         {data.upcoming && data.upcoming.length > 0 && (
-          <div className="truncate text-[11px] text-slate-400">
-            Prochain : <span className="text-slate-200">{data.upcoming[0].title}</span>{' '}
-            <span className="text-slate-500">({data.upcoming[0].date})</span>
+          <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+            Prochain :{' '}
+            <span className="text-slate-800 dark:text-slate-200">{data.upcoming[0].title}</span>{' '}
+            <span className="text-slate-400 dark:text-slate-500">({data.upcoming[0].date})</span>
           </div>
         )}
       </div>
@@ -176,9 +222,10 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
           />
         </div>
         {data.upcoming && data.upcoming.length > 0 && (
-          <div className="truncate text-[11px] text-slate-400">
-            À venir : <span className="text-slate-200">{data.upcoming[0].title}</span>{' '}
-            <span className="text-slate-500">({data.upcoming[0].date})</span>
+          <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+            À venir :{' '}
+            <span className="text-slate-800 dark:text-slate-200">{data.upcoming[0].title}</span>{' '}
+            <span className="text-slate-400 dark:text-slate-500">({data.upcoming[0].date})</span>
           </div>
         )}
       </div>
@@ -192,21 +239,21 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
     }
     return (
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
-          <div className="flex items-center gap-1 text-[10px] uppercase text-slate-500">
-            <ArrowDown className="h-3 w-3 text-emerald-400" />
+        <div className="liquid-subcard rounded-xl px-2.5 py-1.5">
+          <div className="flex items-center gap-1 text-[10px] uppercase text-slate-500 dark:text-slate-400">
+            <ArrowDown className="h-3 w-3 text-emerald-500" />
             DL
           </div>
-          <div className="mt-0.5 font-mono text-xs font-semibold text-emerald-300">
+          <div className="mt-0.5 font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             {formatSpeed(data.dl_speed_bytes)}
           </div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
-          <div className="flex items-center gap-1 text-[10px] uppercase text-slate-500">
-            <ArrowUp className="h-3 w-3 text-cyan-400" />
+        <div className="liquid-subcard rounded-xl px-2.5 py-1.5">
+          <div className="flex items-center gap-1 text-[10px] uppercase text-slate-500 dark:text-slate-400">
+            <ArrowUp className="h-3 w-3 text-cyan-500" />
             UP
           </div>
-          <div className="mt-0.5 font-mono text-xs font-semibold text-cyan-300">
+          <div className="mt-0.5 font-mono text-xs font-semibold text-cyan-700 dark:text-cyan-300">
             {formatSpeed(data.up_speed_bytes)}
           </div>
         </div>
@@ -238,64 +285,321 @@ function renderWidget(widgetType: string | undefined, widgets: WidgetsMap) {
   return null;
 }
 
+function isMutedNow(mutedUntil: string | null | undefined): boolean {
+  if (!mutedUntil) return false;
+  const ts = new Date(mutedUntil).getTime();
+  return !Number.isNaN(ts) && ts > Date.now();
+}
+
 interface ServiceCardProps {
   service: ServiceItem;
   widgets: WidgetsMap;
+  customService?: CustomServiceItem;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onEditCustom?: (svc: CustomServiceItem) => void;
+  onDeleteCustom?: (svc: CustomServiceItem) => Promise<void>;
+  onMoveCustom?: (svc: CustomServiceItem, direction: 'up' | 'down') => Promise<void>;
+  onTestCustom?: (svc: CustomServiceItem) => Promise<CustomServiceTestResponse | null>;
 }
 
-export function ServiceCard({ service, widgets }: ServiceCardProps) {
+export function ServiceCard({
+  service,
+  widgets,
+  customService,
+  canMoveUp = false,
+  canMoveDown = false,
+  onEditCustom,
+  onDeleteCustom,
+  onMoveCustom,
+  onTestCustom,
+}: ServiceCardProps) {
   const Icon = ICONS[service.icon] || Server;
+  const [testing, setTesting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const [lastTestBadge, setLastTestBadge] = useState<string | null>(null);
 
-  return (
-    <a
-      href={service.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="liquid-glass group flex flex-col justify-between rounded-3xl p-4 transition duration-200 hover:-translate-y-0.5 hover:!border-cyan-400/40 active:scale-[0.985]"
-    >
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-800/80 text-cyan-400 transition group-hover:border-cyan-500/40 group-hover:bg-cyan-500/10">
-              <Icon className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-semibold text-slate-100 group-hover:text-cyan-300">
-                  {service.name}
-                </h3>
-                <ExternalLink className="h-3 w-3 text-slate-500 opacity-0 transition group-hover:opacity-100" />
-              </div>
-              <p className="text-xs text-slate-400">{service.description}</p>
-            </div>
+  const isCustom = Boolean(service.is_custom || customService);
+  const protocol = service.protocol || customService?.protocol;
+  const protoMeta = protocol ? PROTOCOL_BADGE[protocol] : null;
+  const statusVal =
+    service.status || (service.online ? 'up' : service.enabled === false ? 'disabled' : 'down');
+  const muted = isMutedNow(service.muted_until ?? customService?.muted_until);
+
+  const metricsEntries = Object.entries(
+    service.metrics || customService?.metrics || {}
+  ).slice(0, 6);
+
+  const statusPill = (() => {
+    if (statusVal === 'disabled') {
+      return {
+        cls: 'border-slate-300/80 bg-slate-200/70 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400',
+        dot: 'bg-slate-400',
+        text: 'Désactivé',
+      };
+    }
+    if (statusVal === 'degraded') {
+      return {
+        cls: 'border-amber-500/35 bg-amber-500/15 text-amber-800 dark:text-amber-200',
+        dot: 'bg-amber-500',
+        text: service.latency_ms !== null ? `Dégradé • ${service.latency_ms} ms` : 'Dégradé',
+      };
+    }
+    if (statusVal === 'up' || service.online) {
+      return {
+        cls: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+        dot: 'bg-emerald-500',
+        text: service.latency_ms !== null ? `${service.latency_ms} ms` : 'OK',
+      };
+    }
+    if (statusVal === 'unknown') {
+      return {
+        cls: 'border-slate-300/80 bg-slate-200/70 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+        dot: 'bg-slate-400',
+        text: 'En attente',
+      };
+    }
+    return {
+      cls: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300',
+      dot: 'bg-rose-500',
+      text: 'Hors ligne',
+    };
+  })();
+
+  const handleTest = async () => {
+    if (!customService || !onTestCustom) return;
+    setTesting(true);
+    setLastTestBadge(null);
+    try {
+      const res = await onTestCustom(customService);
+      if (res) {
+        setLastTestBadge(
+          res.ok
+            ? `OK${res.latency_ms !== null ? ` (${res.latency_ms} ms)` : ''}`
+            : `Échec (${res.status})`
+        );
+      }
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleCopyWebhookUrl = async () => {
+    const base =
+      getServerUrl() || (typeof window !== 'undefined' ? window.location.origin : '');
+    const webhookUrl = `${base}/api/custom-services/${encodeURIComponent(service.id)}/webhook`;
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopiedWebhook(true);
+      window.setTimeout(() => setCopiedWebhook(false), 2000);
+    } catch {
+      // Ignore clipboard failure
+    }
+  };
+
+  const titleContent = (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white/80 text-cyan-600 transition group-hover:border-cyan-500/40 group-hover:bg-cyan-500/10 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-cyan-400">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="truncate text-sm font-semibold text-slate-900 group-hover:text-cyan-700 dark:text-slate-100 dark:group-hover:text-cyan-300">
+              {service.name}
+            </h3>
+            {service.url && (
+              <ExternalLink className="h-3 w-3 shrink-0 text-slate-400 opacity-60 transition group-hover:opacity-100" />
+            )}
+            {protoMeta && (
+              <span
+                className={`rounded-md border px-1.5 py-0.2 font-mono text-[9px] font-semibold uppercase ${protoMeta.cls}`}
+              >
+                {protoMeta.label}
+              </span>
+            )}
+            {muted && (
+              <span
+                title="Alertes en sourdine"
+                className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-amber-700 dark:text-amber-300"
+              >
+                <BellOff className="h-2.5 w-2.5" />
+                Mute
+              </span>
+            )}
           </div>
-
-          <span
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-              service.online
-                ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-                : 'border border-rose-500/25 bg-rose-500/10 text-rose-300'
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                service.online ? 'bg-emerald-400' : 'bg-rose-400'
-              }`}
-            />
-            {service.online
-              ? service.latency_ms !== null
-                ? `${service.latency_ms} ms`
-                : 'OK'
-              : 'Hors ligne'}
-          </span>
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+            {service.description || (service.host ? `${service.host}${service.port ? `:${service.port}` : ''}` : 'Service supervisé')}
+          </p>
         </div>
       </div>
 
+      <span
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusPill.cls}`}
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${statusPill.dot}`} />
+        {statusPill.text}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="liquid-glass group flex flex-col justify-between rounded-3xl p-4 transition duration-200 hover:-translate-y-0.5 hover:!border-cyan-500/40">
+      <div>
+        {service.url ? (
+          <a
+            href={service.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+          >
+            {titleContent}
+          </a>
+        ) : (
+          titleContent
+        )}
+
+        {metricsEntries.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {metricsEntries.map(([key, val]) => (
+              <span
+                key={key}
+                className="liquid-subcard inline-flex items-center gap-1 rounded-lg px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:text-slate-200"
+              >
+                <span className="text-slate-500 dark:text-slate-400">{key}:</span>
+                <span className="font-semibold">{String(val)}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {isCustom && service.message && statusVal !== 'up' && (
+          <p className="mt-2 truncate text-[11px] text-slate-600 dark:text-slate-300">
+            {service.message}
+          </p>
+        )}
+      </div>
+
       {service.widget && (
-        <div className="mt-3.5 border-t border-slate-800/80 pt-3">
+        <div className="mt-3.5 border-t border-slate-200/80 pt-3 dark:border-slate-800/80">
           {renderWidget(service.widget, widgets)}
         </div>
       )}
-    </a>
+
+      {isCustom && customService && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-2.5 dark:border-white/10">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {onTestCustom && (
+              <button
+                type="button"
+                disabled={testing}
+                onClick={() => void handleTest()}
+                className="liquid-pill inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-cyan-700 transition hover:bg-cyan-500/15 disabled:opacity-50 dark:text-cyan-200"
+              >
+                {testing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Play className="h-3 w-3" />
+                )}
+                <span>Tester</span>
+              </button>
+            )}
+
+            {protocol === 'webhook_ingest' && (
+              <button
+                type="button"
+                onClick={() => void handleCopyWebhookUrl()}
+                className="liquid-pill inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-500/15 dark:text-indigo-200"
+                title="Copier l'URL Webhook"
+              >
+                {copiedWebhook ? (
+                  <>
+                    <Check className="h-3 w-3" /> Copié
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" /> Webhook URL
+                  </>
+                )}
+              </button>
+            )}
+
+            {lastTestBadge && (
+              <span className="font-mono text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                {lastTestBadge}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            {onMoveCustom && (
+              <>
+                <button
+                  type="button"
+                  disabled={!canMoveUp}
+                  onClick={() => void onMoveCustom(customService, 'up')}
+                  className="liquid-pill rounded-full p-1 text-slate-600 transition hover:text-slate-900 disabled:opacity-30 dark:text-slate-300 dark:hover:text-white"
+                  title="Monter"
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!canMoveDown}
+                  onClick={() => void onMoveCustom(customService, 'down')}
+                  className="liquid-pill rounded-full p-1 text-slate-600 transition hover:text-slate-900 disabled:opacity-30 dark:text-slate-300 dark:hover:text-white"
+                  title="Descendre"
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </button>
+              </>
+            )}
+
+            {onEditCustom && (
+              <button
+                type="button"
+                onClick={() => onEditCustom(customService)}
+                className="liquid-pill rounded-full p-1 text-slate-600 transition hover:text-cyan-600 dark:text-slate-300 dark:hover:text-cyan-300"
+                title="Modifier"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+
+            {onDeleteCustom &&
+              (!confirmDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="liquid-pill rounded-full p-1 text-slate-500 transition hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-300"
+                  title="Supprimer"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      await onDeleteCustom(customService);
+                    } finally {
+                      setDeleting(false);
+                      setConfirmDelete(false);
+                    }
+                  }}
+                  onBlur={() => setConfirmDelete(false)}
+                  className="rounded-full border border-rose-500/40 bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:text-rose-200"
+                >
+                  {deleting ? '…' : 'Confirmer'}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

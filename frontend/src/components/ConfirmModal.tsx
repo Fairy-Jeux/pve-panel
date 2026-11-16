@@ -15,25 +15,25 @@ const ACTION_META: Record<
 > = {
   start: {
     label: 'Démarrer',
-    tone: 'text-emerald-400',
+    tone: 'text-emerald-500 dark:text-emerald-400',
     buttonClass: 'bg-emerald-600 hover:bg-emerald-500 text-white',
     warning: 'Cette ressource va être démarrée sur le nœud Proxmox.',
   },
   reboot: {
     label: 'Redémarrer',
-    tone: 'text-amber-400',
+    tone: 'text-amber-500 dark:text-amber-400',
     buttonClass: 'bg-amber-600 hover:bg-amber-500 text-white',
     warning: 'Les connexions et services en cours sur cette ressource seront temporairement coupés.',
   },
   shutdown: {
     label: 'Arrêter proprement',
-    tone: 'text-rose-400',
+    tone: 'text-rose-500 dark:text-rose-400',
     buttonClass: 'bg-rose-600 hover:bg-rose-500 text-white',
     warning: 'Un signal ACPI / d’extinction propre va être envoyé à cette ressource.',
   },
   stop: {
     label: 'Forcer l’arrêt',
-    tone: 'text-rose-400',
+    tone: 'text-rose-500 dark:text-rose-400',
     buttonClass: 'bg-rose-700 hover:bg-rose-600 text-white',
     warning: 'Attention : arrêt immédiat sans extinction propre du système.',
   },
@@ -50,11 +50,11 @@ export function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-md sm:items-center sm:p-4"
       onClick={onCancel}
     >
       <div
-        className="ios-sheet safe-bottom-sheet w-full max-w-md rounded-t-[32px] p-5 sm:rounded-3xl sm:p-6"
+        className="ios-sheet safe-bottom-sheet w-full max-w-md rounded-t-[32px] p-5 text-slate-900 dark:text-slate-100 sm:rounded-3xl sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex justify-center sm:hidden">
@@ -66,23 +66,23 @@ export function ConfirmModal({
               <AlertTriangle className={`h-5 w-5 ${meta.tone}`} />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                 {meta.label} {resource.type.toUpperCase()} {resource.vmid}
               </h3>
-              <p className="text-sm text-slate-400">{resource.name}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{resource.name}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="liquid-pill rounded-full p-2 text-slate-300 hover:text-white active:scale-95"
+            className="liquid-pill rounded-full p-2 text-slate-500 hover:text-slate-900 active:scale-95 dark:text-slate-300 dark:hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-sm text-slate-200">
+        <p className="liquid-subcard mt-4 p-3.5 text-sm text-slate-700 dark:text-slate-200">
           {meta.warning}
         </p>
 
@@ -91,7 +91,7 @@ export function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="liquid-pill rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:text-white active:scale-[0.98] disabled:opacity-50"
+            className="liquid-pill rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:text-slate-950 active:scale-[0.98] disabled:opacity-50 dark:text-slate-200 dark:hover:text-white"
           >
             Annuler
           </button>

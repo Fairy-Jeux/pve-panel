@@ -5,14 +5,30 @@ services:
       dockerfile: Dockerfile
     container_name: pve-panel
     restart: unless-stopped
-    # network_mode: host + --host 127.0.0.1 garantit que :
-    # 1. Le serveur écoute exclusivement sur l'interface loopback locale (jamais 0.0.0.0 ni LAN)
-    # 2. request.client.host vaut strictement 127.0.0.1 / ::1 pour la vérification anti-spoofing
+    # network_mode: host permet à la fois :
+    # 1. La diffusion Bonjour / mDNS (_pvecenter._tcp.local.) sur le LAN local
+    # 2. La vérification loopback exacte (127.0.0.1 / ::1) pour Tailscale Serve SSO
     network_mode: host
-    command: ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--no-proxy-headers"]
-    env_file:
-      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - STATE_DB_PATH=/app/config/state.db
+      - LISTEN_HOST=${LISTEN_HOST:-0.0.0.0}
+      - LISTEN_PORT=${LISTEN_PORT:-8000}
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - ${LISTEN_HOST:-0.0.0.0}
+      - --port
+      - ${LISTEN_PORT:-8000}
+      - --no-proxy-headers
     volumes:
-      - ./.env:/app/.env:rw
-      - ./services.yaml:/app/services.yaml:rw
+      # Dossier de configuration déclarative, état SQLite et clé APNs .p8
+      - ./config:/app/config:rw
       - /host_mnt:/host_mnt:ro
+      # Migration / compatibilité héritée : décommentez si vous utilisez encore .env et services.yaml
+      # - ./.env:/app/.env:rw
+      # - ./services.yaml:/app/services.yaml:rw
+      # Pont Avahi / D-Bus optionnel pour coexister avec un démon avahi-daemon sur l'hôte :
+      # - /var/run/dbus:/var/run/dbus
+      # - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket

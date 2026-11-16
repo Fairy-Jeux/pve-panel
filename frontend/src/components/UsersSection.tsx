@@ -1050,7 +1050,7 @@ export function UsersSection({
   const totalLibraries = overview.libraries.length;
 
   return (
-    <section className="space-y-4">
+    <section className="legacy-dark-surface space-y-4">
       <div className="space-y-2.5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2.5">

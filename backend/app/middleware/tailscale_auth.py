@@ -1,77 +1,202 @@
-"""Tailscale Serve SSO & Anti-Spoofing authentication middleware."""
+"""DualAuth ASGI middleware: Tailscale Serve SSO (loopback) + Bearer API / HMAC Session tokens (LAN/WS/SSE)."""
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse, Response
+from __future__ import annotations
 
-from app.config import get_settings
+import re
+from typing import Any
+from urllib.parse import parse_qs
 
-LOCAL_LOOPBACK_IPS = {"127.0.0.1", "::1", "localhost"}
+from starlette.datastructures import Headers
+from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+from app.config import is_configured
+from app.config_manager import (
+    get_config_manager,
+    verify_session_token,
+    verify_token_hash,
+)
+
+LOCAL_LOOPBACK_IPS = frozenset({"127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1"})
+
+_WEBHOOK_INGEST_RE = re.compile(r"^/api/custom-services/[^/]+/webhook$")
+_FIRST_RUN_EXEMPT_EXACT = frozenset(
+    {
+        "/api/setup/status",
+        "/api/setup/test-service",
+        "/api/setup/config",
+        "/api/discovery/lan",
+    }
+)
 
 
-def _deny_response(request: Request, reason: str) -> Response:
-    """Return JSON 403 for API calls or minimal HTML 403 for browser requests."""
-    if request.url.path.startswith("/api"):
-        return JSONResponse(status_code=403, content={"detail": reason})
-    html = (
-        "<!doctype html><html lang='fr'><head><meta charset='utf-8'>"
-        "<title>403 Forbidden</title></head><body style='background:#020617;"
-        "color:#f87171;font-family:system-ui,sans-serif;display:grid;"
-        "place-items:center;height:100vh;margin:0'>"
-        f"<div style='text-align:center'><h1>403 — Accès refusé</h1>"
-        f"<p style='color:#94a3b8'>{reason}</p></div></body></html>"
-    )
-    return HTMLResponse(status_code=403, content=html)
+def _extract_bearer_or_query_token(
+    headers: Headers, scope: Scope, path: str
+) -> str | None:
+    """Extract token from Authorization: Bearer header, or ?token= on WS/SSE endpoints."""
+    auth_header = (headers.get("authorization") or "").strip()
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+        if token:
+            return token
+
+    if scope["type"] == "websocket" or path == "/api/events/stream" or path.startswith("/api/ws/"):
+        raw_qs = scope.get("query_string", b"").decode("utf-8", errors="ignore")
+        params = parse_qs(raw_qs, keep_blank_values=False)
+        token_vals = params.get("token")
+        if token_vals and token_vals[0].strip():
+            return token_vals[0].strip()
+
+    return None
 
 
-class TailscaleSSOMiddleware(BaseHTTPMiddleware):
-    """Enforce loopback origin + Tailscale-User-Login whitelist (with dev bypass)."""
+def _is_public_exempt(path: str, scope_type: str, method: str) -> bool:
+    """Return True for routes accessible without prior authentication."""
+    if path == "/api/health" or path == "/api/auth/login":
+        return True
+    if path == "/api/pairing" or path.startswith("/api/pairing/"):
+        return True
+    if path == "/api/onboarding/status":
+        return True
+    if path.startswith("/assets/"):
+        return True
+    if scope_type == "http" and method in ("GET", "HEAD") and not path.startswith("/api"):
+        return True
+    if scope_type == "http" and method == "POST" and _WEBHOOK_INGEST_RE.match(path):
+        return True
 
-    async def dispatch(self, request: Request, call_next) -> Response:
-        settings = get_settings()
-        client_host = request.client.host if request.client else ""
+    if not is_configured():
+        if path.startswith("/api/onboarding") or path in _FIRST_RUN_EXEMPT_EXACT:
+            return True
 
-        # Verrou 1 (Anti-Spoofing) : même en dev bypass, n'accepter que loopback locale
-        if client_host not in LOCAL_LOOPBACK_IPS:
-            return _deny_response(
-                request,
-                "Origine réseau non autorisée : connexion directe hors tailscale serve bloquée.",
+    return False
+
+
+def authenticate_scope(scope: Scope) -> tuple[dict[str, Any] | None, int, str]:
+    """Authenticate an HTTP or WebSocket ASGI scope; return (user_dict, error_status, reason)."""
+    headers = Headers(scope=scope)
+    path = scope.get("path", "")
+    client = scope.get("client")
+    client_host = client[0] if client else ""
+
+    manager = get_config_manager()
+    cfg = manager.config
+    security = cfg.security
+
+    token = _extract_bearer_or_query_token(headers, scope, path)
+    if token is not None:
+        for entry in security.api_tokens:
+            if verify_token_hash(token, entry.token_hash):
+                return (
+                    {
+                        "login": f"token:{entry.name}",
+                        "name": entry.name,
+                        "profile_pic": "",
+                        "auth_mode": "api_token",
+                        "role": entry.role,
+                        "token_id": entry.id,
+                    },
+                    200,
+                    "",
+                )
+
+        claims = verify_session_token(token, manager.effective_session_secret)
+        if claims is not None:
+            return (
+                {
+                    "login": str(claims.get("sub", "session")),
+                    "name": str(claims.get("name", claims.get("sub", "Session"))),
+                    "profile_pic": "",
+                    "auth_mode": "session",
+                    "role": str(claims.get("role", "admin")),
+                },
+                200,
+                "",
             )
 
-        if settings.dev_auth_bypass:
+        return None, 401, "Jeton d'authentification invalide ou expiré."
+
+    if client_host in LOCAL_LOOPBACK_IPS:
+        if security.dev_auth_bypass:
             primary_user = (
-                next(iter(settings.allowed_users_set), "dev@localhost")
-                if settings.allowed_users_set
+                security.allowed_tailscale_users[0]
+                if security.allowed_tailscale_users
                 else "dev@localhost"
             )
-            request.state.user = {
-                "login": primary_user,
-                "name": "Admin (Mode Dev Local)",
-                "profile_pic": "",
-                "auth_mode": "dev_bypass",
-            }
-            return await call_next(request)
-
-        # Verrou 2 (SSO Tailscale Serve) : vérifier l'identité cryptographiquement injectée
-        ts_login = (request.headers.get("Tailscale-User-Login") or "").strip().lower()
-        if not ts_login:
-            return _deny_response(
-                request,
-                "Authentification Tailscale Serve manquante.",
+            return (
+                {
+                    "login": primary_user,
+                    "name": "Admin (Mode Dev Local)",
+                    "profile_pic": "",
+                    "auth_mode": "dev_bypass",
+                    "role": "admin",
+                },
+                200,
+                "",
             )
 
-        if ts_login not in settings.allowed_users_set:
-            return _deny_response(
-                request,
-                f"Utilisateur '{ts_login}' non autorisé à accéder à ce panneau.",
+        if security.tailscale_sso_enabled:
+            ts_login = (headers.get("tailscale-user-login") or "").strip().lower()
+            if not ts_login:
+                return None, 401, "Authentification Tailscale Serve ou Bearer token requise."
+            if ts_login not in set(security.allowed_tailscale_users):
+                return (
+                    None,
+                    403,
+                    f"Utilisateur '{ts_login}' non autorisé à accéder à ce panneau.",
+                )
+            return (
+                {
+                    "login": ts_login,
+                    "name": (headers.get("tailscale-user-name") or ts_login).strip(),
+                    "profile_pic": (
+                        headers.get("tailscale-user-profile-pic") or ""
+                    ).strip(),
+                    "auth_mode": "tailscale_serve",
+                    "role": "admin",
+                },
+                200,
+                "",
             )
 
-        request.state.user = {
-            "login": ts_login,
-            "name": (request.headers.get("Tailscale-User-Name") or ts_login).strip(),
-            "profile_pic": (
-                request.headers.get("Tailscale-User-Profile-Pic") or ""
-            ).strip(),
-            "auth_mode": "tailscale_serve",
-        }
-        return await call_next(request)
+        return None, 401, "Authentification Bearer requise."
+
+    return None, 401, "Authentification Bearer ou jeton de session requis hors loopback."
+
+
+class TailscaleSSOMiddleware:
+    """Pure ASGI DualAuth middleware supporting HTTP, SSE StreamingResponse, and WebSocket."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        scope_type = scope.get("type")
+        if scope_type not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        method = str(scope.get("method", "GET")).upper()
+        user, status_code, reason = authenticate_scope(scope)
+
+        if user is not None:
+            scope.setdefault("state", {})["user"] = user
+            await self.app(scope, receive, send)
+            return
+
+        if _is_public_exempt(path, scope_type, method):
+            await self.app(scope, receive, send)
+            return
+
+        if scope_type == "websocket":
+            # Consume initial websocket.connect if needed or reject immediately before accept
+            await send({"type": "websocket.close", "code": 4401, "reason": reason[:120]})
+            return
+
+        response: Response = JSONResponse(
+            status_code=status_code,
+            content={"detail": reason},
+            headers={"WWW-Authenticate": "Bearer"} if status_code == 401 else None,
+        )
+        await response(scope, receive, send)

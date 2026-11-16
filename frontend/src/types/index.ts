@@ -2,7 +2,24 @@ export interface AuthUser {
   login: string;
   name: string;
   profile_pic: string;
-  auth_mode: 'tailscale_serve' | 'dev_bypass' | string;
+  auth_mode: 'tailscale_serve' | 'api_token' | 'session' | 'dev_bypass' | 'demo' | string;
+  role?: 'admin' | 'operator' | 'viewer' | 'device' | string;
+}
+
+export interface AuthLoginResponse {
+  ok: boolean;
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  expires_at: string;
+  user: AuthUser;
+}
+
+export interface ApiTokenInfo {
+  id: string;
+  name: string;
+  role: 'admin' | 'operator' | 'viewer' | 'device' | string;
+  created_at: string;
 }
 
 export interface StorageInfo {
@@ -112,6 +129,23 @@ export interface PveOverview {
 
 export type PveAction = 'start' | 'shutdown' | 'reboot' | 'stop';
 
+export type ServiceProtocol =
+  | 'http_rest'
+  | 'tcp_port'
+  | 'icmp_ping'
+  | 'json_metrics'
+  | 'webhook_ingest';
+
+export type ServiceAuthType = 'none' | 'bearer' | 'basic' | 'header';
+
+export type ServiceHealthStatus = 'up' | 'degraded' | 'down' | 'disabled' | 'unknown';
+
+export interface AlertPolicyConfig {
+  enabled: boolean;
+  consecutive_failures: number;
+  cooldown_seconds: number;
+}
+
 export interface ServiceItem {
   id: string;
   name: string;
@@ -123,11 +157,316 @@ export interface ServiceItem {
   online: boolean;
   latency_ms: number | null;
   status_code: number | null;
+  category?: string;
+  protocol?: ServiceProtocol;
+  host?: string;
+  port?: number | null;
+  health_url?: string;
+  internal_url?: string;
+  is_custom?: boolean;
+  status?: ServiceHealthStatus;
+  message?: string;
+  metrics?: Record<string, string | number | boolean | null>;
+  enabled?: boolean;
+  muted_until?: string | null;
 }
 
 export interface ServiceCategory {
   name: string;
   services: ServiceItem[];
+}
+
+export interface CustomServiceItem extends ServiceItem {
+  category: string;
+  protocol: ServiceProtocol;
+  host: string;
+  port: number | null;
+  health_url: string;
+  internal_url: string;
+  auth_type: ServiceAuthType;
+  auth_token: string;
+  auth_token_set: boolean;
+  auth_header_name: string;
+  json_metric_path: string;
+  expected_status: number;
+  refresh_interval_seconds: number;
+  order: number;
+  enabled: boolean;
+  verify_ssl: boolean;
+  webhook_ttl_seconds: number;
+  alert_policy: AlertPolicyConfig;
+  is_custom: true;
+  status: ServiceHealthStatus;
+  message: string;
+  metrics: Record<string, string | number | boolean | null>;
+  consecutive_failures: number;
+  last_check_at: string | null;
+  last_transition_at: string | null;
+  last_alert_at: string | null;
+  muted_until: string | null;
+  last_error: string | null;
+}
+
+export interface CustomServicePayload {
+  id?: string;
+  name: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  protocol: ServiceProtocol;
+  host?: string;
+  port?: number | null;
+  url?: string;
+  health_url?: string;
+  internal_url?: string;
+  auth_type?: ServiceAuthType;
+  auth_token?: string;
+  auth_header_name?: string;
+  json_metric_path?: string;
+  expected_status?: number;
+  refresh_interval_seconds?: number;
+  order?: number;
+  enabled?: boolean;
+  verify_ssl?: boolean;
+  webhook_ttl_seconds?: number;
+  alert_policy?: AlertPolicyConfig;
+}
+
+export interface CustomServiceTestResponse {
+  ok: boolean;
+  service_id: string;
+  protocol: ServiceProtocol;
+  status: ServiceHealthStatus;
+  latency_ms: number | null;
+  http_status: number | null;
+  message: string;
+  metrics: Record<string, string | number | boolean | null>;
+}
+
+export interface IncidentItem {
+  id: string;
+  service_id: string;
+  service_name: string;
+  severity: 'critical' | 'warning' | 'info' | string;
+  title: string;
+  message: string;
+  started_at: string;
+  resolved_at: string | null;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+}
+
+export interface ServiceStateItem {
+  service_id: string;
+  service_name: string;
+  current_status: ServiceHealthStatus;
+  consecutive_failures: number;
+  last_check_at: string | null;
+  last_transition_at: string | null;
+  last_alert_at: string | null;
+  muted_until: string | null;
+  last_error: string | null;
+  last_latency_ms: number | null;
+  last_metrics?: Record<string, string | number | boolean | null>;
+}
+
+export interface IncidentsResponse {
+  incidents: IncidentItem[];
+  count: number;
+  active_count: number;
+  service_states: ServiceStateItem[];
+}
+
+export interface APNsDeviceInfo {
+  device_token: string;
+  platform: 'ios' | 'ipados' | 'tvos' | 'macos' | string;
+  device_name: string;
+  app_version: string;
+  environment: 'sandbox' | 'production' | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface APNsConfigSummary {
+  enabled: boolean;
+  team_id: string;
+  key_id: string;
+  bundle_id: string;
+  private_key_path: string;
+  private_key_exists: boolean;
+  use_sandbox: boolean;
+  configured: boolean;
+  registered_devices_count: number;
+  devices: APNsDeviceInfo[];
+}
+
+export type WebhookChannelType = 'discord' | 'telegram' | 'generic';
+
+export interface WebhookChannelItem {
+  id: string;
+  name: string;
+  type: WebhookChannelType;
+  enabled: boolean;
+  url: string;
+  bot_token: string;
+  bot_token_set: boolean;
+  chat_id: string;
+  headers: Record<string, string>;
+  has_secret_headers: boolean;
+  notify_on_down: boolean;
+  notify_on_recovery: boolean;
+  include_details: boolean;
+}
+
+export interface NotificationChannelsResponse {
+  apns: APNsConfigSummary;
+  webhooks: WebhookChannelItem[];
+}
+
+export interface NotificationTestResultItem {
+  channel_id: string;
+  channel_name: string;
+  channel_type: string;
+  ok: boolean;
+  skipped: boolean;
+  http_status: number | null;
+  message: string;
+}
+
+export interface NotificationTestResponse {
+  ok: boolean;
+  results: NotificationTestResultItem[];
+}
+
+export interface LanDiscoveredService {
+  id: string;
+  name: string;
+  service_type: string;
+  host: string;
+  port: number;
+  txt: Record<string, string>;
+  suggested_protocol: ServiceProtocol;
+}
+
+export interface DiscoveryLanResponse {
+  services: LanDiscoveredService[];
+  count: number;
+}
+
+export interface DiscoveryQrResponse {
+  deep_link: string;
+  onboarding_link: string;
+  public_url: string;
+  svg_data_url_or_text: string;
+  server_id: string;
+  server_name: string;
+  mdns_service_type: string;
+  lan_ip: string;
+  port: number;
+}
+
+export interface OnboardingStatusResponse {
+  is_configured: boolean;
+  needs_onboarding: boolean;
+  config_exists: boolean;
+  is_synthesized: boolean;
+  server_id: string;
+  server_name: string;
+  public_url: string;
+  tailscale_sso_enabled: boolean;
+  pin_configured: boolean;
+  api_tokens_count: number;
+  auth_methods: string[];
+}
+
+export interface OnboardingInitRequest {
+  server_name: string;
+  public_url?: string;
+  listen_host?: string;
+  listen_port?: number;
+  mdns_enabled?: boolean;
+  tailscale_sso_enabled?: boolean;
+  allowed_tailscale_users?: string[];
+  dev_auth_bypass?: boolean;
+  admin_pin?: string;
+  token_name?: string;
+  proxmox?: Record<string, unknown>;
+  integrations?: Record<string, unknown>;
+  alerts?: Record<string, unknown>;
+  notifications?: Record<string, unknown>;
+  categories?: SetupCategoryConfig[];
+  custom_services?: CustomServicePayload[];
+  storage_mounts?: StorageMountConfig[];
+}
+
+export interface OnboardingInitResponse {
+  ok: boolean;
+  is_configured: boolean;
+  server_id: string;
+  server_name: string;
+  api_token: string;
+  token_id: string;
+  config_hash: string;
+  config_path: string;
+}
+
+export interface ConfigParsedSummary {
+  version: number;
+  server_id: string;
+  server_name: string;
+  listen_port: number;
+  public_url: string;
+  proxmox_host: string;
+  proxmox_node: string;
+  categories_count: number;
+  custom_services_count: number;
+  webhooks_count: number;
+  api_tokens_count: number;
+  alerts_enabled: boolean;
+  apns_enabled: boolean;
+}
+
+export interface ConfigYamlResponse {
+  yaml: string;
+  hash: string;
+  is_synthesized: boolean;
+  config_exists: boolean;
+  secrets_masked: boolean;
+  parsed_summary: ConfigParsedSummary;
+}
+
+export interface ConfigValidateResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  parsed_summary: ConfigParsedSummary | null;
+}
+
+export interface ConfigSaveResponse {
+  ok: boolean;
+  valid: boolean;
+  hash?: string;
+  warnings: string[];
+  errors?: string[];
+  parsed_summary?: ConfigParsedSummary;
+  message?: string;
+  detail?: string;
+}
+
+export type RealtimeTransportMode = 'ws' | 'sse' | 'demo' | 'connecting' | 'disconnected';
+
+export interface RealtimeEvent {
+  type:
+    | 'service_status_changed'
+    | 'alert_triggered'
+    | 'alert_resolved'
+    | 'incident_acknowledged'
+    | 'pairing_completed'
+    | 'config_reloaded'
+    | 'ping'
+    | string;
+  timestamp: string;
+  payload: Record<string, unknown>;
 }
 
 export interface JellyfinStream {

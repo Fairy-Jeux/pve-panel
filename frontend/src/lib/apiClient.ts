@@ -1,5 +1,23 @@
 import type {
+  APNsConfigSummary,
+  ApiTokenInfo,
+  AuthLoginResponse,
   AuthUser,
+  ConfigParsedSummary,
+  ConfigSaveResponse,
+  ConfigValidateResponse,
+  ConfigYamlResponse,
+  CustomServiceItem,
+  CustomServiceTestResponse,
+  DiscoveryLanResponse,
+  DiscoveryQrResponse,
+  IncidentItem,
+  IncidentsResponse,
+  NotificationChannelsResponse,
+  NotificationTestResponse,
+  NotificationTestResultItem,
+  OnboardingInitResponse,
+  OnboardingStatusResponse,
   OpsOverview,
   PveOverview,
   PveResource,
@@ -7,6 +25,9 @@ import type {
   QbitTorrentItem,
   SeerrRequestItem,
   ServiceCategory,
+  ServiceHealthStatus,
+  ServiceProtocol,
+  ServiceStateItem,
   SetupCategoryConfig,
   SetupConfigUpdateResponse,
   SetupEnvConfig,
@@ -15,11 +36,13 @@ import type {
   StorageMountConfig,
   UnifiedUser,
   UsersOverview,
+  WebhookChannelItem,
   WidgetsMap,
 } from '../types';
 
 const STORAGE_SERVER_URL = 'pve_panel_server_url';
 const STORAGE_DEMO_MODE = 'pve_panel_demo_mode';
+const STORAGE_AUTH_TOKEN = 'pve_panel_auth_token';
 
 let interceptorInstalled = false;
 let nativeFetchRef: typeof window.fetch | null = null;
@@ -59,6 +82,26 @@ export function setServerUrl(url: string): void {
   }
 }
 
+export function getAuthToken(): string {
+  if (typeof window === 'undefined') return '';
+  return (window.localStorage.getItem(STORAGE_AUTH_TOKEN) || '').trim();
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  const trimmed = token.trim();
+  if (trimmed) {
+    window.localStorage.setItem(STORAGE_AUTH_TOKEN, trimmed);
+  } else {
+    window.localStorage.removeItem(STORAGE_AUTH_TOKEN);
+  }
+}
+
+export function clearAuthToken(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(STORAGE_AUTH_TOKEN);
+}
+
 export function isDemoMode(): boolean {
   if (typeof window === 'undefined') return false;
   return window.localStorage.getItem(STORAGE_DEMO_MODE) === 'true';
@@ -74,6 +117,13 @@ export function setDemoMode(enabled: boolean): void {
 }
 
 interface DemoState {
+  serverId: string;
+  serverName: string;
+  publicUrl: string;
+  mdnsEnabled: boolean;
+  tailscaleSsoEnabled: boolean;
+  pinConfigured: boolean;
+  apiTokens: ApiTokenInfo[];
   resources: PveResource[];
   pveTasks: PveTaskItem[];
   seerrRequests: SeerrRequestItem[];
@@ -83,15 +133,49 @@ interface DemoState {
   setupConfigured: boolean;
   setupEnv: SetupEnvConfig;
   categories: SetupCategoryConfig[];
+  customServices: CustomServiceItem[];
+  incidents: IncidentItem[];
+  serviceStates: ServiceStateItem[];
+  apns: APNsConfigSummary;
+  webhooks: WebhookChannelItem[];
   storageMounts: StorageMountConfig[];
+  yamlOverride: string | null;
 }
 
 const GB = 1024 ** 3;
 const TB = 1024 ** 4;
 
+function nowIso(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 function createInitialDemoState(): DemoState {
   const nowSec = Math.floor(Date.now() / 1000);
+  const oneHourAgo = new Date(Date.now() - 3600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const twelveMinAgo = new Date(Date.now() - 12 * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const twoMinAgo = new Date(Date.now() - 120_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+
   return {
+    serverId: 'demo-server-001',
+    serverName: 'PVE Command Center (Démo)',
+    publicUrl: 'https://panel.example.ts.net',
+    mdnsEnabled: true,
+    tailscaleSsoEnabled: true,
+    pinConfigured: true,
+    apiTokens: [
+      {
+        id: 'tok-demo-admin',
+        name: 'Initial Admin Token',
+        role: 'admin',
+        created_at: oneHourAgo,
+      },
+      {
+        id: 'tok-demo-iphone',
+        name: 'iPhone App Token',
+        role: 'device',
+        created_at: oneHourAgo,
+      },
+    ],
     resources: [
       {
         vmid: 101,
@@ -416,6 +500,251 @@ function createInitialDemoState(): DemoState {
         ],
       },
     ],
+    customServices: [
+      {
+        id: 'adguard-home',
+        name: 'AdGuard Home DNS',
+        description: 'Filtrage DNS réseau & statistiques requêtes JSON',
+        category: 'Infrastructure & Sécurité',
+        icon: 'Shield',
+        protocol: 'json_metrics',
+        host: '192.168.1.5',
+        port: 3000,
+        url: 'http://192.168.1.5:3000',
+        health_url: 'http://192.168.1.5:3000/control/stats',
+        internal_url: 'http://192.168.1.5:3000',
+        auth_type: 'basic',
+        auth_token: '********',
+        auth_token_set: true,
+        auth_header_name: '',
+        json_metric_path: 'num_dns_queries, num_blocked_filtering, avg_processing_time',
+        expected_status: 200,
+        refresh_interval_seconds: 30,
+        order: 0,
+        enabled: true,
+        verify_ssl: false,
+        webhook_ttl_seconds: 300,
+        alert_policy: { enabled: true, consecutive_failures: 2, cooldown_seconds: 300 },
+        is_custom: true,
+        online: true,
+        status: 'up',
+        latency_ms: 8,
+        status_code: 200,
+        message: 'Connecteur json_metrics opérationnel',
+        metrics: {
+          num_dns_queries: 48210,
+          num_blocked_filtering: '18.4%',
+          avg_processing_time: '4 ms',
+        },
+        consecutive_failures: 0,
+        last_check_at: twoMinAgo,
+        last_transition_at: oneHourAgo,
+        last_alert_at: null,
+        muted_until: null,
+        last_error: null,
+      },
+      {
+        id: 'postgres-homelab',
+        name: 'PostgreSQL Cluster',
+        description: 'Sonde TCP port 5432 base de données applicative',
+        category: 'Infrastructure & Sécurité',
+        icon: 'Database',
+        protocol: 'tcp_port',
+        host: '192.168.1.20',
+        port: 5432,
+        url: '',
+        health_url: '',
+        internal_url: '',
+        auth_type: 'none',
+        auth_token: '',
+        auth_token_set: false,
+        auth_header_name: '',
+        json_metric_path: '',
+        expected_status: 200,
+        refresh_interval_seconds: 20,
+        order: 1,
+        enabled: true,
+        verify_ssl: false,
+        webhook_ttl_seconds: 300,
+        alert_policy: { enabled: true, consecutive_failures: 2, cooldown_seconds: 300 },
+        is_custom: true,
+        online: true,
+        status: 'up',
+        latency_ms: 2,
+        status_code: null,
+        message: 'Socket TCP 192.168.1.20:5432 ouvert',
+        metrics: { host: '192.168.1.20', port: 5432 },
+        consecutive_failures: 0,
+        last_check_at: twoMinAgo,
+        last_transition_at: oneHourAgo,
+        last_alert_at: null,
+        muted_until: null,
+        last_error: null,
+      },
+      {
+        id: 'nas-backup-agent',
+        name: 'Agent Backup Offsite',
+        description: 'Heartbeat push webhook nightly Restic / Borg',
+        category: 'Services Personnalisés',
+        icon: 'Activity',
+        protocol: 'webhook_ingest',
+        host: '',
+        port: null,
+        url: '',
+        health_url: '',
+        internal_url: '',
+        auth_type: 'bearer',
+        auth_token: '********',
+        auth_token_set: true,
+        auth_header_name: 'X-Webhook-Token',
+        json_metric_path: '',
+        expected_status: 200,
+        refresh_interval_seconds: 60,
+        order: 2,
+        enabled: true,
+        verify_ssl: false,
+        webhook_ttl_seconds: 600,
+        alert_policy: { enabled: true, consecutive_failures: 1, cooldown_seconds: 600 },
+        is_custom: true,
+        online: false,
+        status: 'down',
+        latency_ms: null,
+        status_code: null,
+        message: 'TTL heartbeat webhook expiré (> 600s)',
+        metrics: { last_snapshot: '2026-11-16 03:00', repo_size_gb: 842 },
+        consecutive_failures: 2,
+        last_check_at: twoMinAgo,
+        last_transition_at: twelveMinAgo,
+        last_alert_at: twelveMinAgo,
+        muted_until: null,
+        last_error: 'TTL heartbeat webhook expiré (> 600s)',
+      },
+    ],
+    incidents: [
+      {
+        id: 'inc-demo-002',
+        service_id: 'nas-backup-agent',
+        service_name: 'Agent Backup Offsite',
+        severity: 'critical',
+        title: 'Agent Backup Offsite hors ligne',
+        message: 'TTL heartbeat webhook expiré (> 600s) — dernier signal reçu à 03:00.',
+        started_at: twelveMinAgo,
+        resolved_at: null,
+        acknowledged: false,
+        acknowledged_at: null,
+      },
+      {
+        id: 'inc-demo-001',
+        service_id: 'adguard-home',
+        service_name: 'AdGuard Home DNS',
+        severity: 'warning',
+        title: 'Latence DNS élevée (> 250 ms)',
+        message: 'Pic temporaire lors de la mise à jour des listes de blocage.',
+        started_at: oneHourAgo,
+        resolved_at: twelveMinAgo,
+        acknowledged: true,
+        acknowledged_at: oneHourAgo,
+      },
+    ],
+    serviceStates: [
+      {
+        service_id: 'adguard-home',
+        service_name: 'AdGuard Home DNS',
+        current_status: 'up',
+        consecutive_failures: 0,
+        last_check_at: twoMinAgo,
+        last_transition_at: oneHourAgo,
+        last_alert_at: oneHourAgo,
+        muted_until: null,
+        last_error: null,
+        last_latency_ms: 8,
+      },
+      {
+        service_id: 'postgres-homelab',
+        service_name: 'PostgreSQL Cluster',
+        current_status: 'up',
+        consecutive_failures: 0,
+        last_check_at: twoMinAgo,
+        last_transition_at: oneHourAgo,
+        last_alert_at: null,
+        muted_until: null,
+        last_error: null,
+        last_latency_ms: 2,
+      },
+      {
+        service_id: 'nas-backup-agent',
+        service_name: 'Agent Backup Offsite',
+        current_status: 'down',
+        consecutive_failures: 2,
+        last_check_at: twoMinAgo,
+        last_transition_at: twelveMinAgo,
+        last_alert_at: twelveMinAgo,
+        muted_until: null,
+        last_error: 'TTL heartbeat webhook expiré (> 600s)',
+        last_latency_ms: null,
+      },
+    ],
+    apns: {
+      enabled: true,
+      team_id: 'DEMO123456',
+      key_id: 'KEY9876543',
+      bundle_id: 'com.example.pvecenter',
+      private_key_path: '/app/config/apns_key.p8',
+      private_key_exists: true,
+      use_sandbox: false,
+      configured: true,
+      registered_devices_count: 2,
+      devices: [
+        {
+          device_token: 'a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00',
+          platform: 'ios',
+          device_name: 'iPhone 16 Pro',
+          app_version: '1.2.0',
+          environment: 'production',
+          updated_at: twoMinAgo,
+        },
+        {
+          device_token: 'ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100',
+          platform: 'macos',
+          device_name: 'MacBook Pro M4',
+          app_version: '1.2.0',
+          environment: 'production',
+          updated_at: oneHourAgo,
+        },
+      ],
+    },
+    webhooks: [
+      {
+        id: 'wh-discord-demo',
+        name: 'Discord #homelab-alerts',
+        type: 'discord',
+        enabled: true,
+        url: 'https://discord.com/api/webhooks/000000000000000000/demo-webhook-token',
+        bot_token: '',
+        bot_token_set: false,
+        chat_id: '',
+        headers: {},
+        has_secret_headers: false,
+        notify_on_down: true,
+        notify_on_recovery: true,
+        include_details: true,
+      },
+      {
+        id: 'wh-ntfy-demo',
+        name: 'ntfy.sh Homelab',
+        type: 'generic',
+        enabled: true,
+        url: 'https://ntfy.sh/pve-center-demo-alerts',
+        bot_token: '',
+        bot_token_set: false,
+        chat_id: '',
+        headers: { Authorization: '********', 'X-Priority': 'high' },
+        has_secret_headers: true,
+        notify_on_down: true,
+        notify_on_recovery: true,
+        include_details: true,
+      },
+    ],
     storageMounts: [
       {
         mount: '/mnt/disk1',
@@ -436,16 +765,118 @@ function createInitialDemoState(): DemoState {
         label: 'Cache NVMe • 2 To',
       },
     ],
+    yamlOverride: null,
   };
 }
 
 let demoState: DemoState = createInitialDemoState();
+
+function buildDemoSummary(): ConfigParsedSummary {
+  return {
+    version: 1,
+    server_id: demoState.serverId,
+    server_name: demoState.serverName,
+    listen_port: 8000,
+    public_url: demoState.publicUrl,
+    proxmox_host: demoState.setupEnv.pve_host,
+    proxmox_node: demoState.setupEnv.pve_node,
+    categories_count: demoState.categories.length,
+    custom_services_count: demoState.customServices.length,
+    webhooks_count: demoState.webhooks.length,
+    api_tokens_count: demoState.apiTokens.length,
+    alerts_enabled: true,
+    apns_enabled: demoState.apns.enabled,
+  };
+}
+
+function buildDemoYaml(): string {
+  if (demoState.yamlOverride) return demoState.yamlOverride;
+  const lines: string[] = [
+    'version: 1',
+    'server:',
+    `  id: "${demoState.serverId}"`,
+    `  name: "${demoState.serverName}"`,
+    '  listen_host: "0.0.0.0"',
+    '  listen_port: 8000',
+    `  public_url: "${demoState.publicUrl}"`,
+    `  mdns_enabled: ${demoState.mdnsEnabled}`,
+    '  mdns_service_type: "_pvecenter._tcp.local."',
+    'security:',
+    `  tailscale_sso_enabled: ${demoState.tailscaleSsoEnabled}`,
+    `  protected_owner_username: "${demoState.setupEnv.protected_owner_username}"`,
+    `  dev_auth_bypass: ${demoState.setupEnv.dev_auth_bypass}`,
+    '  allowed_tailscale_users:',
+    `    - "${demoState.setupEnv.allowed_tailscale_users || 'user@example.com'}"`,
+    'proxmox:',
+    `  host: "${demoState.setupEnv.pve_host}"`,
+    `  default_node: "${demoState.setupEnv.pve_node}"`,
+    `  token_id: "${demoState.setupEnv.pve_token_id}"`,
+    `  token_secret: "${demoState.setupEnv.pve_token_secret_set ? '********' : ''}"`,
+    `  verify_ssl: ${demoState.setupEnv.pve_verify_ssl}`,
+    `  panel_self_vmid: ${demoState.setupEnv.panel_self_vmid}`,
+    'alerts:',
+    '  enabled: true',
+    '  check_interval_seconds: 15',
+    '  default_consecutive_failures: 2',
+    '  default_cooldown_seconds: 300',
+    'notifications:',
+    '  apns:',
+    `    enabled: ${demoState.apns.enabled}`,
+    `    team_id: "${demoState.apns.team_id}"`,
+    `    key_id: "${demoState.apns.key_id}"`,
+    `    bundle_id: "${demoState.apns.bundle_id}"`,
+    `    private_key_path: "${demoState.apns.private_key_path}"`,
+    `    use_sandbox: ${demoState.apns.use_sandbox}`,
+    '  webhooks:',
+  ];
+
+  for (const wh of demoState.webhooks) {
+    lines.push(
+      `    - id: "${wh.id}"`,
+      `      name: "${wh.name}"`,
+      `      type: "${wh.type}"`,
+      `      enabled: ${wh.enabled}`,
+      `      url: "${wh.url}"`
+    );
+  }
+
+  lines.push('custom_services:');
+  for (const svc of demoState.customServices) {
+    lines.push(
+      `  - id: "${svc.id}"`,
+      `    name: "${svc.name}"`,
+      `    category: "${svc.category}"`,
+      `    protocol: "${svc.protocol}"`,
+      `    enabled: ${svc.enabled}`,
+      `    order: ${svc.order}`
+    );
+  }
+
+  return `${lines.join('\n')}\n`;
+}
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+function slugifyDemoId(name: string, existingIds: Set<string>): string {
+  const base =
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'service';
+  let candidate = base;
+  let suffix = 2;
+  while (existingIds.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
 }
 
 async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<Response> {
@@ -463,14 +894,191 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
     }
   }
 
+  if (path === '/api/health' && method === 'GET') {
+    return jsonResponse({
+      status: 'ok',
+      version: '1.0.0',
+      server_id: demoState.serverId,
+      server_name: demoState.serverName,
+      is_configured: demoState.setupConfigured,
+      config_hash: 'demo7f2e91c4',
+    });
+  }
+
   if (path === '/api/me' && method === 'GET') {
     const me: AuthUser = {
       login: 'demo@pve-center.app',
       name: 'Mode Démo App Store',
       profile_pic: '',
       auth_mode: 'demo',
+      role: 'admin',
     };
     return jsonResponse(me);
+  }
+
+  if (path === '/api/auth/login' && method === 'POST') {
+    const pin = String(body.pin || '').trim();
+    const tok = String(body.api_token || body.token || '').trim();
+    if (pin.length >= 4 || tok.startsWith('pve_')) {
+      const expiresAt = new Date(Date.now() + 86400 * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      const resp: AuthLoginResponse = {
+        ok: true,
+        access_token: 'demo_session_jwt_token',
+        token_type: 'bearer',
+        expires_in: 86400,
+        expires_at: expiresAt,
+        user: {
+          login: 'demo@pve-center.app',
+          name: 'Administrateur Démo',
+          profile_pic: '',
+          auth_mode: 'session',
+          role: 'admin',
+        },
+      };
+      return jsonResponse(resp);
+    }
+    return jsonResponse({ detail: 'PIN ou jeton API invalide.' }, 401);
+  }
+
+  if (path === '/api/auth/tokens' && method === 'GET') {
+    return jsonResponse({ tokens: demoState.apiTokens });
+  }
+
+  if (path === '/api/auth/tokens' && method === 'POST') {
+    const name = String(body.name || 'Jeton API').trim();
+    const role = String(body.role || 'admin');
+    const info: ApiTokenInfo = {
+      id: `tok-${Date.now()}`,
+      name,
+      role,
+      created_at: nowIso(),
+    };
+    demoState.apiTokens.push(info);
+    return jsonResponse({
+      ok: true,
+      token: `pve_demo_${Math.random().toString(36).slice(2, 18)}`,
+      token_info: info,
+    });
+  }
+
+  const delTokMatch = path.match(/^\/api\/auth\/tokens\/([^/]+)$/);
+  if (delTokMatch && method === 'DELETE') {
+    const id = delTokMatch[1];
+    demoState.apiTokens = demoState.apiTokens.filter((t) => t.id !== id);
+    return jsonResponse({ ok: true, deleted_id: id });
+  }
+
+  if (path === '/api/auth/pin' && method === 'PUT') {
+    demoState.pinConfigured = true;
+    return jsonResponse({ ok: true, pin_configured: true });
+  }
+
+  if (path === '/api/onboarding/status' && method === 'GET') {
+    const resp: OnboardingStatusResponse = {
+      is_configured: demoState.setupConfigured,
+      needs_onboarding: !demoState.setupConfigured,
+      config_exists: true,
+      is_synthesized: false,
+      server_id: demoState.serverId,
+      server_name: demoState.serverName,
+      public_url: demoState.publicUrl,
+      tailscale_sso_enabled: demoState.tailscaleSsoEnabled,
+      pin_configured: demoState.pinConfigured,
+      api_tokens_count: demoState.apiTokens.length,
+      auth_methods: [
+        ...(demoState.tailscaleSsoEnabled ? ['tailscale_sso'] : []),
+        'api_token',
+        ...(demoState.pinConfigured ? ['pin'] : []),
+      ],
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/onboarding/init' && method === 'POST') {
+    if (typeof body.server_name === 'string' && body.server_name.trim()) {
+      demoState.serverName = body.server_name.trim();
+    }
+    if (typeof body.public_url === 'string') {
+      demoState.publicUrl = body.public_url.trim() || demoState.publicUrl;
+    }
+    if (typeof body.mdns_enabled === 'boolean') {
+      demoState.mdnsEnabled = body.mdns_enabled;
+    }
+    if (typeof body.tailscale_sso_enabled === 'boolean') {
+      demoState.tailscaleSsoEnabled = body.tailscale_sso_enabled;
+    }
+    if (typeof body.admin_pin === 'string' && body.admin_pin.trim().length >= 4) {
+      demoState.pinConfigured = true;
+    }
+    if (Array.isArray(body.custom_services)) {
+      const existingIds = new Set(demoState.customServices.map((s) => s.id));
+      for (const item of body.custom_services as Array<Record<string, unknown>>) {
+        const name = String(item.name || '').trim();
+        if (!name) continue;
+        const id = String(item.id || '').trim() || slugifyDemoId(name, existingIds);
+        if (existingIds.has(id)) continue;
+        existingIds.add(id);
+        demoState.customServices.push({
+          id,
+          name,
+          description: String(item.description || ''),
+          category: String(item.category || 'Services'),
+          icon: String(item.icon || 'Globe'),
+          protocol: (item.protocol as ServiceProtocol) || 'http_rest',
+          host: String(item.host || ''),
+          port: typeof item.port === 'number' ? item.port : null,
+          url: String(item.url || ''),
+          health_url: String(item.health_url || ''),
+          internal_url: String(item.internal_url || ''),
+          auth_type: 'none',
+          auth_token: '',
+          auth_token_set: false,
+          auth_header_name: '',
+          json_metric_path: String(item.json_metric_path || ''),
+          expected_status: 200,
+          refresh_interval_seconds: 30,
+          order: demoState.customServices.length,
+          enabled: true,
+          verify_ssl: false,
+          webhook_ttl_seconds: 300,
+          alert_policy: { enabled: true, consecutive_failures: 2, cooldown_seconds: 300 },
+          is_custom: true,
+          online: true,
+          status: 'up',
+          latency_ms: 9,
+          status_code: 200,
+          message: 'Service initialisé (Démo)',
+          metrics: {},
+          consecutive_failures: 0,
+          last_check_at: nowIso(),
+          last_transition_at: nowIso(),
+          last_alert_at: null,
+          muted_until: null,
+          last_error: null,
+        });
+      }
+    }
+    const tokenId = `tok-${Date.now()}`;
+    demoState.apiTokens.push({
+      id: tokenId,
+      name: String(body.token_name || 'Initial Admin Token'),
+      role: 'admin',
+      created_at: nowIso(),
+    });
+    demoState.setupConfigured = true;
+    demoState.yamlOverride = null;
+
+    const resp: OnboardingInitResponse = {
+      ok: true,
+      is_configured: true,
+      server_id: demoState.serverId,
+      server_name: demoState.serverName,
+      api_token: `pve_demo_${Math.random().toString(36).slice(2, 22)}`,
+      token_id: tokenId,
+      config_hash: 'demo8c4e12a9',
+      config_path: '/app/config/config.yaml',
+    };
+    return jsonResponse(resp);
   }
 
   if (path === '/api/pve/overview' && method === 'GET') {
@@ -640,16 +1248,582 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
   }
 
   if (path === '/api/services' && method === 'GET') {
+    const orderedCustom = [...demoState.customServices].sort(
+      (a, b) => a.order - b.order || a.name.localeCompare(b.name)
+    );
     const categories: ServiceCategory[] = demoState.categories.map((cat) => ({
       name: cat.name,
       services: cat.services.map((svc, idx) => ({
         ...svc,
         online: true,
+        status: 'up' as ServiceHealthStatus,
         latency_ms: 6 + ((idx * 3) % 11),
         status_code: 200,
       })),
     }));
-    return jsonResponse({ categories });
+
+    const catMap = new Map<string, ServiceCategory>();
+    for (const c of categories) catMap.set(c.name.toLowerCase(), c);
+
+    for (const cs of orderedCustom) {
+      if (!cs.enabled) continue;
+      const catName = cs.category || 'Services';
+      const key = catName.toLowerCase();
+      let targetCat = catMap.get(key);
+      if (!targetCat) {
+        targetCat = { name: catName, services: [] };
+        categories.push(targetCat);
+        catMap.set(key, targetCat);
+      }
+      targetCat.services.push({ ...cs });
+    }
+
+    return jsonResponse({ categories, custom_services: orderedCustom });
+  }
+
+  if (path === '/api/custom-services' && method === 'GET') {
+    const ordered = [...demoState.customServices].sort(
+      (a, b) => a.order - b.order || a.name.localeCompare(b.name)
+    );
+    return jsonResponse({ services: ordered, count: ordered.length });
+  }
+
+  if (path === '/api/custom-services' && method === 'POST') {
+    const name = String(body.name || '').trim();
+    if (!name) return jsonResponse({ detail: 'Nom requis' }, 422);
+    const existingIds = new Set(demoState.customServices.map((s) => s.id));
+    const requestedId = String(body.id || '').trim();
+    if (requestedId && existingIds.has(requestedId)) {
+      return jsonResponse({ detail: `Un service avec l'id '${requestedId}' existe déjà.` }, 409);
+    }
+    const id = requestedId || slugifyDemoId(name, existingIds);
+    const nextOrder =
+      typeof body.order === 'number'
+        ? body.order
+        : Math.max(-1, ...demoState.customServices.map((s) => s.order)) + 1;
+    const protocol = (body.protocol as ServiceProtocol) || 'http_rest';
+    const rawToken = String(body.auth_token || '').trim();
+    const hasToken = Boolean(rawToken && rawToken !== '********');
+
+    const created: CustomServiceItem = {
+      id,
+      name,
+      description: String(body.description || ''),
+      category: String(body.category || 'Services'),
+      icon: String(body.icon || 'Globe'),
+      protocol,
+      host: String(body.host || ''),
+      port: typeof body.port === 'number' ? body.port : null,
+      url: String(body.url || ''),
+      health_url: String(body.health_url || ''),
+      internal_url: String(body.internal_url || ''),
+      auth_type: (body.auth_type as CustomServiceItem['auth_type']) || 'none',
+      auth_token: hasToken ? '********' : '',
+      auth_token_set: hasToken,
+      auth_header_name: String(body.auth_header_name || ''),
+      json_metric_path: String(body.json_metric_path || ''),
+      expected_status: typeof body.expected_status === 'number' ? body.expected_status : 200,
+      refresh_interval_seconds:
+        typeof body.refresh_interval_seconds === 'number' ? body.refresh_interval_seconds : 30,
+      order: nextOrder,
+      enabled: body.enabled !== false,
+      verify_ssl: Boolean(body.verify_ssl),
+      webhook_ttl_seconds:
+        typeof body.webhook_ttl_seconds === 'number' ? body.webhook_ttl_seconds : 300,
+      alert_policy: (body.alert_policy as CustomServiceItem['alert_policy']) || {
+        enabled: true,
+        consecutive_failures: 2,
+        cooldown_seconds: 300,
+      },
+      is_custom: true,
+      online: body.enabled !== false,
+      status: body.enabled === false ? 'disabled' : 'up',
+      latency_ms: protocol === 'webhook_ingest' ? 0 : 11,
+      status_code: protocol === 'http_rest' || protocol === 'json_metrics' ? 200 : null,
+      message:
+        protocol === 'webhook_ingest'
+          ? 'En attente de heartbeat webhook'
+          : `Connecteur ${protocol} opérationnel (Démo)`,
+      metrics: protocol === 'json_metrics' ? { status: 'healthy', uptime: '99.9%' } : {},
+      consecutive_failures: 0,
+      last_check_at: nowIso(),
+      last_transition_at: nowIso(),
+      last_alert_at: null,
+      muted_until: null,
+      last_error: null,
+    };
+
+    demoState.customServices.push(created);
+    demoState.serviceStates.push({
+      service_id: created.id,
+      service_name: created.name,
+      current_status: created.status,
+      consecutive_failures: 0,
+      last_check_at: nowIso(),
+      last_transition_at: nowIso(),
+      last_alert_at: null,
+      muted_until: null,
+      last_error: null,
+      last_latency_ms: created.latency_ms,
+    });
+    demoState.yamlOverride = null;
+    return jsonResponse({ ok: true, service: created }, 201);
+  }
+
+  if (path === '/api/custom-services/reorder' && method === 'POST') {
+    const rawIds =
+      (Array.isArray(body.service_ids) && body.service_ids) ||
+      (Array.isArray(body.ids) && body.ids) ||
+      (Array.isArray(body.order) && body.order) ||
+      [];
+    const ids = rawIds.map((x) => String(x));
+    const byId = new Map(demoState.customServices.map((s) => [s.id, s]));
+    const reordered: CustomServiceItem[] = [];
+    const seen = new Set<string>();
+    for (const id of ids) {
+      const item = byId.get(id);
+      if (item && !seen.has(id)) {
+        seen.add(id);
+        reordered.push(item);
+      }
+    }
+    for (const s of demoState.customServices) {
+      if (!seen.has(s.id)) reordered.push(s);
+    }
+    demoState.customServices = reordered.map((s, idx) => ({ ...s, order: idx }));
+    demoState.yamlOverride = null;
+    return jsonResponse({ ok: true, order: demoState.customServices.map((s) => s.id) });
+  }
+
+  const csTestMatch = path.match(/^\/api\/custom-services\/([^/]+)\/test$/);
+  if (csTestMatch && method === 'POST') {
+    const svcId = csTestMatch[1];
+    const saved = demoState.customServices.find((s) => s.id === svcId);
+    const protocol = (body.protocol as ServiceProtocol) || saved?.protocol || 'http_rest';
+    const host = String(body.host ?? saved?.host ?? '');
+    const targetUrl = String(body.health_url ?? body.url ?? saved?.health_url ?? saved?.url ?? '');
+
+    if ((protocol === 'http_rest' || protocol === 'json_metrics') && !targetUrl) {
+      const fail: CustomServiceTestResponse = {
+        ok: false,
+        service_id: svcId,
+        protocol,
+        status: 'down',
+        latency_ms: null,
+        http_status: null,
+        message: 'URL requise pour tester ce connecteur HTTP/JSON.',
+        metrics: {},
+      };
+      return jsonResponse(fail);
+    }
+
+    if ((protocol === 'tcp_port' || protocol === 'icmp_ping') && !host) {
+      const fail: CustomServiceTestResponse = {
+        ok: false,
+        service_id: svcId,
+        protocol,
+        status: 'down',
+        latency_ms: null,
+        http_status: null,
+        message: 'Hôte / IP requis pour ce connecteur.',
+        metrics: {},
+      };
+      return jsonResponse(fail);
+    }
+
+    const demoMetrics: Record<string, string | number | boolean | null> =
+      protocol === 'json_metrics'
+        ? { queries_today: 14280, blocked_pct: '19.2%', version: 'v0.107.52' }
+        : protocol === 'tcp_port'
+          ? { host, port: Number(body.port ?? saved?.port ?? 80) }
+          : protocol === 'icmp_ping'
+            ? { host, rtt_ms: 1.8, packet_loss: '0%' }
+            : protocol === 'webhook_ingest'
+              ? { ttl_seconds: Number(body.webhook_ttl_seconds ?? 300), state: 'listening' }
+              : { endpoint: targetUrl };
+
+    const res: CustomServiceTestResponse = {
+      ok: true,
+      service_id: svcId,
+      protocol,
+      status: 'up',
+      latency_ms: protocol === 'tcp_port' || protocol === 'icmp_ping' ? 2 : 14,
+      http_status: protocol === 'http_rest' || protocol === 'json_metrics' ? 200 : null,
+      message: `Test ${protocol} réussi (Mode Démo)`,
+      metrics: demoMetrics,
+    };
+    return jsonResponse(res);
+  }
+
+  const csMatch = path.match(/^\/api\/custom-services\/([^/]+)$/);
+  if (csMatch && method === 'PUT') {
+    const svcId = csMatch[1];
+    const idx = demoState.customServices.findIndex((s) => s.id === svcId);
+    if (idx === -1) return jsonResponse({ detail: 'Service introuvable' }, 404);
+    const current = demoState.customServices[idx];
+    const nextToken = typeof body.auth_token === 'string' ? body.auth_token.trim() : '';
+    const keepToken = !nextToken || nextToken === '********';
+    const updated: CustomServiceItem = {
+      ...current,
+      name: typeof body.name === 'string' ? body.name : current.name,
+      description: typeof body.description === 'string' ? body.description : current.description,
+      category: typeof body.category === 'string' ? body.category : current.category,
+      icon: typeof body.icon === 'string' ? body.icon : current.icon,
+      protocol: (body.protocol as ServiceProtocol) || current.protocol,
+      host: typeof body.host === 'string' ? body.host : current.host,
+      port: body.port === null ? null : typeof body.port === 'number' ? body.port : current.port,
+      url: typeof body.url === 'string' ? body.url : current.url,
+      health_url: typeof body.health_url === 'string' ? body.health_url : current.health_url,
+      internal_url: typeof body.internal_url === 'string' ? body.internal_url : current.internal_url,
+      auth_type: (body.auth_type as CustomServiceItem['auth_type']) || current.auth_type,
+      auth_token: keepToken ? current.auth_token : '********',
+      auth_token_set: keepToken ? current.auth_token_set : true,
+      auth_header_name:
+        typeof body.auth_header_name === 'string' ? body.auth_header_name : current.auth_header_name,
+      json_metric_path:
+        typeof body.json_metric_path === 'string' ? body.json_metric_path : current.json_metric_path,
+      expected_status:
+        typeof body.expected_status === 'number' ? body.expected_status : current.expected_status,
+      refresh_interval_seconds:
+        typeof body.refresh_interval_seconds === 'number'
+          ? body.refresh_interval_seconds
+          : current.refresh_interval_seconds,
+      enabled: typeof body.enabled === 'boolean' ? body.enabled : current.enabled,
+      verify_ssl: typeof body.verify_ssl === 'boolean' ? body.verify_ssl : current.verify_ssl,
+      webhook_ttl_seconds:
+        typeof body.webhook_ttl_seconds === 'number'
+          ? body.webhook_ttl_seconds
+          : current.webhook_ttl_seconds,
+      alert_policy:
+        (body.alert_policy as CustomServiceItem['alert_policy']) || current.alert_policy,
+    };
+    if (!updated.enabled) {
+      updated.online = false;
+      updated.status = 'disabled';
+      updated.message = 'Service désactivé';
+    } else if (current.status === 'disabled') {
+      updated.online = true;
+      updated.status = 'up';
+      updated.message = 'Connecteur opérationnel';
+    }
+    demoState.customServices[idx] = updated;
+    demoState.yamlOverride = null;
+    return jsonResponse({ ok: true, service: updated });
+  }
+
+  if (csMatch && method === 'DELETE') {
+    const svcId = csMatch[1];
+    const lenBefore = demoState.customServices.length;
+    demoState.customServices = demoState.customServices.filter((s) => s.id !== svcId);
+    if (demoState.customServices.length === lenBefore) {
+      return jsonResponse({ detail: 'Service introuvable' }, 404);
+    }
+    demoState.yamlOverride = null;
+    return jsonResponse({ ok: true, deleted_id: svcId });
+  }
+
+  if (path === '/api/incidents' && method === 'GET') {
+    const activeOnly = url.searchParams.get('active_only') === 'true';
+    const serviceFilter = url.searchParams.get('service_id');
+    const limit = Number(url.searchParams.get('limit') || '50');
+    let list = [...demoState.incidents];
+    if (activeOnly) list = list.filter((i) => i.resolved_at === null);
+    if (serviceFilter) list = list.filter((i) => i.service_id === serviceFilter);
+    list = list.slice(0, limit);
+    const activeCount = demoState.incidents.filter((i) => i.resolved_at === null).length;
+    const resp: IncidentsResponse = {
+      incidents: list,
+      count: list.length,
+      active_count: activeCount,
+      service_states: demoState.serviceStates,
+    };
+    return jsonResponse(resp);
+  }
+
+  const ackMatch = path.match(/^\/api\/incidents\/([^/]+)\/ack$/);
+  if (ackMatch && method === 'POST') {
+    const id = ackMatch[1];
+    const incident = demoState.incidents.find((i) => i.id === id);
+    if (!incident) return jsonResponse({ detail: 'Incident introuvable' }, 404);
+    incident.acknowledged = true;
+    incident.acknowledged_at = nowIso();
+    return jsonResponse({ ok: true, incident });
+  }
+
+  const muteMatch = path.match(/^\/api\/incidents\/services\/([^/]+)\/mute$/);
+  if (muteMatch && method === 'POST') {
+    const serviceId = muteMatch[1];
+    const minutes = Math.max(1, Number(body.minutes || 60));
+    const mutedUntil = new Date(Date.now() + minutes * 60_000)
+      .toISOString()
+      .replace(/\.\d{3}Z$/, 'Z');
+    let st = demoState.serviceStates.find((s) => s.service_id === serviceId);
+    const svc = demoState.customServices.find((s) => s.id === serviceId);
+    if (!st) {
+      st = {
+        service_id: serviceId,
+        service_name: svc?.name || serviceId,
+        current_status: svc?.status || 'unknown',
+        consecutive_failures: 0,
+        last_check_at: nowIso(),
+        last_transition_at: null,
+        last_alert_at: null,
+        muted_until: mutedUntil,
+        last_error: null,
+        last_latency_ms: svc?.latency_ms ?? null,
+      };
+      demoState.serviceStates.push(st);
+    } else {
+      st.muted_until = mutedUntil;
+    }
+    if (svc) svc.muted_until = mutedUntil;
+    return jsonResponse({ ok: true, service_id: serviceId, muted_until: mutedUntil, service_state: st });
+  }
+
+  if (muteMatch && method === 'DELETE') {
+    const serviceId = muteMatch[1];
+    const st = demoState.serviceStates.find((s) => s.service_id === serviceId);
+    if (st) st.muted_until = null;
+    const svc = demoState.customServices.find((s) => s.id === serviceId);
+    if (svc) svc.muted_until = null;
+    return jsonResponse({
+      ok: true,
+      service_id: serviceId,
+      muted_until: null,
+      service_state: st || null,
+    });
+  }
+
+  if (path === '/api/notifications/channels' && method === 'GET') {
+    const resp: NotificationChannelsResponse = {
+      apns: demoState.apns,
+      webhooks: demoState.webhooks,
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/notifications/channels' && method === 'PUT') {
+    if (body.apns && typeof body.apns === 'object') {
+      demoState.apns = {
+        ...demoState.apns,
+        ...(body.apns as Partial<APNsConfigSummary>),
+      };
+    }
+    if (Array.isArray(body.webhooks)) {
+      const prevById = new Map(demoState.webhooks.map((w) => [w.id, w]));
+      demoState.webhooks = (body.webhooks as Array<Record<string, unknown>>).map((item) => {
+        const wid = String(item.id || '').trim() || `wh-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const prev = prevById.get(wid);
+        const rawBot = typeof item.bot_token === 'string' ? item.bot_token.trim() : '';
+        const keepBot = !rawBot || rawBot === '********';
+        return {
+          id: wid,
+          name: String(item.name || 'Webhook'),
+          type: (item.type as WebhookChannelItem['type']) || 'generic',
+          enabled: item.enabled !== false,
+          url: String(item.url || ''),
+          bot_token: keepBot ? (prev?.bot_token_set ? '********' : '') : '********',
+          bot_token_set: keepBot ? Boolean(prev?.bot_token_set) : true,
+          chat_id: String(item.chat_id || ''),
+          headers: (item.headers as Record<string, string>) || {},
+          has_secret_headers: Boolean(
+            Object.keys((item.headers as Record<string, string>) || {}).some((k) =>
+              /auth|token|secret|key|pass/i.test(k)
+            )
+          ),
+          notify_on_down: item.notify_on_down !== false,
+          notify_on_recovery: item.notify_on_recovery !== false,
+          include_details: item.include_details !== false,
+        };
+      });
+    }
+    demoState.yamlOverride = null;
+    return jsonResponse({ ok: true, apns: demoState.apns, webhooks: demoState.webhooks });
+  }
+
+  const devDelMatch = path.match(/^\/api\/notifications\/devices\/([^/]+)$/);
+  if (devDelMatch && method === 'DELETE') {
+    const token = decodeURIComponent(devDelMatch[1]);
+    demoState.apns.devices = demoState.apns.devices.filter((d) => d.device_token !== token);
+    demoState.apns.registered_devices_count = demoState.apns.devices.length;
+    return jsonResponse({ ok: true, deleted: true, device_token: token });
+  }
+
+  if (path === '/api/notifications/test' && method === 'POST') {
+    const channelId = typeof body.channel_id === 'string' ? body.channel_id : null;
+    const channelType = String(body.channel_type || 'all');
+    const results: NotificationTestResultItem[] = [];
+
+    if (!channelId && (channelType === 'all' || channelType === 'apns')) {
+      results.push({
+        channel_id: 'apns',
+        channel_name: `Apple Push (${demoState.apns.devices.length} appareil(s))`,
+        channel_type: 'apns',
+        ok: demoState.apns.enabled && demoState.apns.devices.length > 0,
+        skipped: !demoState.apns.enabled,
+        http_status: demoState.apns.enabled ? 200 : null,
+        message: demoState.apns.enabled
+          ? `Notification test envoyée vers ${demoState.apns.devices.length} appareil(s) APNs (Démo)`
+          : 'APNs désactivé',
+      });
+    }
+
+    for (const wh of demoState.webhooks) {
+      if (channelId && wh.id !== channelId) continue;
+      if (!channelId && channelType !== 'all' && wh.type !== channelType) continue;
+      results.push({
+        channel_id: wh.id,
+        channel_name: wh.name,
+        channel_type: wh.type,
+        ok: wh.enabled,
+        skipped: !wh.enabled,
+        http_status: wh.enabled ? (wh.type === 'discord' ? 204 : 200) : null,
+        message: wh.enabled
+          ? `Webhook ${wh.type} délivré avec succès (Démo)`
+          : 'Canal désactivé',
+      });
+    }
+
+    const resp: NotificationTestResponse = {
+      ok: results.some((r) => r.ok),
+      results,
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/discovery/lan' && method === 'GET') {
+    const resp: DiscoveryLanResponse = {
+      services: [
+        {
+          id: 'lan-proxmox',
+          name: 'Proxmox VE (pve-node-01)',
+          service_type: '_https._tcp.local.',
+          host: '192.168.1.10',
+          port: 8006,
+          txt: { product: 'pve' },
+          suggested_protocol: 'http_rest',
+        },
+        {
+          id: 'lan-jellyfin',
+          name: 'Jellyfin Media Server',
+          service_type: '_http._tcp.local.',
+          host: '192.168.1.26',
+          port: 8096,
+          txt: { version: '10.10' },
+          suggested_protocol: 'http_rest',
+        },
+        {
+          id: 'lan-homeassistant',
+          name: 'Home Assistant',
+          service_type: '_home-assistant._tcp.local.',
+          host: '192.168.1.40',
+          port: 8123,
+          txt: { version: '2026.11' },
+          suggested_protocol: 'http_rest',
+        },
+        {
+          id: 'lan-adguard',
+          name: 'AdGuard Home DNS',
+          service_type: '_http._tcp.local.',
+          host: '192.168.1.5',
+          port: 3000,
+          txt: { path: '/control/stats' },
+          suggested_protocol: 'json_metrics',
+        },
+      ],
+      count: 4,
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/discovery/qr' && method === 'GET') {
+    const deepLink =
+      `pvecenter://connect?url=${encodeURIComponent(demoState.publicUrl)}` +
+      `&name=${encodeURIComponent(demoState.serverName)}` +
+      `&id=${encodeURIComponent(demoState.serverId)}`;
+    const resp: DiscoveryQrResponse = {
+      deep_link: deepLink,
+      onboarding_link: `${demoState.publicUrl}/?onboarding=1`,
+      public_url: demoState.publicUrl,
+      svg_data_url_or_text: deepLink,
+      server_id: demoState.serverId,
+      server_name: demoState.serverName,
+      mdns_service_type: '_pvecenter._tcp.local.',
+      lan_ip: '192.168.1.50',
+      port: 8000,
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/config/yaml' && method === 'GET') {
+    const resp: ConfigYamlResponse = {
+      yaml: buildDemoYaml(),
+      hash: 'demo7f2e91c4a803b1f29e04d7a88a',
+      is_synthesized: false,
+      config_exists: true,
+      secrets_masked: true,
+      parsed_summary: buildDemoSummary(),
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/config/validate' && method === 'POST') {
+    const yamlText = String(body.yaml || '');
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    if (!yamlText.trim()) errors.push('Le document YAML est vide.');
+    if (!yamlText.includes('server:')) errors.push('Section obligatoire "server:" manquante.');
+    if (yamlText.includes('\t')) errors.push('Les tabulations ne sont pas autorisées en YAML (utilisez des espaces).');
+    if (!yamlText.includes('proxmox:')) warnings.push('Section "proxmox:" absente — la supervision PVE sera désactivée.');
+    const resp: ConfigValidateResponse = {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      parsed_summary: errors.length === 0 ? buildDemoSummary() : null,
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/config/yaml' && method === 'PUT') {
+    const yamlText = String(body.yaml || '');
+    if (!yamlText.trim() || !yamlText.includes('server:') || yamlText.includes('\t')) {
+      return jsonResponse(
+        {
+          ok: false,
+          valid: false,
+          errors: [
+            !yamlText.trim()
+              ? 'Le document YAML est vide.'
+              : yamlText.includes('\t')
+                ? 'Tabulations interdites en YAML.'
+                : 'Section "server:" requise.',
+          ],
+          warnings: [],
+          detail: 'Validation YAML échouée.',
+        },
+        422
+      );
+    }
+    demoState.yamlOverride = yamlText;
+    const resp: ConfigSaveResponse = {
+      ok: true,
+      valid: true,
+      hash: `demo${Date.now().toString(16)}`,
+      warnings: [],
+      parsed_summary: buildDemoSummary(),
+      message: 'Configuration YAML enregistrée et rechargée à chaud (Démo).',
+    };
+    return jsonResponse(resp);
+  }
+
+  if (path === '/api/config/export' && method === 'GET') {
+    return new Response(buildDemoYaml(), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/x-yaml',
+        'Content-Disposition': 'attachment; filename="config.yaml"',
+      },
+    });
   }
 
   if (path === '/api/widgets/all' && method === 'GET') {
@@ -854,11 +2028,11 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
   }
 
   if (path === '/api/setup/status' && method === 'GET') {
-    const tailscaleUrl = 'https://panel.example.ts.net';
+    const tailscaleUrl = demoState.publicUrl || 'https://panel.example.ts.net';
     const status: SetupStatusResponse = {
       is_configured: demoState.setupConfigured,
       tailscale_url: tailscaleUrl,
-      pairing_deep_link: `pvecenter://connect?url=${encodeURIComponent(tailscaleUrl)}&name=${encodeURIComponent(demoState.setupEnv.pve_node || 'PVE Center')}`,
+      pairing_deep_link: `pvecenter://connect?url=${encodeURIComponent(tailscaleUrl)}&name=${encodeURIComponent(demoState.serverName)}`,
       env: { ...demoState.setupEnv },
       categories: demoState.categories.map((cat) => ({
         name: cat.name,
@@ -965,6 +2139,7 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
     demoState.setupConfigured = Boolean(
       demoState.setupEnv.pve_host.trim() && demoState.setupEnv.pve_token_secret_set
     );
+    demoState.yamlOverride = null;
 
     const updated: SetupConfigUpdateResponse = {
       ok: true,
@@ -1013,16 +2188,26 @@ export function installApiInterceptor(): void {
       return handleDemoRequest(apiPath, init);
     }
 
+    const token = getAuthToken();
+    const headers = new Headers(
+      init?.headers ?? (input instanceof Request ? input.headers : undefined)
+    );
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
     const remoteBase = getServerUrl();
+    const nextInit: RequestInit = {
+      ...init,
+      headers,
+      credentials: init?.credentials ?? 'include',
+    };
+
     if (remoteBase) {
       const targetUrl = `${remoteBase}${apiPath}`;
-      const nextInit: RequestInit = {
-        ...init,
-        credentials: init?.credentials ?? 'include',
-      };
       return nativeFetch(targetUrl, nextInit);
     }
 
-    return nativeFetch(input, init);
+    return nativeFetch(input, nextInit);
   };
 }

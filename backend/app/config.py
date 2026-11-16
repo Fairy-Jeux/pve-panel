@@ -1,16 +1,23 @@
-"""Configuration loader and hot-reload writer for .env and services.yaml."""
+"""Compatibility configuration wrapper delegating to declarative ConfigManager."""
 
-import errno
+from __future__ import annotations
+
 from functools import lru_cache
 import os
 from pathlib import Path
 import re
-import shutil
-import tempfile
 from typing import Any
 
-import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import yaml
+
+from app.config_manager import (
+    get_config_manager,
+    resolve_env_file,
+    resolve_services_yaml_path,
+    write_text_safe as _write_text_safe,
+)
+from app.config_schema import AppConfig, is_secret_configured
 
 SECRET_ENV_KEYS = frozenset(
     {
@@ -27,22 +34,7 @@ SECRET_ENV_KEYS = frozenset(
 
 _ENV_LINE_RE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=.*$")
 _TRANSIENT_SERVICE_KEYS = frozenset({"online", "latency_ms", "status_code"})
-
-
-def resolve_env_file() -> Path:
-    """Locate .env file prioritizing /app/.env in Docker, then project root."""
-    candidates = [
-        Path("/app/.env"),
-        Path.cwd() / ".env",
-        Path.cwd().parent / ".env",
-        Path(__file__).resolve().parents[2] / ".env",
-    ]
-    for path in candidates:
-        if path.is_file():
-            return path
-    if Path("/app").is_dir():
-        return Path("/app/.env")
-    return Path(__file__).resolve().parents[2] / ".env"
+_REGISTERED_MANAGER_IDS: set[int] = set()
 
 
 def _find_env_file() -> str | None:
@@ -52,7 +44,7 @@ def _find_env_file() -> str | None:
 
 
 class Settings(BaseSettings):
-    """Typed application settings loaded from environment / .env."""
+    """Typed application settings backed by ConfigManager (config.yaml or .env + services.yaml)."""
 
     model_config = SettingsConfigDict(
         env_file=_find_env_file(),
@@ -107,21 +99,16 @@ class Settings(BaseSettings):
 
     def resolve_services_yaml(self) -> Path:
         """Resolve services.yaml dynamically across dev and container layouts."""
-        configured = Path(self.services_config_path)
-        if configured.is_file():
-            return configured
-        project_root = Path(__file__).resolve().parents[2] / "services.yaml"
-        if project_root.is_file():
-            return project_root
-        if Path("/app/services.yaml").is_file() or Path("/app").is_dir():
-            return Path("/app/services.yaml")
-        return project_root
+        return resolve_services_yaml_path(self.services_config_path)
 
     def resolve_static_dir(self) -> Path | None:
         """Locate compiled React frontend static directory."""
-        candidates = []
+        candidates: list[Path] = []
         if self.static_dir:
             candidates.append(Path(self.static_dir))
+        env_static = os.environ.get("STATIC_DIR", "").strip()
+        if env_static:
+            candidates.append(Path(env_static))
         candidates.extend(
             [
                 Path("/app/static"),
@@ -134,74 +121,81 @@ class Settings(BaseSettings):
         return None
 
 
+def _settings_from_app_config(cfg: AppConfig) -> Settings:
+    """Project declarative AppConfig onto the legacy flat Settings interface."""
+    return Settings.model_construct(
+        dev_auth_bypass=cfg.security.dev_auth_bypass,
+        allowed_tailscale_users=",".join(cfg.security.allowed_tailscale_users),
+        protected_owner_username=cfg.security.protected_owner_username,
+        services_config_path=os.environ.get("SERVICES_CONFIG_PATH", "../services.yaml"),
+        static_dir=os.environ.get("STATIC_DIR", ""),
+        pve_host=cfg.proxmox.host,
+        pve_node=cfg.proxmox.default_node,
+        pve_token_id=cfg.proxmox.token_id,
+        pve_token_secret=cfg.proxmox.token_secret,
+        pve_verify_ssl=cfg.proxmox.verify_ssl,
+        panel_self_vmid=cfg.proxmox.panel_self_vmid,
+        jellyfin_url=cfg.integrations.jellyfin.url,
+        jellyfin_api_key=cfg.integrations.jellyfin.api_key,
+        jellyseerr_url=cfg.integrations.jellyseerr.url,
+        jellyseerr_api_key=cfg.integrations.jellyseerr.api_key,
+        plex_url=cfg.integrations.plex.url,
+        plex_token=cfg.integrations.plex.token,
+        radarr_url=cfg.integrations.radarr.url,
+        radarr_api_key=cfg.integrations.radarr.api_key,
+        sonarr_url=cfg.integrations.sonarr.url,
+        sonarr_api_key=cfg.integrations.sonarr.api_key,
+        prowlarr_url=cfg.integrations.prowlarr.url,
+        prowlarr_api_key=cfg.integrations.prowlarr.api_key,
+        qbit_url=cfg.integrations.qbittorrent.url,
+        qbit_username=cfg.integrations.qbittorrent.username,
+        qbit_password=cfg.integrations.qbittorrent.password,
+    )
+
+
+def _ensure_cache_invalidation_hook() -> None:
+    manager = get_config_manager()
+    mgr_id = id(manager)
+    if mgr_id not in _REGISTERED_MANAGER_IDS:
+        _REGISTERED_MANAGER_IDS.add(mgr_id)
+        manager.on_reload(lambda _cfg: get_settings.cache_clear())
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Return cached Settings instance."""
-    return Settings(_env_file=resolve_env_file())
+    """Return cached Settings projected from ConfigManager."""
+    _ensure_cache_invalidation_hook()
+    return _settings_from_app_config(get_config_manager().config)
 
 
 def reload_settings() -> Settings:
-    """Clear cached settings and reload from .env and environment."""
+    """Reload ConfigManager from disk/env, clear cached settings, and return fresh Settings."""
+    get_config_manager().reload(emit_event=False, source="reload_settings")
     get_settings.cache_clear()
     return get_settings()
 
 
-def is_secret_configured(value: str | None) -> bool:
-    """Return True when a secret string is set and not an example placeholder."""
-    cleaned = (value or "").strip()
-    return bool(cleaned) and not cleaned.startswith("replace-with-")
-
-
 def is_configured(settings: Settings | None = None) -> bool:
-    """Return True when Proxmox host and API token secret are configured."""
-    cfg = settings or get_settings()
-    host = cfg.pve_host.strip()
-    secret = cfg.pve_token_secret.strip()
-    return bool(host) and bool(secret) and secret != "replace-with-pve-token-secret"
+    """Return True when panel has either Proxmox credentials or persisted config.yaml onboarding."""
+    if settings is not None:
+        host = settings.pve_host.strip()
+        secret = settings.pve_token_secret.strip()
+        return bool(host) and is_secret_configured(secret)
 
-
-def _write_text_safe(
-    path: Path, content: str, new_file_mode: int | None = None
-) -> None:
-    """Write text atomically, falling back to in-place write on bind-mounted files."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as tmp_file:
-            tmp_path = Path(tmp_file.name)
-            tmp_file.write(content)
-            tmp_file.flush()
-            os.fsync(tmp_file.fileno())
-
-        if path.exists():
-            shutil.copymode(path, tmp_path)
-        elif new_file_mode is not None:
-            os.chmod(tmp_path, new_file_mode)
-
-        os.replace(tmp_path, path)
-        tmp_path = None
-    except OSError as exc:
-        if exc.errno not in {errno.EBUSY, errno.EXDEV, errno.EPERM}:
-            raise
-        with path.open("w", encoding="utf-8") as fh:
-            fh.write(content)
-            fh.flush()
-            os.fsync(fh.fileno())
-        if new_file_mode is not None and not path.exists():
-            os.chmod(path, new_file_mode)
-    finally:
-        if tmp_path is not None and tmp_path.exists():
-            try:
-                tmp_path.unlink()
-            except OSError:
-                pass
+    manager = get_config_manager()
+    cfg = manager.config
+    proxmox_ok = bool(cfg.proxmox.host.strip()) and is_secret_configured(
+        cfg.proxmox.token_secret
+    )
+    if proxmox_ok:
+        return True
+    if manager.config_exists and (
+        bool(cfg.security.api_tokens)
+        or bool(cfg.security.admin_pin_hash)
+        or bool(cfg.custom_services)
+    ):
+        return True
+    return False
 
 
 def _format_env_value(raw: str) -> str:
@@ -266,6 +260,8 @@ def update_env_file(updates: dict[str, Any]) -> Path:
     for key, val in normalized.items():
         os.environ[key] = val
 
+    get_config_manager().reload(emit_event=False, source="env_update")
+    get_settings.cache_clear()
     return env_path
 
 
@@ -310,18 +306,35 @@ def _sanitize_storage_mounts(mounts: list[dict[str, Any]]) -> list[dict[str, str
     return cleaned
 
 
+def _read_services_yaml_raw() -> dict[str, Any]:
+    """Read raw services.yaml mapping dynamically without caching across edits."""
+    yaml_path = get_settings().resolve_services_yaml()
+    if not yaml_path.is_file():
+        return {}
+    with yaml_path.open("r", encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+    return data if isinstance(data, dict) else {}
+
+
 def save_services_yaml(
     categories: list[dict[str, Any]] | None = None,
     storage_mounts: list[dict[str, Any]] | None = None,
 ) -> Path:
-    """Save services.yaml cleanly while preserving any unmodified section."""
+    """Save services.yaml cleanly (and mirror into config.yaml if present)."""
     yaml_path = get_settings().resolve_services_yaml()
     existing = dict(_read_services_yaml_raw())
 
-    if categories is not None:
-        existing["categories"] = _sanitize_categories(categories)
-    if storage_mounts is not None:
-        existing["storage_mounts"] = _sanitize_storage_mounts(storage_mounts)
+    sanitized_categories = (
+        _sanitize_categories(categories) if categories is not None else None
+    )
+    sanitized_mounts = (
+        _sanitize_storage_mounts(storage_mounts) if storage_mounts is not None else None
+    )
+
+    if sanitized_categories is not None:
+        existing["categories"] = sanitized_categories
+    if sanitized_mounts is not None:
+        existing["storage_mounts"] = sanitized_mounts
 
     ordered: dict[str, Any] = {}
     for preferred_key in ("categories", "storage_mounts"):
@@ -337,28 +350,33 @@ def save_services_yaml(
         indent=2,
     )
     _write_text_safe(yaml_path, rendered)
+
+    manager = get_config_manager()
+    if manager.config_exists:
+        cfg_dict = manager.config.model_dump()
+        if sanitized_categories is not None:
+            cfg_dict["categories"] = sanitized_categories
+        if sanitized_mounts is not None:
+            cfg_dict["storage_mounts"] = sanitized_mounts
+        manager.save_config(cfg_dict, preserve_templates=True, emit_event=False)
+    else:
+        manager.reload(emit_event=False, source="services_yaml_save")
+    get_settings.cache_clear()
     return yaml_path
 
 
-def _read_services_yaml_raw() -> dict[str, Any]:
-    """Read raw services.yaml mapping dynamically without caching across edits."""
-    yaml_path = get_settings().resolve_services_yaml()
-    if not yaml_path.is_file():
-        return {}
-    with yaml_path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh)
-    return data if isinstance(data, dict) else {}
-
-
 def load_services_config() -> list[dict[str, Any]]:
-    """Read service categories from services.yaml."""
-    categories = _read_services_yaml_raw().get("categories", [])
-    return categories if isinstance(categories, list) else []
+    """Read service categories from active ConfigManager (config.yaml or legacy services.yaml)."""
+    return [
+        cat.model_dump(exclude_none=True)
+        for cat in get_config_manager().config.categories
+    ]
 
 
 def load_storage_mounts_config() -> list[dict[str, str]]:
-    """Read optional physical storage mounts mapping from services.yaml."""
-    mounts = _read_services_yaml_raw().get("storage_mounts", [])
-    if not isinstance(mounts, list):
-        return []
-    return [m for m in mounts if isinstance(m, dict) and m.get("subpath")]
+    """Read physical storage mounts mapping from active ConfigManager."""
+    return [
+        mount.model_dump()
+        for mount in get_config_manager().config.storage_mounts
+        if mount.subpath
+    ]

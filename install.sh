@@ -239,14 +239,273 @@ print_final_summary() {
   printf "${BOLD}${GREEN}======================================================================${NC}\n\n"
   printf "  ${BOLD}URL Web HTTPS :${NC}       %s\n" "$panel_url"
   printf "  ${BOLD}Appairage Apple :${NC}     %s\n" "$pairing_link"
+  printf "  ${BOLD}Config déclarative :${NC}  ./config/config.yaml (monté sur /app/config/config.yaml)\n"
+  printf "  ${BOLD}Découverte Bonjour :${NC}  _pvecenter._tcp.local.\n"
   printf "\n"
   printf "  ${CYAN}Prochaine étape :${NC}\n"
-  printf "  Ouvrez l'URL HTTPS ci-dessus (ou le lien pvecenter:// sur iPhone / Mac).\n"
-  printf "  Tout le reste (Proxmox VE, Jellyfin, Jellyseerr, Plex, Radarr, Sonarr,\n"
-  printf "  Prowlarr, qBittorrent, services et disques) se configure directement\n"
-  printf "  depuis le ${BOLD}Setup Web intégré (« Configuration »)${NC} ou l'app native !\n\n"
+  printf "  Ouvrez l'URL HTTPS ci-dessus (ou scannez le QR Code / lien pvecenter:// sur iPhone / Mac).\n"
+  printf "  L'assistant de premier lancement (Onboarding) vous permet de générer votre\n"
+  printf "  jeton API Bearer (LAN / Apple TV), configurer Proxmox VE, vos services\n"
+  printf "  personnalisés et vos alertes Discord / Telegram / ntfy / APNs à chaud.\n\n"
   printf "  ${YELLOW}Rappel ACL Tailscale recommandé :${NC}\n"
   printf '  {"tagOwners":{"tag:panel":["%s"]},"acls":[{"action":"accept","src":["%s"],"dst":["tag:panel:*"]}]}\n\n' "$admin_email" "$admin_email"
+}
+
+generate_session_secret() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import secrets; print(secrets.token_hex(32))'
+    return
+  fi
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+    return
+  fi
+  od -An -tx1 -N32 /dev/urandom | tr -d ' \n'
+  printf '\n'
+}
+
+ensure_session_secret_in_env() {
+  local env_file="$1"
+  local current=""
+  if [[ -f "$env_file" ]]; then
+    current="$(get_env_var "$env_file" SESSION_SECRET)"
+  fi
+  if [[ -z "$current" || "$current" == replace-with-* || "$current" == '${'* ]]; then
+    local generated
+    generated="$(generate_session_secret)"
+    if [[ -f "$env_file" ]]; then
+      set_env_var "$env_file" SESSION_SECRET "$generated"
+    fi
+    printf '%s\n' "$generated"
+    return
+  fi
+  printf '%s\n' "$current"
+}
+
+ensure_config_dir_and_mount() {
+  local repo_dir="$1"
+  mkdir -p "${repo_dir}/config"
+  chmod 700 "${repo_dir}/config"
+  if [[ -f "${repo_dir}/docker-compose.yml" ]]; then
+    if grep -qE '\./config:/app/config(:rw)?' "${repo_dir}/docker-compose.yml"; then
+      log_ok "Montage Docker ./config:/app/config:rw vérifié dans docker-compose.yml."
+    else
+      log_warn "Montage ./config:/app/config:rw absent de docker-compose.yml — vérifiez vos volumes persistants."
+    fi
+  fi
+}
+
+create_initial_config_yaml() {
+  local repo_dir="$1"
+  local allowed_users="$2"
+  local owner_user="$3"
+  local pve_node="$4"
+  local session_secret="$5"
+  local config_file="${repo_dir}/config/config.yaml"
+  local example_file="${repo_dir}/config/config.example.yaml"
+
+  if [[ -f "$config_file" ]]; then
+    chmod 600 "$config_file"
+    log_ok "Fichier config/config.yaml déjà présent (conservé)."
+    return
+  fi
+
+  local pve_host="" pve_token_id="root@pam!pve-panel" pve_token_secret="" pve_verify_ssl="false" panel_vmid="116"
+  if [[ -f "${repo_dir}/.env" ]]; then
+    pve_host="$(get_env_var "${repo_dir}/.env" PVE_HOST)"
+    pve_token_id="$(get_env_var "${repo_dir}/.env" PVE_TOKEN_ID)"
+    pve_token_secret="$(get_env_var "${repo_dir}/.env" PVE_TOKEN_SECRET)"
+    pve_verify_ssl="$(get_env_var "${repo_dir}/.env" PVE_VERIFY_SSL)"
+    panel_vmid="$(get_env_var "${repo_dir}/.env" PANEL_SELF_VMID)"
+  fi
+
+  if [[ -z "$pve_token_secret" || "$pve_token_secret" == replace-with-* || "$pve_token_secret" == '${'* ]]; then
+    pve_host=""
+    pve_token_secret=""
+  fi
+  pve_token_id="${pve_token_id:-root@pam!pve-panel}"
+  pve_verify_ssl="${pve_verify_ssl:-false}"
+  panel_vmid="${panel_vmid:-116}"
+  [[ "$panel_vmid" =~ ^[0-9]+$ ]] || panel_vmid="116"
+
+  if command -v python3 >/dev/null 2>&1; then
+    PVE_CFG_OUT="$config_file" \
+    PVE_CFG_EXAMPLE="$example_file" \
+    PVE_ALLOWED_USERS="$allowed_users" \
+    PVE_OWNER_USER="$owner_user" \
+    PVE_SESSION_SECRET="$session_secret" \
+    PVE_HOST_VAL="$pve_host" \
+    PVE_NODE_VAL="$pve_node" \
+    PVE_TOKEN_ID_VAL="$pve_token_id" \
+    PVE_TOKEN_SECRET_VAL="$pve_token_secret" \
+    PVE_VERIFY_SSL_VAL="$pve_verify_ssl" \
+    PVE_SELF_VMID_VAL="$panel_vmid" \
+    python3 - <<'PYEOF'
+import json
+import os
+from pathlib import Path
+import uuid
+
+out_path = Path(os.environ["PVE_CFG_OUT"])
+example_path = Path(os.environ["PVE_CFG_EXAMPLE"])
+allowed_raw = os.environ.get("PVE_ALLOWED_USERS", "")
+allowed = [u.strip().lower() for u in allowed_raw.split(",") if u.strip()]
+owner = os.environ.get("PVE_OWNER_USER", "admin").strip() or "admin"
+session_secret = os.environ.get("PVE_SESSION_SECRET", "").strip()
+pve_host = os.environ.get("PVE_HOST_VAL", "").strip()
+pve_node = os.environ.get("PVE_NODE_VAL", "pve").strip() or "pve"
+pve_token_id = os.environ.get("PVE_TOKEN_ID_VAL", "root@pam!pve-panel").strip() or "root@pam!pve-panel"
+pve_token_secret = os.environ.get("PVE_TOKEN_SECRET_VAL", "")
+pve_verify_ssl = os.environ.get("PVE_VERIFY_SSL_VAL", "false").strip().lower() in {"1", "true", "yes", "on"}
+try:
+    panel_vmid = max(1, int(os.environ.get("PVE_SELF_VMID_VAL", "116") or "116"))
+except ValueError:
+    panel_vmid = 116
+
+q = json.dumps
+allowed_block = "\n".join(f"    - {q(u)}" for u in allowed) if allowed else "    []"
+if allowed:
+    allowed_yaml = "  allowed_tailscale_users:\n" + allowed_block
+else:
+    allowed_yaml = "  allowed_tailscale_users: []"
+
+header = (
+    "# ==============================================================================\n"
+    "# PVE Command Center — Configuration déclarative (config/config.yaml)\n"
+    f"# Généré par install.sh (référence : {example_path.name if example_path.is_file() else 'config.example.yaml'})\n"
+    "# ==============================================================================\n"
+)
+
+content = f"""{header}version: 1
+
+server:
+  id: {q(str(uuid.uuid4()))}
+  name: "PVE Command Center"
+  listen_host: "0.0.0.0"
+  listen_port: 8000
+  public_url: ""
+  mdns_enabled: true
+  mdns_service_name: "PVE Command Center"
+  mdns_service_type: "_pvecenter._tcp.local."
+  refresh_interval_seconds: 5
+
+security:
+  tailscale_sso_enabled: true
+{allowed_yaml}
+  dev_auth_bypass: false
+  protected_owner_username: {q(owner)}
+  session_secret: {q(session_secret)}
+  admin_pin_hash: ""
+  api_tokens: []
+
+proxmox:
+  host: {q(pve_host)}
+  token_id: {q(pve_token_id)}
+  token_secret: {q(pve_token_secret)}
+  verify_ssl: {"true" if pve_verify_ssl else "false"}
+  default_node: {q(pve_node)}
+  panel_self_vmid: {panel_vmid}
+
+integrations:
+  jellyfin:
+    url: ""
+    api_key: ""
+  jellyseerr:
+    url: ""
+    api_key: ""
+  plex:
+    url: ""
+    token: ""
+  radarr:
+    url: ""
+    api_key: ""
+  sonarr:
+    url: ""
+    api_key: ""
+  prowlarr:
+    url: ""
+    api_key: ""
+  qbittorrent:
+    url: ""
+    username: ""
+    password: ""
+
+alerts:
+  enabled: true
+  default_consecutive_failures: 3
+  default_cooldown_seconds: 300
+  check_interval_seconds: 30
+
+notifications:
+  apns:
+    enabled: false
+    team_id: ""
+    key_id: ""
+    bundle_id: "io.ac.pvepanel.app"
+    private_key_path: "/app/config/AuthKey.p8"
+    use_sandbox: true
+  webhooks: []
+
+categories: []
+custom_services: []
+storage_mounts: []
+"""
+out_path.write_text(content, encoding="utf-8")
+PYEOF
+  elif [[ -f "$example_file" ]]; then
+    cp "$example_file" "$config_file"
+  else
+    cat >"$config_file" <<EOF
+version: 1
+server:
+  name: "PVE Command Center"
+  listen_host: "0.0.0.0"
+  listen_port: 8000
+  public_url: ""
+  mdns_enabled: true
+  mdns_service_name: "PVE Command Center"
+  mdns_service_type: "_pvecenter._tcp.local."
+  refresh_interval_seconds: 5
+security:
+  tailscale_sso_enabled: true
+  allowed_tailscale_users: []
+  dev_auth_bypass: false
+  protected_owner_username: "${owner_user}"
+  session_secret: "${session_secret}"
+  admin_pin_hash: ""
+  api_tokens: []
+EOF
+  fi
+
+  chmod 600 "$config_file"
+  log_ok "Fichier config/config.yaml initialisé (mode 600, prêt pour hot-reload et onboarding)."
+}
+
+update_config_public_url() {
+  local config_file="$1"
+  local public_url="$2"
+  [[ -f "$config_file" && -n "$public_url" ]] || return 0
+  if command -v python3 >/dev/null 2>&1; then
+    PVE_CFG_FILE="$config_file" PVE_PUBLIC_URL="$public_url" python3 - <<'PYEOF'
+import json
+import os
+from pathlib import Path
+import re
+
+path = Path(os.environ["PVE_CFG_FILE"])
+public_url = os.environ["PVE_PUBLIC_URL"].strip()
+text = path.read_text(encoding="utf-8")
+updated = re.sub(
+    r'^(\s*public_url:\s*)(?:""|\x27\x27|https://pve-panel\.example\.ts\.net)\s*$',
+    lambda m: f"{m.group(1)}{json.dumps(public_url)}",
+    text,
+    count=1,
+    flags=re.MULTILINE,
+)
+if updated != text:
+    path.write_text(updated, encoding="utf-8")
+PYEOF
+  fi
 }
 
 run_mode_b_linux() {
@@ -261,6 +520,8 @@ run_mode_b_linux() {
   ensure_tailscale
 
   cd "$repo_dir"
+
+  ensure_config_dir_and_mount "$repo_dir"
 
   if [[ ! -f .env ]]; then
     cp .env.example .env
@@ -293,19 +554,32 @@ run_mode_b_linux() {
   set_env_var .env DEV_AUTH_BYPASS "false"
   set_env_var .env ALLOWED_TAILSCALE_USERS "$allowed_users"
 
+  local session_secret
+  session_secret="$(ensure_session_secret_in_env .env)"
+  log_ok "SESSION_SECRET initial vérifié / généré."
+
+  local owner_user
+  owner_user="$(get_env_var .env PROTECTED_OWNER_USERNAME)"
+  owner_user="${owner_user:-admin}"
+
   if [[ -z "$pve_node" ]]; then
     pve_node="$(get_env_var .env PVE_NODE)"
     pve_node="${pve_node:-pve}"
   fi
 
+  create_initial_config_yaml "$repo_dir" "$allowed_users" "$owner_user" "$pve_node" "$session_secret"
+
   log_info "Construction et démarrage du conteneur Docker (pve-panel)..."
   docker compose up -d --build
-  log_ok "Conteneur Docker démarré sur 127.0.0.1:8000."
+  log_ok "Conteneur Docker démarré sur ${LISTEN_HOST:-0.0.0.0}:${LISTEN_PORT:-8000} (volume ./config:/app/config:rw)."
 
   configure_tailscale_serve "$ts_hostname"
 
   local dns_name
   dns_name="$(detect_tailscale_dns_name)"
+  if [[ -n "$dns_name" ]]; then
+    update_config_public_url "${repo_dir}/config/config.yaml" "https://${dns_name}"
+  fi
   print_final_summary "$dns_name" "$pve_node" "${allowed_users%%,*}"
 }
 
@@ -456,11 +730,15 @@ run_mode_a_proxmox() {
   token_secret="$(create_pve_api_token)"
 
   log_info "Copie du dépôt dans /opt/pve-panel du LXC ${vmid}..."
-  pct exec "$vmid" -- mkdir -p /opt/pve-panel
+  pct exec "$vmid" -- mkdir -p /opt/pve-panel /opt/pve-panel/config
   tar \
     --exclude='.git' \
     --exclude='.env' \
     --exclude='services.yaml' \
+    --exclude='config/config.yaml' \
+    --exclude='config/*.db' \
+    --exclude='config/*.db-*' \
+    --exclude='config/*.p8' \
     --exclude='.venv' \
     --exclude='frontend/node_modules' \
     --exclude='frontend/dist' \
@@ -471,17 +749,21 @@ run_mode_a_proxmox() {
   pct exec "$vmid" -- bash -c '
     set -e
     cd /opt/pve-panel
+    mkdir -p config
+    chmod 700 config
     [[ -f .env ]] || cp .env.example .env
     [[ -f services.yaml ]] || cp services.example.yaml services.yaml
     chmod 600 .env
   '
 
-  local tmp_env
+  local tmp_env lxc_session_secret
   tmp_env="$(mktemp)"
+  lxc_session_secret="$(generate_session_secret)"
   pct pull "$vmid" /opt/pve-panel/.env "$tmp_env"
   set_env_var "$tmp_env" DEV_AUTH_BYPASS "false"
   set_env_var "$tmp_env" ALLOWED_TAILSCALE_USERS "$allowed_users"
   set_env_var "$tmp_env" PROTECTED_OWNER_USERNAME "$owner_user"
+  set_env_var "$tmp_env" SESSION_SECRET "$lxc_session_secret"
   set_env_var "$tmp_env" PVE_HOST "$pve_host"
   set_env_var "$tmp_env" PVE_NODE "$pve_node"
   set_env_var "$tmp_env" PVE_TOKEN_ID "root@pam!pve-panel"
@@ -501,8 +783,6 @@ run_mode_a_proxmox() {
 }
 
 main() {
-  require_root
-
   local in_container="false"
   local ts_hostname=""
   local allowed_users=""
@@ -528,9 +808,16 @@ main() {
         ;;
       -h|--help)
         cat <<'EOF'
-Usage: ./install.sh
+Usage: ./install.sh [OPTIONS]
 Installe PVE Command Center sur un hôte Proxmox VE (création LXC dédiée)
-ou sur un serveur Linux / conteneur LXC existant (Docker + Tailscale Serve).
+ou sur un serveur Linux / conteneur LXC existant (Docker + Tailscale Serve + config/config.yaml).
+
+Options :
+  --in-container             Forcer le mode serveur Linux / LXC existant (Mode B)
+  --ts-hostname <nom>        Nom d'hôte Tailscale souhaité
+  --allowed-users <emails>   Email(s) Tailscale autorisés séparés par des virgules
+  --pve-node <noeud>         Nom du nœud Proxmox VE par défaut
+  -h, --help                 Afficher cette aide
 EOF
         exit 0
         ;;
@@ -540,6 +827,8 @@ EOF
         ;;
     esac
   done
+
+  require_root
 
   local repo_dir
   repo_dir="$(resolve_repo_dir)"

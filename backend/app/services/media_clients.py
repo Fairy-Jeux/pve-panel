@@ -9,6 +9,14 @@ import xml.etree.ElementTree as ET
 import httpx
 
 from app.config import get_settings
+from app.config_schema import (
+    MASKED_SECRET_SENTINEL,
+    AppConfig,
+    CustomServiceConfig,
+    is_secret_configured,
+)
+from app.services.connectors import ConnectorResult, run_connector
+from app.services.state_store import StateStore
 
 
 async def check_single_service(
@@ -61,6 +69,167 @@ async def check_categories_health(
         result_categories[cat_idx]["services"][svc_idx] = svc_result
 
     return result_categories
+
+
+def serialize_custom_service(
+    svc: CustomServiceConfig,
+    result: ConnectorResult | None = None,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Serialize a CustomServiceConfig with masked secret and live/cached state."""
+    has_token = is_secret_configured(svc.auth_token)
+    if result is not None:
+        online = result.ok
+        status = result.status
+        latency_ms: int | None = result.latency_ms
+        status_code = result.http_status
+        message = result.message
+        metrics = result.metrics
+    elif not svc.enabled:
+        online = False
+        status = "disabled"
+        latency_ms = state.get("last_latency_ms") if state else None
+        status_code = None
+        message = "Service désactivé"
+        metrics = state.get("last_metrics", {}) if state else {}
+    else:
+        cached_status = state.get("current_status", "unknown") if state else "unknown"
+        online = cached_status == "up"
+        status = cached_status
+        latency_ms = state.get("last_latency_ms") if state else None
+        status_code = None
+        message = (state.get("last_error") or "") if state else ""
+        metrics = state.get("last_metrics", {}) if state else {}
+
+    return {
+        "id": svc.id,
+        "name": svc.name,
+        "description": svc.description,
+        "category": svc.category,
+        "icon": svc.icon,
+        "protocol": svc.protocol,
+        "host": svc.host,
+        "port": svc.port,
+        "url": svc.url,
+        "health_url": svc.health_url,
+        "internal_url": svc.internal_url,
+        "auth_type": svc.auth_type,
+        "auth_token": MASKED_SECRET_SENTINEL if has_token else "",
+        "auth_token_set": has_token,
+        "auth_header_name": svc.auth_header_name,
+        "json_metric_path": svc.json_metric_path,
+        "expected_status": svc.expected_status,
+        "refresh_interval_seconds": svc.refresh_interval_seconds,
+        "order": svc.order,
+        "enabled": svc.enabled,
+        "verify_ssl": svc.verify_ssl,
+        "webhook_ttl_seconds": svc.webhook_ttl_seconds,
+        "alert_policy": svc.alert_policy.model_dump(),
+        "is_custom": True,
+        "online": online,
+        "status": status,
+        "latency_ms": latency_ms,
+        "status_code": status_code,
+        "message": message,
+        "metrics": metrics,
+        "consecutive_failures": int(state.get("consecutive_failures", 0)) if state else 0,
+        "last_check_at": state.get("last_check_at") if state else None,
+        "last_transition_at": state.get("last_transition_at") if state else None,
+        "last_alert_at": state.get("last_alert_at") if state else None,
+        "muted_until": state.get("muted_until") if state else None,
+        "last_error": state.get("last_error") if state else None,
+    }
+
+
+async def check_custom_services(
+    client: httpx.AsyncClient,
+    custom_services: list[CustomServiceConfig],
+    *,
+    state_store: StateStore | None = None,
+    only_enabled: bool = False,
+) -> list[dict[str, Any]]:
+    """Evaluate all custom services concurrently via extensible connectors and merge StateStore metadata."""
+    ordered = sorted(custom_services, key=lambda s: (s.order, s.name.lower()))
+    if only_enabled:
+        ordered = [s for s in ordered if s.enabled]
+    if not ordered:
+        return []
+
+    states_by_id: dict[str, dict[str, Any]] = {}
+    if state_store is not None:
+        try:
+            all_states = await state_store.list_service_states()
+            states_by_id = {st["service_id"]: st for st in all_states}
+        except Exception:
+            states_by_id = {}
+
+    async def _probe_one(svc: CustomServiceConfig) -> ConnectorResult | None:
+        if not svc.enabled:
+            return None
+        return await run_connector(svc, http_client=client, state_store=state_store)
+
+    probe_results = await asyncio.gather(*(_probe_one(svc) for svc in ordered))
+    return [
+        serialize_custom_service(svc, res, states_by_id.get(svc.id))
+        for svc, res in zip(ordered, probe_results)
+    ]
+
+
+async def check_services_overview(
+    client: httpx.AsyncClient,
+    app_config: AppConfig,
+    *,
+    state_store: StateStore | None = None,
+) -> dict[str, Any]:
+    """Check legacy categories and custom_services concurrently and merge into backward-compatible view."""
+    legacy_cats = [cat.model_dump() for cat in app_config.categories]
+    checked_cats, checked_custom = await asyncio.gather(
+        check_categories_health(client, legacy_cats),
+        check_custom_services(client, app_config.custom_services, state_store=state_store),
+    )
+
+    # Index categories by lowercase name for clean merging
+    cat_index: dict[str, dict[str, Any]] = {}
+    for cat in checked_cats:
+        key = str(cat.get("name") or "Services").strip().lower()
+        cat_index[key] = cat
+
+    custom_by_id = {item["id"]: item for item in checked_custom}
+
+    # Enrich matching legacy entries and deduplicate merged custom services
+    merged_ids: set[str] = set()
+    for cat in checked_cats:
+        updated_list: list[dict[str, Any]] = []
+        for svc in cat.get("services") or []:
+            svc_id = str(svc.get("id") or "")
+            if svc_id in custom_by_id:
+                merged_ids.add(svc_id)
+                updated_list.append({**svc, **custom_by_id[svc_id]})
+            else:
+                updated_list.append(
+                    {
+                        **svc,
+                        "status": "up" if svc.get("online") else "down",
+                        "metrics": svc.get("metrics") or {},
+                    }
+                )
+        cat["services"] = updated_list
+
+    for custom_item in checked_custom:
+        if not custom_item.get("enabled", True) or custom_item["id"] in merged_ids:
+            continue
+        cat_name = str(custom_item.get("category") or "Services").strip() or "Services"
+        cat_key = cat_name.lower()
+        if cat_key not in cat_index:
+            new_cat = {"name": cat_name, "services": []}
+            checked_cats.append(new_cat)
+            cat_index[cat_key] = new_cat
+        cat_index[cat_key]["services"].append(custom_item)
+
+    return {
+        "categories": checked_cats,
+        "custom_services": checked_custom,
+    }
 
 
 async def fetch_jellyfin_widget(client: httpx.AsyncClient) -> dict[str, Any]:

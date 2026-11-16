@@ -111,11 +111,20 @@ public struct UsersTabView: View {
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: filter)
+        #endif
         .sheet(isPresented: $showCreateSheet) {
             CreateUserSheet(viewModel: viewModel)
+                #if !os(tvOS)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+                #endif
         }
         .sheet(item: $selectedUser) { user in
             ManageUserSheet(viewModel: viewModel, user: user)
+                #if !os(tvOS)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+                #endif
         }
     }
 

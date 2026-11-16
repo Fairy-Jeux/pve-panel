@@ -1,4 +1,6 @@
+#if canImport(Charts)
 import Charts
+#endif
 import SwiftUI
 
 private struct ResourceMetricPoint: Identifiable {
@@ -6,6 +8,13 @@ private struct ResourceMetricPoint: Identifiable {
     let label: String
     let percentage: Double
     let color: Color
+}
+
+private struct ServiceLatencyPoint: Identifiable {
+    let id: String
+    let name: String
+    let latencyMs: Double
+    let isOnline: Bool
 }
 
 public struct OverviewTabView: View {
@@ -42,10 +51,15 @@ public struct OverviewTabView: View {
                             onSelectMachines: { viewModel.selectedTab = .proxmox },
                             onSelectStorage: { viewModel.selectedTab = .storage }
                         )
+                        #if canImport(Charts)
                         nodeTelemetryChart(pve)
+                        #endif
                     }
 
                     quickStatsGrid
+                    #if canImport(Charts)
+                    servicesLatencyChartCard
+                    #endif
                     servicesAccessCard
                     activeStreamsSection
                 }
@@ -69,6 +83,7 @@ public struct OverviewTabView: View {
         }
     }
 
+    #if canImport(Charts)
     private func nodeTelemetryChart(_ pve: PveOverview) -> some View {
         let teal = DesignTokens.signalTeal(colorScheme)
         let rootPct = pve.node.rootfsTotalBytes > 0
@@ -140,6 +155,104 @@ public struct OverviewTabView: View {
         }
     }
 
+    @ViewBuilder
+    private var servicesLatencyChartCard: some View {
+        let points = mergedLatencyPoints
+        if !points.isEmpty {
+            let onlinePoints = points.filter(\.isOnline)
+            let avgLatency: Int = onlinePoints.isEmpty
+                ? 0
+                : Int((onlinePoints.map(\.latencyMs).reduce(0, +) / Double(onlinePoints.count)).rounded())
+            let displayed = Array(points.prefix(6))
+            let maxLatency = max(20.0, (displayed.map(\.latencyMs).max() ?? 20.0) * 1.25)
+
+            GlassCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Santé & Latence des services")
+                                .font(.headline)
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                            Text("Moyenne \(avgLatency) ms • \(onlinePoints.count)/\(points.count) opérationnels")
+                                .font(.caption)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 8)
+                        if viewModel.activeIncidentsCount > 0 {
+                            StatusPill(
+                                "\(viewModel.activeIncidentsCount) incident\(viewModel.activeIncidentsCount > 1 ? "s" : "")",
+                                color: DesignTokens.critical(colorScheme),
+                                systemImage: "exclamationmark.octagon.fill"
+                            )
+                        } else {
+                            StatusPill(
+                                "Stable",
+                                color: DesignTokens.nominal(colorScheme),
+                                systemImage: "waveform.path.ecg"
+                            )
+                        }
+                    }
+
+                    Chart(displayed) { item in
+                        let barColor: Color = !item.isOnline
+                            ? DesignTokens.critical(colorScheme)
+                            : (item.latencyMs >= 100
+                                ? DesignTokens.caution(colorScheme)
+                                : (item.latencyMs >= 40 ? DesignTokens.signalTeal(colorScheme) : DesignTokens.nominal(colorScheme)))
+
+                        BarMark(
+                            x: .value("Latence (ms)", item.isOnline ? max(1.0, item.latencyMs) : maxLatency * 0.12),
+                            y: .value("Service", item.name)
+                        )
+                        .foregroundStyle(barColor)
+                        .cornerRadius(5)
+                        .annotation(position: .trailing) {
+                            Text(item.isOnline ? "\(Int(item.latencyMs.rounded())) ms" : "HS")
+                                .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                                .foregroundStyle(item.isOnline ? DesignTokens.secondaryText(colorScheme) : DesignTokens.critical(colorScheme))
+                        }
+                    }
+                    .chartXScale(domain: 0...maxLatency)
+                    .chartXAxis(.hidden)
+                    #if os(tvOS)
+                    .frame(height: CGFloat(max(140, displayed.count * 42)))
+                    #else
+                    .frame(height: CGFloat(max(96, displayed.count * 26)))
+                    #endif
+                }
+            }
+        }
+    }
+    #endif
+
+    private var mergedLatencyPoints: [ServiceLatencyPoint] {
+        var seen: Set<String> = []
+        var list: [ServiceLatencyPoint] = []
+
+        for svc in viewModel.customServices {
+            if seen.insert(svc.id).inserted {
+                list.append(ServiceLatencyPoint(
+                    id: svc.id,
+                    name: svc.name,
+                    latencyMs: Double(svc.latencyMs ?? 0),
+                    isOnline: svc.isOnline
+                ))
+            }
+        }
+        for svc in viewModel.categories.flatMap(\.services) {
+            if seen.insert(svc.id).inserted {
+                list.append(ServiceLatencyPoint(
+                    id: svc.id,
+                    name: svc.name,
+                    latencyMs: svc.latencyMs ?? 0,
+                    isOnline: svc.online
+                ))
+            }
+        }
+        return list
+    }
+
     private var quickStatsColumns: [GridItem] {
         #if os(tvOS)
         return [GridItem(.adaptive(minimum: 520), spacing: 20)]
@@ -174,8 +287,8 @@ public struct OverviewTabView: View {
 
     private var quickStatsGrid: some View {
         let pve = viewModel.pveOverview
-        let allServices = viewModel.categories.flatMap(\.services)
-        let onlineServices = allServices.filter(\.online).count
+        let mergedServices = mergedLatencyPoints
+        let onlineServices = mergedServices.filter(\.isOnline).count
         let qbit = viewModel.widgets?.qbittorrent
         let teal = DesignTokens.signalTeal(colorScheme)
 
@@ -212,7 +325,7 @@ public struct OverviewTabView: View {
 
             statTile(
                 title: "Services",
-                value: "\(onlineServices) / \(allServices.count)",
+                value: "\(onlineServices) / \(mergedServices.count)",
                 subtitle: "En ligne",
                 icon: "checkmark.seal.fill",
                 accent: DesignTokens.nominal(colorScheme)

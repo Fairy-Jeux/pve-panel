@@ -59,17 +59,38 @@ public struct ServerSetupWizardSheet: View {
     // Live per-service test state
     @State private var testingService: String?
     @State private var testResults: [String: ServiceTestResponse] = [:]
+    @State private var showOnboardingFlow: Bool = false
+    @State private var showYAMLEditor: Bool = false
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
     }
 
     public var body: some View {
-        #if os(tvOS)
-        tvOSWizardBody
-        #else
-        standardWizardBody
-        #endif
+        Group {
+            #if os(tvOS)
+            tvOSWizardBody
+                .fullScreenCover(isPresented: $showOnboardingFlow) {
+                    OnboardingFlowView(viewModel: viewModel)
+                        .preferredColorScheme(viewModel.preferredColorScheme)
+                }
+                .fullScreenCover(isPresented: $showYAMLEditor) {
+                    YAMLConfigEditorView(viewModel: viewModel)
+                        .preferredColorScheme(viewModel.preferredColorScheme)
+                }
+            #else
+            standardWizardBody
+                .sheet(isPresented: $showOnboardingFlow) {
+                    OnboardingFlowView(viewModel: viewModel)
+                        .preferredColorScheme(viewModel.preferredColorScheme)
+                }
+                .sheet(isPresented: $showYAMLEditor) {
+                    YAMLConfigEditorView(viewModel: viewModel)
+                        .preferredColorScheme(viewModel.preferredColorScheme)
+                }
+            #endif
+        }
+        .preferredColorScheme(viewModel.preferredColorScheme)
     }
 
     #if os(tvOS)
@@ -87,6 +108,20 @@ public struct ServerSetupWizardSheet: View {
                             .foregroundStyle(isConfigured ? .green : .orange)
                     }
                     Spacer()
+                    Button {
+                        showOnboardingFlow = true
+                    } label: {
+                        Label("Assistant 4 étapes", systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(.glass)
+
+                    Button {
+                        showYAMLEditor = true
+                    } label: {
+                        Label("YAML", systemImage: "doc.text")
+                    }
+                    .buttonStyle(.glass)
+
                     Button(isSaving ? "Application…" : "Enregistrer") {
                         Task { await saveConfig() }
                     }
@@ -355,6 +390,18 @@ public struct ServerSetupWizardSheet: View {
             if !pairingDeepLink.isEmpty {
                 LabeledContent("Lien d'appairage", value: pairingDeepLink)
                     .font(.caption2)
+            }
+
+            Button {
+                showOnboardingFlow = true
+            } label: {
+                Label("Ouvrir l'assistant guidé (4 étapes)", systemImage: "wand.and.stars")
+            }
+
+            Button {
+                showYAMLEditor = true
+            } label: {
+                Label("Ouvrir l'éditeur YAML avancé", systemImage: "doc.text.magnifyingglass")
             }
         }
     }

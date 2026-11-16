@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct ContentView: View {
     @Bindable var viewModel: AppViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -9,8 +10,43 @@ public struct ContentView: View {
         self.viewModel = viewModel
     }
 
+    private var onboardingPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.needsOnboarding },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.dismissOnboarding()
+                }
+            }
+        )
+    }
+
+    private func handleOnboardingDismiss() {
+        if viewModel.serverBaseURL.isEmpty && !viewModel.isDemoMode {
+            Task { await viewModel.configureConnection(baseURL: "", demoMode: true) }
+        }
+    }
+
+    private func handleBannerAcknowledge(_ banner: InAppAlertBanner) {
+        let matchingIncident = viewModel.incidents.first {
+            $0.id == banner.id || ($0.isActive && banner.serviceId != nil && $0.serviceId == banner.serviceId)
+        }
+        let targetID = matchingIncident?.id ?? (banner.id.hasPrefix("alert-") ? nil : banner.id)
+        viewModel.dismissAlertBanner(id: banner.id)
+        if let targetID {
+            Task { await viewModel.acknowledgeIncident(id: targetID) }
+        }
+    }
+
+    private func handleBannerMute(_ banner: InAppAlertBanner) {
+        viewModel.dismissAlertBanner(id: banner.id)
+        if let serviceId = banner.serviceId {
+            Task { await viewModel.muteServiceAlerts(serviceId: serviceId, minutes: 60) }
+        }
+    }
+
     public var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             #if os(macOS)
             macOSBody
             #elseif os(tvOS)
@@ -19,16 +55,54 @@ public struct ContentView: View {
             adaptiveAppleBody
             #endif
 
+            if let liveBanner = viewModel.activeTVBanner {
+                VStack {
+                    LiveAlertOverlayBanner(
+                        banner: liveBanner,
+                        onAcknowledge: liveBanner.isResolved ? nil : {
+                            handleBannerAcknowledge(liveBanner)
+                        },
+                        onMuteOneHour: (liveBanner.isResolved || liveBanner.serviceId == nil) ? nil : {
+                            handleBannerMute(liveBanner)
+                        },
+                        onOpenDetails: {
+                            viewModel.selectedTab = .operations
+                            viewModel.dismissAlertBanner(id: liveBanner.id)
+                        },
+                        onDismiss: {
+                            viewModel.dismissAlertBanner(id: liveBanner.id)
+                        }
+                    )
+                    .padding(.top, liveBannerTopPadding)
+                    .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+                    Spacer(minLength: 0)
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(20)
+            }
+
             if let toast = viewModel.toast {
-                ToastOverlayView(toast: toast)
-                    .padding(.bottom, toastBottomPadding)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                VStack {
+                    Spacer(minLength: 0)
+                    ToastOverlayView(toast: toast)
+                        .padding(.bottom, toastBottomPadding)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(15)
             }
         }
+        #if os(tvOS)
         .preferredColorScheme(.dark)
+        #else
+        .preferredColorScheme(viewModel.preferredColorScheme)
+        #endif
         .animation(
             reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
             value: viewModel.toast?.id
+        )
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.84),
+            value: viewModel.activeTVBanner?.id
         )
         #if os(tvOS)
         .fullScreenCover(
@@ -47,6 +121,37 @@ public struct ContentView: View {
             ServerSetupWizardSheet(viewModel: viewModel)
                 .preferredColorScheme(.dark)
         }
+        .fullScreenCover(
+            isPresented: onboardingPresentedBinding,
+            onDismiss: handleOnboardingDismiss
+        ) {
+            OnboardingFlowView(viewModel: viewModel)
+                .preferredColorScheme(.dark)
+        }
+        #elseif os(macOS)
+        .sheet(
+            isPresented: $viewModel.showServerSettings,
+            onDismiss: {
+                if viewModel.pendingOpenSetupWizard {
+                    viewModel.pendingOpenSetupWizard = false
+                    viewModel.showServerSetupWizard = true
+                }
+            }
+        ) {
+            ServerSettingsSheet(viewModel: viewModel)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+        }
+        .sheet(isPresented: $viewModel.showServerSetupWizard) {
+            ServerSetupWizardSheet(viewModel: viewModel)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+        }
+        .sheet(
+            isPresented: onboardingPresentedBinding,
+            onDismiss: handleOnboardingDismiss
+        ) {
+            OnboardingFlowView(viewModel: viewModel)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+        }
         #else
         .sheet(
             isPresented: $viewModel.showServerSettings,
@@ -58,20 +163,48 @@ public struct ContentView: View {
             }
         ) {
             ServerSettingsSheet(viewModel: viewModel)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(isPresented: $viewModel.showServerSetupWizard) {
             ServerSetupWizardSheet(viewModel: viewModel)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+        }
+        .fullScreenCover(
+            isPresented: onboardingPresentedBinding,
+            onDismiss: handleOnboardingDismiss
+        ) {
+            OnboardingFlowView(viewModel: viewModel)
+                .preferredColorScheme(viewModel.preferredColorScheme)
         }
         #endif
-        #if !os(tvOS)
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: viewModel.selectedTab)
+        .sensoryFeedback(.success, trigger: viewModel.hapticSuccessTrigger)
+        .sensoryFeedback(.impact(flexibility: .soft), trigger: viewModel.hapticImpactTrigger)
+        .sensoryFeedback(.warning, trigger: viewModel.activeTVBanner?.id) { _, _ in
+            viewModel.activeTVBanner?.isResolved == false
+        }
+        #elseif !os(tvOS)
         .sensoryFeedback(.success, trigger: viewModel.hapticSuccessTrigger)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: viewModel.hapticImpactTrigger)
         #endif
         .task {
             viewModel.start()
         }
+    }
+
+    private var liveBannerTopPadding: CGFloat {
+        #if os(tvOS)
+        return 24
+        #elseif os(macOS)
+        return 14
+        #else
+        return 8
+        #endif
+    }
+
+    private var operationsBadgeCount: Int {
+        viewModel.pendingRequestsCount + viewModel.activeIncidentsCount
     }
 
     private var toastBottomPadding: CGFloat {
@@ -104,7 +237,7 @@ public struct ContentView: View {
                     sidebarRow(for: .services)
                 }
                 Section("Administration") {
-                    sidebarRow(for: .operations, badge: viewModel.pendingRequestsCount)
+                    sidebarRow(for: .operations, badge: operationsBadgeCount)
                     sidebarRow(for: .users)
                 }
             }
@@ -126,7 +259,7 @@ public struct ContentView: View {
                     }
             }
         }
-        .tint(Color(red: 0.220, green: 0.824, blue: 0.910))
+        .tint(DesignTokens.signalTeal(colorScheme))
     }
 
     private func sidebarRow(for tab: AppTab, badge: Int = 0) -> some View {
@@ -196,7 +329,13 @@ public struct ContentView: View {
 
             Spacer()
 
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
+                RealtimeSyncPill(
+                    isDemoMode: viewModel.isDemoMode,
+                    state: viewModel.realtimeState,
+                    activeIncidentsCount: viewModel.activeIncidentsCount
+                )
+
                 if !viewModel.isDemoMode && viewModel.serverBaseURL.isEmpty {
                     Button {
                         Task { await viewModel.configureConnection(baseURL: "", demoMode: true) }
@@ -263,7 +402,7 @@ public struct ContentView: View {
                     }
                     Section("Administration") {
                         Label(AppTab.operations.title, systemImage: AppTab.operations.systemImage)
-                            .badge(viewModel.pendingRequestsCount)
+                            .badge(operationsBadgeCount)
                             .tag(AppTab.operations)
                         Label(AppTab.users.title, systemImage: AppTab.users.systemImage).tag(AppTab.users)
                     }
@@ -287,7 +426,7 @@ public struct ContentView: View {
                 ForEach(AppTab.compactTabs) { tab in
                     tabScreen(
                         for: tab,
-                        badge: tab == .operations ? viewModel.pendingRequestsCount : 0
+                        badge: tab == .operations ? operationsBadgeCount : 0
                     ) {
                         activeTabContent(for: tab)
                     }
@@ -356,6 +495,38 @@ public struct ContentView: View {
 
     @ToolbarContentBuilder
     private var commonToolbarItems: some ToolbarContent {
+        #if os(iOS)
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                viewModel.selectedTab = .operations
+            } label: {
+                RealtimeSyncPill(
+                    isDemoMode: viewModel.isDemoMode,
+                    state: viewModel.realtimeState,
+                    activeIncidentsCount: viewModel.activeIncidentsCount
+                )
+            }
+            .buttonStyle(.plain)
+            .help("État temps réel (\(viewModel.realtimeState.label)) — Voir l'activité et les incidents")
+        }
+        #else
+        ToolbarItem(placement: .automatic) {
+            Button {
+                viewModel.selectedTab = .operations
+            } label: {
+                RealtimeSyncPill(
+                    isDemoMode: viewModel.isDemoMode,
+                    state: viewModel.realtimeState,
+                    activeIncidentsCount: viewModel.activeIncidentsCount
+                )
+            }
+            .buttonStyle(.plain)
+            #if !os(tvOS)
+            .help("État temps réel (\(viewModel.realtimeState.label)) — Voir l'activité et les incidents")
+            #endif
+        }
+        #endif
+
         #if os(macOS)
         ToolbarItem(placement: .automatic) {
             Button {
@@ -376,7 +547,7 @@ public struct ContentView: View {
             } label: {
                 Label(
                     shortServerButtonTitle,
-                    systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
+                    systemImage: "server.rack"
                 )
             }
             #if !os(tvOS)

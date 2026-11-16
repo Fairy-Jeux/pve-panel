@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Thread-safe in-memory state used when Demo Mode is active (or during App Store Review).
@@ -14,6 +15,14 @@ public actor DemoDataStore {
     private var qbitTorrents: [QbitTorrentItem]
     private var users: [UnifiedUser]
     private var setupEnv: SetupEnvConfig
+    private var customServices: [CustomServiceConfig]
+    private var incidents: [IncidentEvent]
+    private var notificationChannels: NotificationChannelsResponse
+    private var yamlConfigText: String
+    private var onboardingConfigured: Bool = true
+    private var registeredAPNsTokens: Set<String> = []
+    private var demoPairingSessions: [String: PairingSessionInfo] = [:]
+    private var demoPairingBundles: [String: EncryptedPairingBundle] = [:]
 
     public init() {
         let nowSec = Int(Date().timeIntervalSince1970)
@@ -259,6 +268,213 @@ public actor DemoDataStore {
             qbitUsername: "admin",
             qbitPasswordSet: true
         )
+
+        let isoFormatter = ISO8601DateFormatter()
+        self.customServices = [
+            CustomServiceConfig(
+                id: "jellyfin",
+                name: "Jellyfin",
+                description: "Serveur multimédia 4K HDR & transcodage matériel",
+                category: "Médias & Streaming",
+                icon: "film",
+                protocol: .httpRest,
+                url: "http://192.168.1.26:8096",
+                healthUrl: "http://192.168.1.26:8096/health",
+                expectedStatus: 200,
+                order: 0,
+                enabled: true,
+                status: "up",
+                online: true,
+                latencyMs: 8,
+                httpStatus: 200,
+                message: "HTTP 200 OK",
+                lastCheckAt: isoFormatter.string(from: Date().addingTimeInterval(-12))
+            ),
+            CustomServiceConfig(
+                id: "proxmox-ssh",
+                name: "Hôte Proxmox SSH",
+                description: "Contrôle port TCP 22 sur pve-node-01",
+                category: "Infrastructure & Sécurité",
+                icon: "terminal",
+                protocol: .tcpPort,
+                host: "192.168.1.10",
+                port: 22,
+                order: 1,
+                enabled: true,
+                status: "up",
+                online: true,
+                latencyMs: 2,
+                message: "Port TCP 22 ouvert",
+                lastCheckAt: isoFormatter.string(from: Date().addingTimeInterval(-10))
+            ),
+            CustomServiceConfig(
+                id: "gateway-icmp",
+                name: "Passerelle Réseau",
+                description: "Latence ICMP vers routeur principal",
+                category: "Infrastructure & Sécurité",
+                icon: "wifi",
+                protocol: .icmpPing,
+                host: "192.168.1.1",
+                order: 2,
+                enabled: true,
+                status: "up",
+                online: true,
+                latencyMs: 1,
+                message: "1 paquet reçu (1 ms)",
+                lastCheckAt: isoFormatter.string(from: Date().addingTimeInterval(-8))
+            ),
+            CustomServiceConfig(
+                id: "media-stats-json",
+                name: "Télémétrie Streaming",
+                description: "Extraction JSON des flux actifs et bibliothèque",
+                category: "Médias & Streaming",
+                icon: "chart.bar.doc.horizontal",
+                protocol: .jsonMetrics,
+                url: "http://192.168.1.26:8096/Sessions",
+                jsonMetricPath: "active_streams",
+                order: 3,
+                enabled: true,
+                status: "up",
+                online: true,
+                latencyMs: 11,
+                httpStatus: 200,
+                message: "Métriques extraites",
+                metrics: [
+                    "active_streams": .int(2),
+                    "movies": .int(418),
+                    "transcodes": .int(1),
+                ],
+                lastCheckAt: isoFormatter.string(from: Date().addingTimeInterval(-15))
+            ),
+            CustomServiceConfig(
+                id: "backup-heartbeat",
+                name: "Job Sauvegarde Nuit",
+                description: "Webhook entrant Restic / Proxmox Backup",
+                category: "Infrastructure & Sécurité",
+                icon: "externaldrive.badge.checkmark",
+                protocol: .webhookIngest,
+                webhookTtlSeconds: 86400,
+                order: 4,
+                enabled: true,
+                status: "up",
+                online: true,
+                latencyMs: 0,
+                message: "Heartbeat reçu il y a 2h",
+                metrics: [
+                    "snapshots": .int(14),
+                    "duration_s": .int(142),
+                ],
+                lastCheckAt: isoFormatter.string(from: Date().addingTimeInterval(-7200))
+            ),
+            CustomServiceConfig(
+                id: "vaultwarden",
+                name: "Vaultwarden",
+                description: "Coffre-fort de mots de passe chiffré",
+                category: "Infrastructure & Sécurité",
+                icon: "shield",
+                protocol: .httpRest,
+                url: "http://192.168.1.35:8222",
+                healthUrl: "http://192.168.1.35:8222/alive",
+                expectedStatus: 200,
+                order: 5,
+                enabled: true,
+                status: "down",
+                online: false,
+                latencyMs: 42,
+                httpStatus: 502,
+                message: "HTTP 502 Bad Gateway",
+                lastCheckAt: isoFormatter.string(from: Date().addingTimeInterval(-25))
+            ),
+        ]
+
+        self.incidents = [
+            IncidentEvent(
+                id: "inc-demo-01",
+                serviceId: "vaultwarden",
+                serviceName: "Vaultwarden",
+                severity: "critical",
+                title: "Vaultwarden hors ligne (HTTP 502)",
+                message: "3 échecs consécutifs détectés sur /alive.",
+                startedAt: isoFormatter.string(from: Date().addingTimeInterval(-420)),
+                resolvedAt: nil,
+                acknowledged: false,
+                acknowledgedAt: nil
+            ),
+            IncidentEvent(
+                id: "inc-demo-00",
+                serviceId: "radarr",
+                serviceName: "Radarr",
+                severity: "warning",
+                title: "Latence élevée détectée sur Radarr",
+                message: "Temps de réponse revenu sous 20 ms.",
+                startedAt: isoFormatter.string(from: Date().addingTimeInterval(-7200)),
+                resolvedAt: isoFormatter.string(from: Date().addingTimeInterval(-6600)),
+                acknowledged: true,
+                acknowledgedAt: isoFormatter.string(from: Date().addingTimeInterval(-7000))
+            ),
+        ]
+
+        self.notificationChannels = NotificationChannelsResponse(
+            apns: APNsConfigSummary(
+                enabled: true,
+                teamId: "DEMO123456",
+                keyId: "APNSDEMO01",
+                bundleId: "io.ac.pvepanel.app",
+                privateKeyPath: "/app/config/AuthKey.p8",
+                useSandbox: true,
+                keyConfigured: true
+            ),
+            webhooks: [
+                NotificationChannelConfig(
+                    id: "wh-discord-demo",
+                    name: "Discord Homelab",
+                    type: "discord",
+                    enabled: true,
+                    url: "https://discord.com/api/webhooks/demo/masked",
+                    notifyOnDown: true,
+                    notifyOnRecovery: true,
+                    includeDetails: true
+                ),
+                NotificationChannelConfig(
+                    id: "wh-ntfy-demo",
+                    name: "ntfy Mobile",
+                    type: "generic",
+                    enabled: true,
+                    url: "https://ntfy.sh/pve-center-demo",
+                    notifyOnDown: true,
+                    notifyOnRecovery: false,
+                    includeDetails: true
+                ),
+            ]
+        )
+
+        self.yamlConfigText = """
+        version: 1
+        server:
+          id: demo-pve-node-01
+          name: Homelab Démo
+          listen_host: 0.0.0.0
+          listen_port: 8000
+          public_url: https://panel.example.ts.net
+          mdns_enabled: true
+          mdns_service_name: pve-center-demo
+          refresh_interval_seconds: 5
+        security:
+          tailscale_sso_enabled: true
+          allowed_tailscale_users: demo@pve-center.app
+          dev_auth_bypass: false
+        proxmox:
+          host: https://192.168.1.10:8006
+          token_id: root@pam!pve-panel
+          token_secret: ${PVE_TOKEN_SECRET}
+          verify_ssl: false
+          default_node: pve-node-01
+        alerts:
+          enabled: true
+          default_consecutive_failures: 3
+          default_cooldown_seconds: 300
+          check_interval_seconds: 30
+        """
     }
 
     public func currentUser() -> AuthUser {
@@ -828,5 +1044,369 @@ public actor DemoDataStore {
             isConfigured: configured,
             message: "Configuration simulée enregistrée et rechargée (Mode Démo)."
         )
+    }
+
+    // MARK: - Auth & Onboarding
+
+    public func login(_ req: AuthLoginRequest) throws -> AuthLoginResponse {
+        if let pin = req.pin, !pin.isEmpty, pin.count < 4 {
+            throw APIError.serverError(statusCode: 401, detail: "Code PIN invalide (Mode Démo).")
+        }
+        return AuthLoginResponse(
+            ok: true,
+            token: "demo-session-token-pve-center",
+            tokenType: "bearer",
+            expiresAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(86_400)),
+            user: currentUser()
+        )
+    }
+
+    public func onboardingStatus() -> OnboardingStatusResponse {
+        OnboardingStatusResponse(
+            isConfigured: onboardingConfigured,
+            configExists: onboardingConfigured,
+            hasApiTokens: true,
+            hasAdminPin: true,
+            serverId: "demo-pve-node-01",
+            serverName: "Homelab Démo",
+            publicUrl: "https://panel.example.ts.net",
+            tailscaleSsoEnabled: true,
+            mdnsEnabled: true
+        )
+    }
+
+    public func initOnboarding(_ req: OnboardingInitRequest) -> OnboardingInitResponse {
+        onboardingConfigured = true
+        if let services = req.customServices, !services.isEmpty {
+            customServices.append(contentsOf: services)
+        }
+        if let webhooks = req.webhooks, !webhooks.isEmpty {
+            notificationChannels.webhooks.append(contentsOf: webhooks)
+        }
+        return OnboardingInitResponse(
+            ok: true,
+            apiToken: "pve_demo_\(UUID().uuidString.prefix(12).lowercased())",
+            tokenName: req.tokenName ?? "iOS / Apple App",
+            serverId: "demo-pve-node-01",
+            configHash: yamlHash(),
+            message: "Configuration initiale simulée appliquée (Mode Démo)."
+        )
+    }
+
+    // MARK: - Custom Services
+
+    public func customServicesList() -> [CustomServiceConfig] {
+        customServices.sorted { $0.order < $1.order }
+    }
+
+    public func createCustomService(_ service: CustomServiceConfig) -> CustomServiceConfig {
+        var created = service
+        if created.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            created.id = "svc-\(Int(Date().timeIntervalSince1970))"
+        }
+        created.order = customServices.count
+        created.status = created.status ?? "up"
+        created.online = created.online ?? true
+        created.latencyMs = created.latencyMs ?? 9
+        created.message = created.message ?? "Service ajouté (Mode Démo)"
+        created.lastCheckAt = ISO8601DateFormatter().string(from: Date())
+        customServices.append(created)
+        return created
+    }
+
+    public func updateCustomService(id: String, service: CustomServiceConfig) throws -> CustomServiceConfig {
+        guard let idx = customServices.firstIndex(where: { $0.id == id }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Service personnalisé introuvable.")
+        }
+        var updated = service
+        updated.id = id
+        updated.status = updated.status ?? customServices[idx].status
+        updated.online = updated.online ?? customServices[idx].online
+        updated.latencyMs = updated.latencyMs ?? customServices[idx].latencyMs
+        customServices[idx] = updated
+        return updated
+    }
+
+    public func deleteCustomService(id: String) throws {
+        guard customServices.contains(where: { $0.id == id }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Service personnalisé introuvable.")
+        }
+        customServices.removeAll { $0.id == id }
+    }
+
+    public func reorderCustomServices(serviceIds: [String]) {
+        let indexMap = Dictionary(uniqueKeysWithValues: serviceIds.enumerated().map { ($1, $0) })
+        for idx in customServices.indices {
+            if let newOrder = indexMap[customServices[idx].id] {
+                customServices[idx].order = newOrder
+            }
+        }
+        customServices.sort { $0.order < $1.order }
+    }
+
+    public func testCustomService(id: String, override: CustomServiceConfig? = nil) -> CustomServiceTestResult {
+        let target = override ?? customServices.first(where: { $0.id == id })
+        let targetName = target?.name ?? id
+        let proto = target?.`protocol` ?? .httpRest
+        let isDownDemo = id == "vaultwarden" && override == nil
+
+        if isDownDemo {
+            return CustomServiceTestResult(
+                ok: false,
+                status: "down",
+                latencyMs: 42,
+                httpStatus: 502,
+                message: "HTTP 502 Bad Gateway simulé sur \(targetName)."
+            )
+        }
+
+        return CustomServiceTestResult(
+            ok: true,
+            status: "up",
+            latencyMs: proto == .icmpPing ? 1 : 9,
+            httpStatus: (proto == .httpRest || proto == .jsonMetrics) ? 200 : nil,
+            message: "Test \(proto.title) réussi sur \(targetName) (Mode Démo).",
+            metrics: target?.metrics
+        )
+    }
+
+    // MARK: - Incidents & Mute
+
+    public func incidentsList(activeOnly: Bool, limit: Int) -> [IncidentEvent] {
+        let filtered = activeOnly ? incidents.filter(\.isActive) : incidents
+        return Array(filtered.prefix(max(1, limit)))
+    }
+
+    public func acknowledgeIncident(id: String) throws {
+        guard let idx = incidents.firstIndex(where: { $0.id == id }) else {
+            throw APIError.serverError(statusCode: 404, detail: "Incident introuvable.")
+        }
+        incidents[idx].acknowledged = true
+        incidents[idx].acknowledgedAt = ISO8601DateFormatter().string(from: Date())
+    }
+
+    public func muteService(id: String, minutes: Int) {
+        guard let idx = customServices.firstIndex(where: { $0.id == id }) else { return }
+        customServices[idx].mutedUntil = ISO8601DateFormatter().string(
+            from: Date().addingTimeInterval(TimeInterval(minutes * 60))
+        )
+    }
+
+    public func unmuteService(id: String) {
+        guard let idx = customServices.firstIndex(where: { $0.id == id }) else { return }
+        customServices[idx].mutedUntil = nil
+    }
+
+    // MARK: - Notification Channels & APNs
+
+    public func notificationChannelsOverview() -> NotificationChannelsResponse {
+        notificationChannels
+    }
+
+    public func saveNotificationChannels(_ channels: NotificationChannelsResponse) -> NotificationChannelsResponse {
+        notificationChannels = channels
+        return notificationChannels
+    }
+
+    public func testNotification(_ request: TestNotificationRequest) -> TestNotificationResult {
+        var results: [TestNotificationChannelResult] = []
+        if request.channelType == nil || request.channelType == "all" || request.channelType == "apns" {
+            results.append(TestNotificationChannelResult(
+                channelId: "apns",
+                channelType: "apns",
+                name: "Apple Push (APNs)",
+                ok: notificationChannels.apns.enabled,
+                message: notificationChannels.apns.enabled
+                    ? "Push APNs simulé envoyé (\(registeredAPNsTokens.count) appareil(s))."
+                    : "APNs désactivé."
+            ))
+        }
+        for webhook in notificationChannels.webhooks where webhook.enabled {
+            if let targetID = request.channelId, targetID != webhook.id { continue }
+            if let targetType = request.channelType, targetType != "all", targetType != webhook.type { continue }
+            results.append(TestNotificationChannelResult(
+                channelId: webhook.id,
+                channelType: webhook.type,
+                name: webhook.name,
+                ok: true,
+                message: "Notification de test envoyée à \(webhook.name) (Mode Démo)."
+            ))
+        }
+        return TestNotificationResult(
+            ok: results.allSatisfy(\.ok),
+            results: results,
+            message: "Test effectué sur \(results.count) canal(aux)."
+        )
+    }
+
+    public func registerAPNsDevice(_ req: APNsDeviceRegisterRequest) {
+        registeredAPNsTokens.insert(req.deviceToken)
+    }
+
+    public func unregisterAPNsDevice(_ token: String) {
+        registeredAPNsTokens.remove(token)
+    }
+
+    // MARK: - Declarative YAML Config
+
+    public func fetchConfigYAML() -> YAMLConfigResponse {
+        YAMLConfigResponse(
+            yaml: yamlConfigText,
+            hash: yamlHash(),
+            parsedSummary: [
+                "version": .int(1),
+                "custom_services_count": .int(customServices.count),
+                "webhooks_count": .int(notificationChannels.webhooks.count),
+            ]
+        )
+    }
+
+    public func validateConfigYAML(_ yaml: String) -> YAMLValidationResponse {
+        let trimmed = yaml.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return YAMLValidationResponse(valid: false, errors: ["Le fichier YAML ne peut pas être vide."], warnings: [])
+        }
+        var warnings: [String] = []
+        if !trimmed.contains("server:") {
+            warnings.append("Section 'server:' absente — valeurs par défaut appliquées.")
+        }
+        return YAMLValidationResponse(
+            valid: true,
+            errors: [],
+            warnings: warnings,
+            hash: sha256Hex(trimmed),
+            message: "YAML valide (Mode Démo)."
+        )
+    }
+
+    public func saveConfigYAML(_ yaml: String) -> YAMLValidationResponse {
+        let validation = validateConfigYAML(yaml)
+        if validation.valid {
+            yamlConfigText = yaml
+        }
+        return YAMLValidationResponse(
+            valid: validation.valid,
+            errors: validation.errors,
+            warnings: validation.warnings,
+            hash: yamlHash(),
+            message: validation.valid ? "Configuration YAML sauvegardée et rechargée (Mode Démo)." : "Erreurs de validation YAML."
+        )
+    }
+
+    public func exportConfigYAML() -> String {
+        yamlConfigText
+    }
+
+    // MARK: - LAN Discovery & Pairing
+
+    public func lanDiscoveryServices() -> [DiscoveryServerItem] {
+        [
+            DiscoveryServerItem(
+                id: "demo-pvecenter-01",
+                name: "Homelab Démo (pve-node-01)",
+                serviceType: "_pvecenter._tcp",
+                host: "192.168.1.10",
+                port: 8000,
+                isHttps: false,
+                publicUrl: "https://panel.example.ts.net",
+                version: "2.0.0",
+                txt: ["id": "demo-pvecenter-01", "name": "Homelab Démo", "version": "2.0.0"],
+                suggestedProtocol: .httpRest,
+                isLocalBonjour: false
+            ),
+            DiscoveryServerItem(
+                id: "demo-nas-smb",
+                name: "NAS Storage (SMB)",
+                serviceType: "_smb._tcp",
+                host: "192.168.1.20",
+                port: 445,
+                isHttps: false,
+                suggestedProtocol: .tcpPort,
+                isLocalBonjour: false
+            ),
+            DiscoveryServerItem(
+                id: "demo-pve-ssh",
+                name: "Proxmox VE SSH",
+                serviceType: "_ssh._tcp",
+                host: "192.168.1.10",
+                port: 22,
+                isHttps: false,
+                suggestedProtocol: .tcpPort,
+                isLocalBonjour: false
+            ),
+            DiscoveryServerItem(
+                id: "demo-grafana-http",
+                name: "Grafana Monitoring",
+                serviceType: "_http._tcp",
+                host: "192.168.1.33",
+                port: 3000,
+                isHttps: false,
+                suggestedProtocol: .httpRest,
+                isLocalBonjour: false
+            ),
+        ]
+    }
+
+    public func discoveryQR(baseURL: String) -> DiscoveryQRResponse {
+        let resolved = baseURL.isEmpty ? "https://panel.example.ts.net" : baseURL
+        let encoded = resolved.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? resolved
+        return DiscoveryQRResponse(
+            deepLink: "pvecenter://connect?url=\(encoded)&name=Homelab%20D%C3%A9mo",
+            onboardingLink: "pvecenter://connect?url=\(encoded)&name=Homelab%20D%C3%A9mo",
+            publicUrl: resolved,
+            svgDataUrl: nil,
+            serverId: "demo-pve-node-01",
+            serverName: "Homelab Démo"
+        )
+    }
+
+    public func createDemoPairingSession(publicKey: String, deviceName: String) -> PairingSessionInfo {
+        let pin = String(format: "%06d", Int.random(in: 0...999_999))
+        let session = PairingSessionInfo(
+            pin: pin,
+            sessionId: UUID().uuidString.lowercased(),
+            publicKey: publicKey,
+            deviceName: deviceName,
+            expiresAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(300)),
+            completed: false
+        )
+        demoPairingSessions[pin] = session
+        return session
+    }
+
+    public func fetchDemoPairingSession(pin: String) throws -> PairingSessionInfo {
+        guard let session = demoPairingSessions[pin] else {
+            throw APIError.serverError(statusCode: 404, detail: "Session d'appairage introuvable.")
+        }
+        return session
+    }
+
+    public func completeDemoPairingSession(pin: String, bundle: EncryptedPairingBundle) throws {
+        guard var session = demoPairingSessions[pin] else {
+            throw APIError.serverError(statusCode: 404, detail: "Session d'appairage introuvable.")
+        }
+        session = PairingSessionInfo(
+            pin: session.pin,
+            sessionId: session.sessionId,
+            publicKey: session.publicKey,
+            deviceName: session.deviceName,
+            expiresAt: session.expiresAt,
+            completed: true
+        )
+        demoPairingSessions[pin] = session
+        demoPairingBundles[pin] = bundle
+    }
+
+    public func fetchDemoPairingPayload(pin: String) -> EncryptedPairingBundle? {
+        demoPairingBundles.removeValue(forKey: pin)
+    }
+
+    private func yamlHash() -> String {
+        sha256Hex(yamlConfigText)
+    }
+
+    private func sha256Hex(_ text: String) -> String {
+        let digest = SHA256.hash(data: Data(text.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

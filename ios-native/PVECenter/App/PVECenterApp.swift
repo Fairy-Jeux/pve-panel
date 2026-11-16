@@ -2,19 +2,102 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 #endif
+#if os(iOS) && canImport(UIKit)
+import UIKit
+#endif
+
+private extension Notification.Name {
+    static let pveDidRegisterAPNsToken = Notification.Name("PVECenter.didRegisterAPNsToken")
+}
+
+#if os(iOS) && canImport(UIKit)
+@MainActor
+final class PVEAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        NotificationCenter.default.post(name: .pveDidRegisterAPNsToken, object: deviceToken)
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Safely ignored when aps-environment entitlement is absent (e.g. personal team or simulator).
+        _ = error
+    }
+}
+#elseif os(macOS) && canImport(AppKit)
+@MainActor
+final class PVEAppDelegate: NSObject, NSApplicationDelegate {
+    func application(
+        _ application: NSApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        NotificationCenter.default.post(name: .pveDidRegisterAPNsToken, object: deviceToken)
+    }
+
+    func application(
+        _ application: NSApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Safely ignored when aps-environment entitlement is absent.
+        _ = error
+    }
+}
+#endif
 
 @main
 public struct PVECenterApp: App {
     @State private var viewModel = AppViewModel()
+    @Environment(\.scenePhase) private var scenePhase
+
+    #if os(iOS) && canImport(UIKit)
+    @UIApplicationDelegateAdaptor(PVEAppDelegate.self) private var appDelegate
+    #elseif os(macOS) && canImport(AppKit)
+    @NSApplicationDelegateAdaptor(PVEAppDelegate.self) private var appDelegate
+    #endif
 
     public init() {}
 
     public var body: some Scene {
         WindowGroup("PVE Center", id: "main") {
             ContentView(viewModel: viewModel)
+                #if os(tvOS)
+                .preferredColorScheme(.dark)
+                #else
+                .preferredColorScheme(viewModel.preferredColorScheme)
+                #endif
                 .onOpenURL { url in
                     Task { await viewModel.handleIncomingURL(url) }
                 }
+                .onChange(of: scenePhase) { _, newPhase in
+                    switch newPhase {
+                    case .active:
+                        viewModel.handleScenePhaseChanged(isBackground: false)
+                    case .background:
+                        viewModel.handleScenePhaseChanged(isBackground: true)
+                    case .inactive:
+                        break
+                    @unknown default:
+                        break
+                    }
+                }
+                #if !os(tvOS)
+                .onReceive(NotificationCenter.default.publisher(for: .pveDidRegisterAPNsToken)) { notification in
+                    if let data = notification.object as? Data {
+                        Task { await viewModel.handleRegisteredDeviceToken(data) }
+                    }
+                }
+                .onChange(of: viewModel.pushManager.authorizationStatus) { _, _ in
+                    registerRemoteNotificationsIfAuthorized()
+                }
+                .task {
+                    await viewModel.pushManager.refreshAuthorizationStatus()
+                    registerRemoteNotificationsIfAuthorized()
+                }
+                #endif
                 #if os(macOS)
                 .frame(minWidth: 880, minHeight: 580)
                 #endif
@@ -38,6 +121,10 @@ public struct PVECenterApp: App {
                 }
                 .keyboardShortcut(";", modifiers: .command)
 
+                Button("Assistant d'installation…") {
+                    viewModel.relaunchOnboarding()
+                }
+
                 Divider()
 
                 ForEach(Array(AppTab.allCases.enumerated()), id: \.element.id) { index, tab in
@@ -53,16 +140,28 @@ public struct PVECenterApp: App {
         #if os(macOS)
         Settings {
             ServerSettingsSheet(viewModel: viewModel)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(viewModel.preferredColorScheme)
         }
 
         MenuBarExtra("PVE Center", systemImage: "server.rack") {
             MenuBarPanelView(viewModel: viewModel)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .menuBarExtraStyle(.window)
         #endif
     }
+
+    #if !os(tvOS)
+    private func registerRemoteNotificationsIfAuthorized() {
+        let status = viewModel.pushManager.authorizationStatus
+        guard status == .authorized || status == .provisional else { return }
+        #if os(iOS) && canImport(UIKit)
+        UIApplication.shared.registerForRemoteNotifications()
+        #elseif os(macOS) && canImport(AppKit)
+        NSApplication.shared.registerForRemoteNotifications()
+        #endif
+    }
+    #endif
 }
 
 #if os(macOS)

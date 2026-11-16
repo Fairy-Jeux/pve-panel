@@ -4,46 +4,96 @@ import SwiftUI
 
 public enum DesignTokens {
     public static func canvas(_ scheme: ColorScheme) -> Color {
-        Color(red: 0.020, green: 0.031, blue: 0.067)
+        switch scheme {
+        case .light:
+            return Color(red: 0.945, green: 0.961, blue: 0.984)
+        default:
+            return Color(red: 0.020, green: 0.031, blue: 0.067)
+        }
     }
 
     public static func surface(_ scheme: ColorScheme) -> Color {
-        Color(red: 0.075, green: 0.094, blue: 0.145)
+        switch scheme {
+        case .light:
+            return Color(red: 0.992, green: 0.996, blue: 1.000)
+        default:
+            return Color(red: 0.075, green: 0.094, blue: 0.145)
+        }
     }
 
     public static func surfaceElevated(_ scheme: ColorScheme) -> Color {
-        Color.white.opacity(0.065)
+        switch scheme {
+        case .light:
+            return Color(red: 0.067, green: 0.110, blue: 0.212).opacity(0.055)
+        default:
+            return Color.white.opacity(0.065)
+        }
     }
 
     public static func primaryText(_ scheme: ColorScheme) -> Color {
-        Color(red: 0.949, green: 0.957, blue: 0.973)
+        switch scheme {
+        case .light:
+            return Color(red: 0.067, green: 0.098, blue: 0.173)
+        default:
+            return Color(red: 0.949, green: 0.957, blue: 0.973)
+        }
     }
 
     public static func secondaryText(_ scheme: ColorScheme, highContrast: Bool = false) -> Color {
         if highContrast {
             return primaryText(scheme).opacity(0.88)
         }
-        return Color(red: 0.620, green: 0.667, blue: 0.753)
+        switch scheme {
+        case .light:
+            return Color(red: 0.275, green: 0.337, blue: 0.431)
+        default:
+            return Color(red: 0.620, green: 0.667, blue: 0.753)
+        }
     }
 
     public static func hairBorder(_ scheme: ColorScheme, highContrast: Bool = false) -> Color {
-        Color.white.opacity(highContrast ? 0.34 : 0.14)
+        switch scheme {
+        case .light:
+            return Color(red: 0.067, green: 0.098, blue: 0.173).opacity(highContrast ? 0.28 : 0.10)
+        default:
+            return Color.white.opacity(highContrast ? 0.34 : 0.14)
+        }
     }
 
     public static func signalTeal(_ scheme: ColorScheme) -> Color {
-        Color(red: 0.220, green: 0.824, blue: 0.910)
+        switch scheme {
+        case .light:
+            return Color(red: 0.008, green: 0.486, blue: 0.592)
+        default:
+            return Color(red: 0.220, green: 0.824, blue: 0.910)
+        }
     }
 
     public static func nominal(_ scheme: ColorScheme) -> Color {
-        Color(red: 0.239, green: 0.839, blue: 0.549)
+        switch scheme {
+        case .light:
+            return Color(red: 0.039, green: 0.490, blue: 0.286)
+        default:
+            return Color(red: 0.239, green: 0.839, blue: 0.549)
+        }
     }
 
     public static func caution(_ scheme: ColorScheme) -> Color {
-        Color(red: 0.961, green: 0.651, blue: 0.137)
+        switch scheme {
+        case .light:
+            return Color(red: 0.690, green: 0.373, blue: 0.000)
+        default:
+            return Color(red: 0.961, green: 0.651, blue: 0.137)
+        }
     }
 
     public static func critical(_ scheme: ColorScheme) -> Color {
-        Color(red: 1.000, green: 0.420, blue: 0.420)
+        switch scheme {
+        case .light:
+            return Color(red: 0.776, green: 0.157, blue: 0.157)
+        default:
+            return Color(red: 1.000, green: 0.420, blue: 0.420)
+        }
     }
 
     public static var pageHorizontalPadding: CGFloat {
@@ -197,6 +247,31 @@ public struct GlassCard<Content: View>: View {
                         lineWidth: 1.5
                     )
                 )
+        } else if colorScheme == .light {
+            content
+                .padding(padding)
+                .background(.ultraThinMaterial, in: shape)
+                .background(Color.white.opacity(elevated ? 0.46 : 0.30), in: shape)
+                .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+                .overlay(
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.92),
+                                Color(red: 0.067, green: 0.098, blue: 0.173).opacity(contrast == .increased ? 0.24 : 0.09),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: contrast == .increased ? 1.25 : 0.85
+                    )
+                )
+                .shadow(
+                    color: Color(red: 0.067, green: 0.098, blue: 0.173).opacity(elevated ? 0.09 : 0.05),
+                    radius: elevated ? 14 : 9,
+                    x: 0,
+                    y: 4
+                )
         } else {
             content
                 .padding(padding)
@@ -219,44 +294,84 @@ public struct GlassCard<Content: View>: View {
     }
 }
 
-/// Arrière-plan atmosphérique profond permettant aux surfaces Liquid Glass
-/// de réfracter naturellement lumière et couleur sans jamais masquer le contenu.
+/// Arrière-plan atmosphérique profond (sombre) ou nacré ardoise (clair) permettant aux surfaces
+/// Liquid Glass de réfracter naturellement lumière et couleur sans jamais masquer le contenu.
 public struct AmbientBackgroundView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     public init() {}
 
     public var body: some View {
+        #if os(tvOS)
+        let isLight = false
+        #else
+        let isLight = colorScheme == .light
+        #endif
+
         ZStack {
-            Color(red: 0.020, green: 0.031, blue: 0.067)
+            DesignTokens.canvas(isLight ? .light : .dark)
 
-            RadialGradient(
-                colors: [
-                    Color(red: 0.055, green: 0.647, blue: 0.914).opacity(0.22),
-                    Color.clear,
-                ],
-                center: .topLeading,
-                startRadius: 20,
-                endRadius: 560
-            )
+            if isLight {
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.055, green: 0.647, blue: 0.914).opacity(0.11),
+                        Color.clear,
+                    ],
+                    center: .topLeading,
+                    startRadius: 20,
+                    endRadius: 560
+                )
 
-            RadialGradient(
-                colors: [
-                    Color(red: 0.388, green: 0.400, blue: 0.945).opacity(0.20),
-                    Color.clear,
-                ],
-                center: .topTrailing,
-                startRadius: 20,
-                endRadius: 520
-            )
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.388, green: 0.400, blue: 0.945).opacity(0.08),
+                        Color.clear,
+                    ],
+                    center: .topTrailing,
+                    startRadius: 20,
+                    endRadius: 520
+                )
 
-            RadialGradient(
-                colors: [
-                    Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.10),
-                    Color.clear,
-                ],
-                center: .bottom,
-                startRadius: 20,
-                endRadius: 480
-            )
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.06),
+                        Color.clear,
+                    ],
+                    center: .bottom,
+                    startRadius: 20,
+                    endRadius: 480
+                )
+            } else {
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.055, green: 0.647, blue: 0.914).opacity(0.22),
+                        Color.clear,
+                    ],
+                    center: .topLeading,
+                    startRadius: 20,
+                    endRadius: 560
+                )
+
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.388, green: 0.400, blue: 0.945).opacity(0.20),
+                        Color.clear,
+                    ],
+                    center: .topTrailing,
+                    startRadius: 20,
+                    endRadius: 520
+                )
+
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.10),
+                        Color.clear,
+                    ],
+                    center: .bottom,
+                    startRadius: 20,
+                    endRadius: 480
+                )
+            }
         }
         .ignoresSafeArea()
     }
@@ -278,19 +393,19 @@ public struct StatusPill: View {
     }
 
     public var body: some View {
-        let base = Label {
+        let base = HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.caption2.weight(.bold))
             Text(title)
                 .font(.caption.weight(.semibold))
                 .lineLimit(1)
-        } icon: {
-            Image(systemName: systemImage)
-                .font(.caption2.weight(.bold))
         }
-        .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
         .foregroundStyle(color)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
 
         if reduceTransparency {
             base
@@ -421,7 +536,7 @@ public struct RackBayMatrixView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .background(
-                                    Color.white.opacity(0.06),
+                                    DesignTokens.surfaceElevated(colorScheme),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                                 .accessibilityLabel("\(res.type.badgeLabel) \(res.vmid) \(res.name), \(res.isRunning ? "en ligne" : "arrêté")")
@@ -463,7 +578,7 @@ public struct RackBayMatrixView: View {
                                 .padding(8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
-                                    Color.white.opacity(0.06),
+                                    DesignTokens.surfaceElevated(colorScheme),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                                 .accessibilityLabel("Baie \(idx + 1) \(drive.label), utilisé à \(Int(drive.usedPct)) pourcent, SMART \(drive.health)")
@@ -497,7 +612,11 @@ public struct UsageProgressBar: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.12))
+                    .fill(
+                        colorScheme == .light
+                            ? Color(red: 0.067, green: 0.098, blue: 0.173).opacity(0.11)
+                            : Color.white.opacity(0.12)
+                    )
                 Capsule()
                     .fill(resolvedColor.gradient)
                     .frame(width: max(4, geo.size.width * (percentage / 100)))
@@ -535,6 +654,13 @@ public struct ToastOverlayView: View {
             label
                 .background(DesignTokens.surface(colorScheme), in: Capsule())
                 .overlay(Capsule().strokeBorder(DesignTokens.hairBorder(colorScheme, highContrast: true), lineWidth: 1.5))
+                .padding(.horizontal, 20)
+        } else if colorScheme == .light {
+            label
+                .background(.ultraThinMaterial, in: Capsule())
+                .glassEffect(.regular, in: Capsule())
+                .overlay(Capsule().strokeBorder(DesignTokens.hairBorder(colorScheme), lineWidth: 0.85))
+                .shadow(color: .black.opacity(0.14), radius: 12, y: 5)
                 .padding(.horizontal, 20)
         } else {
             label

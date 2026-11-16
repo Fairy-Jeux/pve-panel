@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { getServerUrl } from '../lib/apiClient';
+import { QrCodeView } from './NotificationsModal';
 import type {
   SetupCategoryConfig,
   SetupConfigUpdateRequest,
@@ -200,8 +201,7 @@ const WIDGET_OPTIONS = [
   { value: 'qbittorrent', label: 'Widget qBittorrent' },
 ];
 
-const INPUT_CLASS =
-  'w-full rounded-2xl border border-white/15 bg-slate-950/70 px-3.5 py-2 text-sm text-white placeholder-slate-500 transition focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20';
+const INPUT_CLASS = 'liquid-input';
 
 function createEmptyEnvForm(): SetupEnvFormState {
   return {
@@ -786,7 +786,7 @@ export function SetupWizardModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="setup-wizard-title"
-        className="ios-sheet safe-bottom-sheet flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[32px] text-slate-100 sm:rounded-3xl"
+        className="ios-sheet legacy-dark-surface safe-bottom-sheet flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[32px] text-slate-900 dark:text-slate-100 sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 px-5 pt-3 sm:px-6 sm:pt-5">
@@ -1607,12 +1607,19 @@ export function SetupWizardModal({
                           serveur ou copiez son URL Tailscale Serve HTTPS.
                         </p>
 
-                        <div className="mt-4 rounded-2xl border border-white/15 bg-slate-950/75 p-3">
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                            URL du panel détectée
-                          </div>
-                          <div className="mt-1 break-all font-mono text-xs text-cyan-200">
-                            {detectedPanelUrl || 'Non détectée'}
+                        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+                          {computedDeepLink && (
+                            <div className="shrink-0 self-center sm:self-start">
+                              <QrCodeView value={computedDeepLink} size={136} />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1 rounded-2xl border border-white/15 bg-slate-950/75 p-3">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                              URL du panel détectée
+                            </div>
+                            <div className="mt-1 break-all font-mono text-xs text-cyan-200">
+                              {detectedPanelUrl || 'Non détectée'}
+                            </div>
                           </div>
                         </div>
 

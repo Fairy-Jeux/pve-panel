@@ -112,6 +112,9 @@ public struct ProxmoxTabView: View {
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: filter)
+        #endif
         .confirmationDialog(
             pendingCommand.map { "\($0.action.label) \($0.resource.name) (#\($0.resource.vmid)) ?" } ?? "",
             isPresented: Binding(

@@ -1,6 +1,12 @@
 .env
 services.yaml
+config/config.yaml
+!config/config.example.yaml
+config/*.db
+config/*.db-*
+config/*.p8
 .venv/
+backend/.venv/
 __pycache__/
 *.pyc
 *.pyo

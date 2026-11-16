@@ -14,6 +14,8 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from app.config import (
+    _sanitize_categories,
+    _sanitize_storage_mounts,
     get_settings,
     is_configured,
     is_secret_configured,
@@ -23,6 +25,9 @@ from app.config import (
     save_services_yaml,
     update_env_file,
 )
+from app.config_manager import get_config_manager
+from app.config_schema import AppConfig, is_masked_or_empty
+from app.services.realtime_bus import get_realtime_bus
 
 router = APIRouter(prefix="/api/setup", tags=["setup"])
 
@@ -278,17 +283,20 @@ async def _run_service_probe(
 
 @router.get("/status")
 async def get_setup_status(request: Request) -> dict[str, Any]:
-    """Return setup completeness, Tailscale pairing info, sanitized env, and services.yaml."""
+    """Return setup completeness, Tailscale pairing info, sanitized env, and services."""
     settings = get_settings()
+    cfg = get_config_manager().config
     tailscale_url = await _detect_tailscale_url(request)
     pairing_deep_link = (
         f"pvecenter://connect?url={quote(tailscale_url, safe='')}"
-        f"&name={quote(settings.pve_node or 'PVE', safe='')}"
+        f"&name={quote(cfg.server.name or settings.pve_node or 'PVE', safe='')}"
         if tailscale_url
         else ""
     )
     return {
-        "is_configured": is_configured(settings),
+        "is_configured": is_configured(),
+        "server_id": cfg.server.id,
+        "server_name": cfg.server.name,
         "tailscale_url": tailscale_url,
         "pairing_deep_link": pairing_deep_link,
         "env": _build_env_summary(),
@@ -343,20 +351,99 @@ async def test_service_connection(payload: TestServicePayload) -> dict[str, Any]
         )
 
 
+_ENV_TO_CONFIG_MAP: dict[str, tuple[str, ...]] = {
+    "DEV_AUTH_BYPASS": ("security", "dev_auth_bypass"),
+    "ALLOWED_TAILSCALE_USERS": ("security", "allowed_tailscale_users"),
+    "PROTECTED_OWNER_USERNAME": ("security", "protected_owner_username"),
+    "PVE_HOST": ("proxmox", "host"),
+    "PVE_NODE": ("proxmox", "default_node"),
+    "PVE_TOKEN_ID": ("proxmox", "token_id"),
+    "PVE_TOKEN_SECRET": ("proxmox", "token_secret"),
+    "PVE_VERIFY_SSL": ("proxmox", "verify_ssl"),
+    "PANEL_SELF_VMID": ("proxmox", "panel_self_vmid"),
+    "JELLYFIN_URL": ("integrations", "jellyfin", "url"),
+    "JELLYFIN_API_KEY": ("integrations", "jellyfin", "api_key"),
+    "JELLYSEERR_URL": ("integrations", "jellyseerr", "url"),
+    "JELLYSEERR_API_KEY": ("integrations", "jellyseerr", "api_key"),
+    "PLEX_URL": ("integrations", "plex", "url"),
+    "PLEX_TOKEN": ("integrations", "plex", "token"),
+    "RADARR_URL": ("integrations", "radarr", "url"),
+    "RADARR_API_KEY": ("integrations", "radarr", "api_key"),
+    "SONARR_URL": ("integrations", "sonarr", "url"),
+    "SONARR_API_KEY": ("integrations", "sonarr", "api_key"),
+    "PROWLARR_URL": ("integrations", "prowlarr", "url"),
+    "PROWLARR_API_KEY": ("integrations", "prowlarr", "api_key"),
+    "QBIT_URL": ("integrations", "qbittorrent", "url"),
+    "QBIT_USERNAME": ("integrations", "qbittorrent", "username"),
+    "QBIT_PASSWORD": ("integrations", "qbittorrent", "password"),
+}
+
+_SETUP_SECRET_ENV_KEYS = frozenset(
+    {
+        "PVE_TOKEN_SECRET",
+        "JELLYFIN_API_KEY",
+        "JELLYSEERR_API_KEY",
+        "PLEX_TOKEN",
+        "RADARR_API_KEY",
+        "SONARR_API_KEY",
+        "PROWLARR_API_KEY",
+        "QBIT_PASSWORD",
+    }
+)
+
+
+def _apply_env_updates_to_config_dict(
+    cfg_dict: dict[str, Any], updates: dict[str, Any]
+) -> None:
+    for raw_key, raw_val in updates.items():
+        env_key = str(raw_key).strip().upper()
+        target_path = _ENV_TO_CONFIG_MAP.get(env_key)
+        if not target_path or raw_val is None:
+            continue
+        if env_key in _SETUP_SECRET_ENV_KEYS and is_masked_or_empty(raw_val):
+            continue
+        cur = cfg_dict
+        for part in target_path[:-1]:
+            cur = cur.setdefault(part, {})
+        cur[target_path[-1]] = raw_val
+
+
 @router.put("/config")
 async def update_setup_config(
     request: Request, payload: SetupConfigUpdatePayload
 ) -> dict[str, Any]:
-    """Persist .env / services.yaml updates and hot-reload application settings."""
+    """Persist config.yaml (or legacy .env/services.yaml) updates and hot-reload application settings."""
     old_verify_ssl = get_settings().pve_verify_ssl
+    manager = get_config_manager()
 
-    if payload.env:
-        update_env_file(payload.env)
-
-    if payload.categories is not None or payload.storage_mounts is not None:
-        save_services_yaml(payload.categories, payload.storage_mounts)
-
-    new_settings = reload_settings()
+    if manager.config_exists:
+        cfg_dict = manager.config.model_dump()
+        if payload.env:
+            _apply_env_updates_to_config_dict(cfg_dict, payload.env)
+        if payload.categories is not None:
+            cfg_dict["categories"] = _sanitize_categories(payload.categories)
+        if payload.storage_mounts is not None:
+            cfg_dict["storage_mounts"] = _sanitize_storage_mounts(payload.storage_mounts)
+        validated = AppConfig.model_validate(cfg_dict)
+        manager.save_config(
+            validated, preserve_templates=True, emit_event=True, source="setup_put"
+        )
+        new_settings = reload_settings()
+    else:
+        if payload.env:
+            update_env_file(payload.env)
+        if payload.categories is not None or payload.storage_mounts is not None:
+            save_services_yaml(payload.categories, payload.storage_mounts)
+        new_settings = reload_settings()
+        await get_realtime_bus().publish(
+            "config_reloaded",
+            {
+                "hash": manager.content_hash,
+                "source": "setup_put",
+                "server_id": manager.config.server.id,
+                "is_synthesized": manager.is_synthesized,
+            },
+        )
 
     if new_settings.pve_verify_ssl != old_verify_ssl:
         old_client = getattr(request.app.state, "pve_http", None)
@@ -372,6 +459,6 @@ async def update_setup_config(
 
     return {
         "ok": True,
-        "is_configured": is_configured(new_settings),
+        "is_configured": is_configured(),
         "message": "Configuration enregistrée et rechargée à chaud.",
     }

@@ -43,7 +43,7 @@ export function ProxmoxSection({
   if (!overview) {
     return (
       <section className="liquid-glass rounded-3xl p-6">
-        <div className="animate-pulse text-sm text-slate-400">
+        <div className="animate-pulse text-sm text-slate-500 dark:text-slate-400">
           Connexion à l’API Proxmox VE…
         </div>
       </section>
@@ -73,15 +73,15 @@ export function ProxmoxSection({
           <span
             className={`h-2.5 w-2.5 rounded-full ${
               overview.online
-                ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+                ? 'bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.7)]'
                 : 'bg-rose-500'
             }`}
           />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
             Supervision Proxmox VE — Nœud {node.name}
           </h2>
           {node.pve_version && (
-            <span className="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-[11px] text-slate-400">
+            <span className="rounded-md border border-slate-200 bg-white/75 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
               {node.pve_version}
             </span>
           )}
@@ -91,10 +91,10 @@ export function ProxmoxSection({
           <button
             type="button"
             onClick={() => setStatusFilter('all')}
-            className={`rounded-lg px-2.5 py-1 font-medium transition ${
+            className={`rounded-full px-2.5 py-1 font-medium transition ${
               statusFilter === 'all'
-                ? 'bg-slate-800 text-slate-100'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-cyan-500/20 text-cyan-800 dark:bg-slate-800 dark:text-slate-100'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             Tous ({counts.total})
@@ -102,10 +102,10 @@ export function ProxmoxSection({
           <button
             type="button"
             onClick={() => setStatusFilter('running')}
-            className={`rounded-lg px-2.5 py-1 font-medium transition ${
+            className={`rounded-full px-2.5 py-1 font-medium transition ${
               statusFilter === 'running'
-                ? 'bg-emerald-500/20 text-emerald-300'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             Actifs ({counts.running})
@@ -113,10 +113,10 @@ export function ProxmoxSection({
           <button
             type="button"
             onClick={() => setStatusFilter('stopped')}
-            className={`rounded-lg px-2.5 py-1 font-medium transition ${
+            className={`rounded-full px-2.5 py-1 font-medium transition ${
               statusFilter === 'stopped'
-                ? 'bg-rose-500/20 text-rose-300'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             Arrêtés ({counts.stopped})
@@ -127,14 +127,14 @@ export function ProxmoxSection({
       {/* KPIs Nœud Proxmox */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="liquid-glass rounded-3xl p-4">
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
-              <Cpu className="h-4 w-4 text-cyan-400" />
+              <Cpu className="h-4 w-4 text-cyan-500 dark:text-cyan-400" />
               Processeur ({node.cpu_threads} threads)
             </span>
-            <span className="font-semibold text-slate-100">{node.cpu_pct}%</span>
+            <span className="font-semibold text-slate-900 dark:text-slate-100">{node.cpu_pct}%</span>
           </div>
-          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
             <div
               className={`h-full rounded-full transition-all duration-500 ${progressTone(node.cpu_pct)}`}
               style={{ width: `${Math.min(node.cpu_pct, 100)}%` }}
@@ -149,14 +149,14 @@ export function ProxmoxSection({
         </div>
 
         <div className="liquid-glass rounded-3xl p-4">
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
-              <MemoryStick className="h-4 w-4 text-indigo-400" />
+              <MemoryStick className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
               Mémoire RAM
             </span>
-            <span className="font-semibold text-slate-100">{node.mem_pct}%</span>
+            <span className="font-semibold text-slate-900 dark:text-slate-100">{node.mem_pct}%</span>
           </div>
-          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
             <div
               className={`h-full rounded-full transition-all duration-500 ${progressTone(node.mem_pct)}`}
               style={{ width: `${Math.min(node.mem_pct, 100)}%` }}
@@ -171,16 +171,16 @@ export function ProxmoxSection({
         </div>
 
         <div className="liquid-glass rounded-3xl p-4">
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
-              <HardDrive className="h-4 w-4 text-amber-400" />
+              <HardDrive className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               Stockage {lvmStorage ? lvmStorage.name : 'Système'}
             </span>
-            <span className="font-semibold text-slate-100">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
               {lvmStorage ? `${lvmStorage.used_pct}%` : '—'}
             </span>
           </div>
-          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
             <div
               className={`h-full rounded-full transition-all duration-500 ${progressTone(
                 lvmStorage?.used_pct || 0
@@ -199,23 +199,27 @@ export function ProxmoxSection({
         </div>
 
         <div className="liquid-glass rounded-3xl p-4">
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1.5 font-medium">
-              <Clock className="h-4 w-4 text-emerald-400" />
+              <Clock className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               Disponibilité &amp; Instances
             </span>
-            <span className="font-semibold text-emerald-300">
+            <span className="font-semibold text-emerald-700 dark:text-emerald-300">
               {node.uptime_human}
             </span>
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-1.5">
+            <div className="liquid-subcard flex-1 rounded-xl px-3 py-1.5">
               <div className="text-[11px] text-slate-500">Conteneurs LXC</div>
-              <div className="text-sm font-semibold text-slate-100">{counts.lxc}</div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {counts.lxc}
+              </div>
             </div>
-            <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-1.5">
+            <div className="liquid-subcard flex-1 rounded-xl px-3 py-1.5">
               <div className="text-[11px] text-slate-500">Machines VM</div>
-              <div className="text-sm font-semibold text-slate-100">{counts.qemu}</div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {counts.qemu}
+              </div>
             </div>
           </div>
         </div>
@@ -226,7 +230,7 @@ export function ProxmoxSection({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-800/80 bg-slate-950/50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <tr className="border-b border-slate-200/80 bg-slate-100/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800/80 dark:bg-slate-950/50 dark:text-slate-400">
                 <th className="px-4 py-3">ID &amp; Nom</th>
                 <th className="px-4 py-3">État</th>
                 <th className="hidden px-4 py-3 md:table-cell">CPU</th>
@@ -235,21 +239,21 @@ export function ProxmoxSection({
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/60">
               {filteredResources.map((item) => {
                 const isRunning = item.status === 'running';
                 return (
                   <tr
                     key={`${item.type}-${item.vmid}`}
-                    className="transition hover:bg-slate-800/40"
+                    className="transition hover:bg-black/[0.02] dark:hover:bg-slate-800/40"
                   >
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2.5">
                         <span
                           className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs ${
                             item.type === 'qemu'
-                              ? 'border-purple-500/30 bg-purple-500/10 text-purple-300'
-                              : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
+                              ? 'border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300'
+                              : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300'
                           }`}
                           title={item.type === 'qemu' ? 'Machine Virtuelle' : 'Conteneur LXC'}
                         >
@@ -264,11 +268,11 @@ export function ProxmoxSection({
                             <span className="font-mono text-xs text-slate-500">
                               #{item.vmid}
                             </span>
-                            <span className="font-medium text-slate-100">
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
                               {item.name}
                             </span>
                             {item.is_self && (
-                              <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] font-medium text-cyan-300">
+                              <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] font-medium text-cyan-700 dark:text-cyan-300">
                                 Panel
                               </span>
                             )}
@@ -278,7 +282,7 @@ export function ProxmoxSection({
                               {item.tags.slice(0, 3).map((tag) => (
                                 <span
                                   key={tag}
-                                  className="rounded bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-400"
+                                  className="rounded bg-slate-200/80 px-1.5 py-0.2 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                                 >
                                   {tag}
                                 </span>
@@ -293,13 +297,13 @@ export function ProxmoxSection({
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           isRunning
-                            ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-                            : 'border border-slate-700 bg-slate-800 text-slate-400'
+                            ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            : 'border border-slate-300 bg-slate-200/70 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
                         }`}
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
-                            isRunning ? 'bg-emerald-400' : 'bg-slate-500'
+                            isRunning ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-500'
                           }`}
                         />
                         {isRunning ? 'Actif' : 'Arrêté'}
@@ -309,13 +313,13 @@ export function ProxmoxSection({
                     <td className="hidden px-4 py-2.5 md:table-cell">
                       {isRunning ? (
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-800">
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                             <div
                               className={`h-full rounded-full ${progressTone(item.cpu_pct)}`}
                               style={{ width: `${Math.min(item.cpu_pct, 100)}%` }}
                             />
                           </div>
-                          <span className="font-mono text-xs text-slate-300">
+                          <span className="font-mono text-xs text-slate-700 dark:text-slate-300">
                             {item.cpu_pct}%
                           </span>
                         </div>
@@ -326,7 +330,7 @@ export function ProxmoxSection({
 
                     <td className="hidden px-4 py-2.5 sm:table-cell">
                       {isRunning ? (
-                        <div className="text-xs text-slate-300">
+                        <div className="text-xs text-slate-700 dark:text-slate-300">
                           <span className="font-mono">{formatBytes(item.mem_used_bytes)}</span>
                           <span className="text-slate-500">
                             {' '}
@@ -340,7 +344,7 @@ export function ProxmoxSection({
                       )}
                     </td>
 
-                    <td className="hidden px-4 py-2.5 text-xs text-slate-400 lg:table-cell">
+                    <td className="hidden px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 lg:table-cell">
                       {item.uptime_human}
                     </td>
 
@@ -350,7 +354,7 @@ export function ProxmoxSection({
                           <button
                             type="button"
                             onClick={() => onRequestAction(item, 'start')}
-                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/20"
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300"
                             title="Démarrer"
                           >
                             <Play className="h-3 w-3" />
@@ -361,7 +365,7 @@ export function ProxmoxSection({
                             <button
                               type="button"
                               onClick={() => onRequestAction(item, 'reboot')}
-                              className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300 transition hover:bg-amber-500/20"
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300"
                               title="Redémarrer"
                             >
                               <RotateCw className="h-3 w-3" />
@@ -370,7 +374,7 @@ export function ProxmoxSection({
                               type="button"
                               disabled={item.is_self}
                               onClick={() => onRequestAction(item, 'shutdown')}
-                              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-35"
+                              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-35 dark:text-rose-300"
                               title={
                                 item.is_self
                                   ? 'Protection du panel activée'

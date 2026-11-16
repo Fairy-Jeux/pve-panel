@@ -1,0 +1,177 @@
+# ==============================================================================
+# PVE Command Center — Declarative Configuration (config.example.yaml)
+# Copy to config/config.yaml (never commit real secrets; use ${VAR_NAME} env refs)
+# ==============================================================================
+version: 1
+
+server:
+  id: "00000000-0000-4000-8000-000000000001"
+  name: "PVE Command Center"
+  listen_host: "0.0.0.0"
+  listen_port: 8000
+  public_url: "https://pve-panel.example.ts.net"
+  mdns_enabled: true
+  mdns_service_name: "PVE Command Center"
+  mdns_service_type: "_pvecenter._tcp.local."
+  refresh_interval_seconds: 5
+
+security:
+  # Loopback connections from Tailscale Serve verify Tailscale-User-Login when enabled.
+  tailscale_sso_enabled: true
+  allowed_tailscale_users:
+    - "admin@example.com"
+  dev_auth_bypass: false
+  protected_owner_username: "admin"
+  # Used to sign HMAC/HS256 session JWTs issued by POST /api/auth/login
+  session_secret: "${SESSION_SECRET}"
+  # Admin PIN hash (generated automatically during onboarding or PUT /api/auth/pin)
+  admin_pin_hash: ""
+  # Non-loopback LAN / iOS / macOS / Apple TV requests authenticate via Bearer API tokens
+  api_tokens: []
+
+proxmox:
+  host: "https://192.168.1.10:8006"
+  token_id: "root@pam!pve-panel"
+  token_secret: "${PVE_TOKEN_SECRET}"
+  verify_ssl: false
+  default_node: "pve"
+  panel_self_vmid: 116
+
+integrations:
+  jellyfin:
+    url: "http://192.168.1.26:8096"
+    api_key: "${JELLYFIN_API_KEY}"
+  jellyseerr:
+    url: "http://192.168.1.31:5055"
+    api_key: "${JELLYSEERR_API_KEY}"
+  plex:
+    url: "http://192.168.1.30:32400"
+    token: "${PLEX_TOKEN}"
+  radarr:
+    url: "http://192.168.1.27:7878"
+    api_key: "${RADARR_API_KEY}"
+  sonarr:
+    url: "http://192.168.1.28:8989"
+    api_key: "${SONARR_API_KEY}"
+  prowlarr:
+    url: "http://192.168.1.29:9696"
+    api_key: "${PROWLARR_API_KEY}"
+  qbittorrent:
+    url: "http://192.168.1.32:8090"
+    username: "admin"
+    password: "${QBIT_PASSWORD}"
+
+alerts:
+  enabled: true
+  default_consecutive_failures: 3
+  default_cooldown_seconds: 300
+  check_interval_seconds: 30
+
+notifications:
+  apns:
+    enabled: false
+    team_id: ""
+    key_id: ""
+    bundle_id: "io.ac.pvepanel.app"
+    private_key_path: "/app/config/AuthKey.p8"
+    use_sandbox: true
+  webhooks:
+    - id: "discord-ops"
+      name: "Discord Homelab Alerts"
+      type: "discord"
+      enabled: false
+      url: "${DISCORD_WEBHOOK_URL}"
+      bot_token: ""
+      chat_id: ""
+      headers: {}
+      notify_on_down: true
+      notify_on_recovery: true
+      include_details: true
+    - id: "telegram-ops"
+      name: "Telegram Bot Alerts"
+      type: "telegram"
+      enabled: false
+      url: ""
+      bot_token: "${TELEGRAM_BOT_TOKEN}"
+      chat_id: "${TELEGRAM_CHAT_ID}"
+      headers: {}
+      notify_on_down: true
+      notify_on_recovery: true
+      include_details: true
+    - id: "ntfy-generic"
+      name: "Generic / ntfy Webhook"
+      type: "generic"
+      enabled: false
+      url: "https://ntfy.example.com/homelab"
+      bot_token: ""
+      chat_id: ""
+      headers:
+        Authorization: "Bearer ${NTFY_TOKEN}"
+      notify_on_down: true
+      notify_on_recovery: true
+      include_details: true
+
+categories:
+  - name: "Médias & Streaming"
+    services:
+      - id: "jellyfin"
+        name: "Jellyfin"
+        description: "Cinéma & Séries"
+        url: "https://jellyfin.example.com"
+        ping_url: "http://192.168.1.26:8096/health"
+        icon: "Film"
+        widget: "jellyfin"
+
+custom_services:
+  - id: "adguard-home"
+    name: "AdGuard Home"
+    description: "DNS Filtering & DHCP"
+    category: "Réseau"
+    icon: "Shield"
+    protocol: "json_metrics"
+    host: "192.168.1.2"
+    port: 80
+    url: "http://192.168.1.2"
+    health_url: "http://192.168.1.2/control/status"
+    internal_url: "http://192.168.1.2"
+    auth_type: "basic"
+    auth_token: "${ADGUARD_AUTH_TOKEN}"
+    auth_header_name: ""
+    json_metric_path: "running,version"
+    expected_status: 200
+    refresh_interval_seconds: 30
+    order: 1
+    enabled: true
+    alert_policy:
+      enabled: true
+      consecutive_failures: 2
+      cooldown_seconds: 300
+  - id: "nas-smb"
+    name: "NAS Storage (SMB)"
+    description: "Partage réseau principal"
+    category: "Infrastructure"
+    icon: "HardDrive"
+    protocol: "tcp_port"
+    host: "192.168.1.20"
+    port: 445
+    url: ""
+    health_url: ""
+    internal_url: ""
+    auth_type: "none"
+    auth_token: ""
+    auth_header_name: ""
+    json_metric_path: ""
+    expected_status: 200
+    refresh_interval_seconds: 60
+    order: 2
+    enabled: false
+    alert_policy:
+      enabled: true
+      consecutive_failures: 3
+      cooldown_seconds: 600
+
+storage_mounts:
+  - mount: "/mnt/disk1"
+    subpath: "disk1"
+    wwn: "0x5000000000000001"
+    label: "Disque 4 To (Exemple)"
