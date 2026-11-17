@@ -3,6 +3,7 @@ import SwiftUI
 public struct ServerSetupWizardSheet: View {
     public var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var isLoading: Bool = true
     @State private var isSaving: Bool = false
@@ -72,11 +73,11 @@ public struct ServerSetupWizardSheet: View {
             tvOSWizardBody
                 .fullScreenCover(isPresented: $showOnboardingFlow) {
                     OnboardingFlowView(viewModel: viewModel)
-                        .preferredColorScheme(viewModel.preferredColorScheme)
+                        .preferredColorScheme(.dark)
                 }
                 .fullScreenCover(isPresented: $showYAMLEditor) {
                     YAMLConfigEditorView(viewModel: viewModel)
-                        .preferredColorScheme(viewModel.preferredColorScheme)
+                        .preferredColorScheme(.dark)
                 }
             #else
             standardWizardBody
@@ -90,7 +91,11 @@ public struct ServerSetupWizardSheet: View {
                 }
             #endif
         }
+        #if os(tvOS)
+        .preferredColorScheme(.dark)
+        #else
         .preferredColorScheme(viewModel.preferredColorScheme)
+        #endif
     }
 
     #if os(tvOS)
@@ -99,7 +104,7 @@ public struct ServerSetupWizardSheet: View {
             AmbientBackgroundView()
 
             VStack(spacing: 0) {
-                HStack(spacing: 16) {
+                HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Configuration Serveur")
                             .font(.largeTitle.weight(.bold))
@@ -112,33 +117,40 @@ public struct ServerSetupWizardSheet: View {
                         showOnboardingFlow = true
                     } label: {
                         Label("Assistant 4 étapes", systemImage: "wand.and.stars")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
 
                     Button {
                         showYAMLEditor = true
                     } label: {
                         Label("YAML", systemImage: "doc.text")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
 
-                    Button(isSaving ? "Application…" : "Enregistrer") {
+                    Button {
+                        guard !(isLoading || isSaving) else { return }
                         Task { await saveConfig() }
+                    } label: {
+                        Text(isSaving ? "Application…" : "Enregistrer")
+                            .font(.callout.weight(.semibold))
+                            .opacity((isLoading || isSaving) ? 0.5 : 1.0)
                     }
-                    .buttonStyle(.glassProminent)
-                    .tint(.cyan)
-                    .disabled(isLoading || isSaving)
+                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
 
                     Button {
                         dismiss()
                     } label: {
                         Label("Fermer", systemImage: "xmark.circle.fill")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
                 }
                 .padding(.horizontal, 48)
                 .padding(.top, 32)
                 .padding(.bottom, 16)
+                .focusSection()
 
                 if isLoading {
                     VStack(spacing: 14) {
@@ -147,9 +159,9 @@ public struct ServerSetupWizardSheet: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 620), spacing: 28)], spacing: 24) {
-                            GlassCard(padding: 22, cornerRadius: 22) {
-                                VStack(alignment: .leading, spacing: 12) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 760), spacing: 28)], spacing: 24) {
+                            GlassCard(padding: 24, cornerRadius: 22) {
+                                VStack(alignment: .leading, spacing: 14) {
                                     Text("Proxmox VE & Sécurité")
                                         .font(.title3.weight(.semibold))
                                     TextField("Hôte Proxmox (https://192.168.1.10:8006)", text: $pveHost)
@@ -171,7 +183,7 @@ public struct ServerSetupWizardSheet: View {
                                             verifySsl: pveVerifySsl
                                         )
                                     }
-                                    .buttonStyle(.glass)
+                                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
                                     Divider()
                                     TextField("Emails Tailscale autorisés", text: $allowedTailscaleUsers)
                                     TextField("Compte propriétaire protégé", text: $protectedOwnerUsername)
@@ -179,8 +191,8 @@ public struct ServerSetupWizardSheet: View {
                                 }
                             }
 
-                            GlassCard(padding: 22, cornerRadius: 22) {
-                                VStack(alignment: .leading, spacing: 12) {
+                            GlassCard(padding: 24, cornerRadius: 22) {
+                                VStack(alignment: .leading, spacing: 14) {
                                     Text("Services Médias & Téléchargements")
                                         .font(.title3.weight(.semibold))
                                     TextField("URL Jellyfin", text: $jellyfinUrl)
@@ -202,6 +214,7 @@ public struct ServerSetupWizardSheet: View {
                             }
                         }
                         .padding(.horizontal, 48)
+                        .padding(.top, 12)
                         .padding(.bottom, 36)
                     }
                 }
@@ -520,6 +533,7 @@ public struct ServerSetupWizardSheet: View {
         buildRequest: @escaping () -> ServiceTestRequest
     ) -> some View {
         Button {
+            guard testingService == nil else { return }
             Task { await runServiceTest(buildRequest()) }
         } label: {
             HStack {
@@ -529,8 +543,13 @@ public struct ServerSetupWizardSheet: View {
                     ProgressView()
                 }
             }
+            #if os(tvOS)
+            .opacity(testingService != nil ? 0.55 : 1.0)
+            #endif
         }
+        #if !os(tvOS)
         .disabled(testingService != nil)
+        #endif
 
         if let result = testResults[serviceKey] {
             HStack(alignment: .top, spacing: 8) {
@@ -542,7 +561,11 @@ public struct ServerSetupWizardSheet: View {
                         .foregroundStyle(result.ok ? .green : .red)
                     if let ms = result.latencyMs {
                         Text(String(format: "Latence : %.0f ms", ms))
+                            #if os(tvOS)
+                            .font(.caption)
+                            #else
                             .font(.caption2)
+                            #endif
                             .foregroundStyle(.secondary)
                     }
                 }

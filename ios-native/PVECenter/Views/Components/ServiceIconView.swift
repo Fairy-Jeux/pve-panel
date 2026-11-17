@@ -482,7 +482,7 @@ public struct ServiceIconPickerSection: View {
 
     private var gridColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 94), spacing: 12)]
+        return [GridItem(.adaptive(minimum: 132), spacing: 14)]
         #else
         return [GridItem(.adaptive(minimum: 64), spacing: 8)]
         #endif
@@ -490,7 +490,7 @@ public struct ServiceIconPickerSection: View {
 
     private var symbolColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 72), spacing: 12)]
+        return [GridItem(.adaptive(minimum: 92), spacing: 14)]
         #else
         return [GridItem(.adaptive(minimum: 42), spacing: 8)]
         #endif
@@ -505,16 +505,22 @@ public struct ServiceIconPickerSection: View {
         )
 
         Section("Icône de l'application") {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 ServiceIconView(
                     icon: selectedIcon,
                     serviceId: serviceId,
                     serviceName: serviceName,
                     widget: widget,
                     isOnline: true,
-                    size: 44
+                    size: {
+                        #if os(tvOS)
+                        56
+                        #else
+                        44
+                        #endif
+                    }()
                 )
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(
                         ServiceBrandCatalog.displayLabel(
                             icon: selectedIcon,
@@ -527,26 +533,50 @@ public struct ServiceIconPickerSection: View {
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
                     Text("Choisissez une icône dédiée Homelab ou un symbole générique")
+                        #if os(tvOS)
+                        .font(.caption)
+                        #else
                         .font(.caption2)
+                        #endif
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .lineLimit(1)
                 }
             }
 
-            LazyVGrid(columns: gridColumns, spacing: 8) {
+            LazyVGrid(columns: gridColumns, spacing: {
+                #if os(tvOS)
+                14
+                #else
+                8
+                #endif
+            }()) {
                 ForEach(ServiceBrandCatalog.brands) { brand in
                     let isSelected = activeBrand?.id == brand.id
                     Button {
                         selectedIcon = brand.id
                     } label: {
-                        VStack(spacing: 4) {
-                            ServiceIconView(icon: brand.id, size: 32)
+                        VStack(spacing: 6) {
+                            ServiceIconView(icon: brand.id, size: {
+                                #if os(tvOS)
+                                42
+                                #else
+                                32
+                                #endif
+                            }())
                             Text(brand.shortLabel)
+                                #if os(tvOS)
+                                .font(.caption.weight(.medium))
+                                #else
                                 .font(.system(size: 10, weight: .medium))
+                                #endif
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                 .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity)
+                        #if os(tvOS)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 8)
+                        #else
                         .padding(.vertical, 6)
                         .padding(.horizontal, 4)
                         .background(
@@ -562,14 +592,25 @@ public struct ServiceIconPickerSection: View {
                                     lineWidth: 1.5
                                 )
                         )
+                        #endif
                     }
-                    .buttonStyle(.plain)
+                    .adaptiveIconTileButtonStyle(
+                        isSelected: isSelected,
+                        accent: DesignTokens.signalTeal(colorScheme),
+                        cornerRadius: 12
+                    )
                     .accessibilityLabel(brand.label)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
 
-            LazyVGrid(columns: symbolColumns, spacing: 8) {
+            LazyVGrid(columns: symbolColumns, spacing: {
+                #if os(tvOS)
+                14
+                #else
+                8
+                #endif
+            }()) {
                 ForEach(ServiceSymbolCatalog.options) { option in
                     let cleaned = ServiceBrandCatalog.cleanGenericIconName(selectedIcon)
                     let isSelected = activeBrand == nil && ServiceSymbolCatalog.resolveSFSymbol(cleaned) == option.symbol
@@ -577,9 +618,15 @@ public struct ServiceIconPickerSection: View {
                         selectedIcon = "sf:\(option.symbol)"
                     } label: {
                         Image(systemName: option.symbol)
+                            #if os(tvOS)
+                            .font(.title3)
+                            .frame(maxWidth: .infinity, minHeight: 56)
+                            #else
                             .font(.body)
-                            .foregroundStyle(isSelected ? DesignTokens.signalTeal(colorScheme) : .primary)
                             .frame(maxWidth: .infinity, minHeight: 38)
+                            #endif
+                            .foregroundStyle(isSelected ? DesignTokens.signalTeal(colorScheme) : .primary)
+                            #if !os(tvOS)
                             .background(
                                 isSelected
                                     ? DesignTokens.signalTeal(colorScheme).opacity(0.18)
@@ -593,12 +640,17 @@ public struct ServiceIconPickerSection: View {
                                         lineWidth: 1.4
                                     )
                             )
+                            #endif
                     }
-                    .buttonStyle(.plain)
+                    .adaptiveIconTileButtonStyle(
+                        isSelected: isSelected,
+                        accent: DesignTokens.signalTeal(colorScheme),
+                        cornerRadius: 12
+                    )
                     .accessibilityLabel(option.label)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
 
             TextField("Nom personnalisé ou SF Symbol (ex: zoraxy, sf:server.rack)", text: $selectedIcon)
                 .autocorrectionDisabled()

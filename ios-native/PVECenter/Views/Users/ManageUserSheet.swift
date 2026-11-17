@@ -4,6 +4,7 @@ public struct ManageUserSheet: View {
     public var viewModel: AppViewModel
     public let user: UnifiedUser
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var isDisabled: Bool
     @State private var isAdmin: Bool
@@ -123,8 +124,40 @@ public struct ManageUserSheet: View {
                         }
                     }
                 }
+
+                #if os(tvOS)
+                Section {
+                    HStack(spacing: 14) {
+                        Button("Fermer") { dismiss() }
+                            .adaptivePillButtonStyle()
+                        Spacer()
+                        Button {
+                            guard !isSaving else { return }
+                            Task {
+                                isSaving = true
+                                let payload = UpdateUserRequest(
+                                    isDisabled: isProtectedOwner ? nil : isDisabled,
+                                    isAdmin: isProtectedOwner ? nil : isAdmin,
+                                    enableAllFolders: enableAllFolders,
+                                    enabledFolders: enableAllFolders ? [] : Array(selectedFolders),
+                                    enableDownloading: enableDownloading,
+                                    maxActiveSessions: maxActiveSessions,
+                                    autoApprove: user.inJellyseerr && !isProtectedOwner ? autoApprove : nil
+                                )
+                                let ok = await viewModel.updateUser(id: user.jellyfinId, payload: payload)
+                                isSaving = false
+                                if ok { dismiss() }
+                            }
+                        } label: {
+                            Text(isSaving ? "Enregistrement…" : "Enregistrer")
+                                .opacity(isSaving ? 0.5 : 1.0)
+                        }
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    }
+                }
+                #endif
             }
-            .formStyle(.grouped)
+            .adaptiveTVOSModalFormContainer()
             .navigationTitle(user.name)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

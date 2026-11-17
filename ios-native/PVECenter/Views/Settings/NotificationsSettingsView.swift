@@ -61,6 +61,26 @@ public struct NotificationsSettingsView: View {
                 }
                 #endif
             }
+            #if os(tvOS)
+            .fullScreenCover(isPresented: $isAddingWebhook) {
+                WebhookChannelEditorSheet(
+                    existing: nil,
+                    onSave: { newChannel in
+                        await saveWebhook(newChannel, isNew: true)
+                    }
+                )
+                .preferredColorScheme(.dark)
+            }
+            .fullScreenCover(item: $editingWebhook) { channel in
+                WebhookChannelEditorSheet(
+                    existing: channel,
+                    onSave: { updated in
+                        await saveWebhook(updated, isNew: false)
+                    }
+                )
+                .preferredColorScheme(.dark)
+            }
+            #else
             .sheet(isPresented: $isAddingWebhook) {
                 WebhookChannelEditorSheet(
                     existing: nil,
@@ -68,6 +88,7 @@ public struct NotificationsSettingsView: View {
                         await saveWebhook(newChannel, isNew: true)
                     }
                 )
+                .preferredColorScheme(viewModel.preferredColorScheme)
             }
             .sheet(item: $editingWebhook) { channel in
                 WebhookChannelEditorSheet(
@@ -76,9 +97,13 @@ public struct NotificationsSettingsView: View {
                         await saveWebhook(updated, isNew: false)
                     }
                 )
+                .preferredColorScheme(viewModel.preferredColorScheme)
             }
+            #endif
         }
-        #if os(macOS)
+        #if os(tvOS)
+        .preferredColorScheme(.dark)
+        #elseif os(macOS)
         .frame(minWidth: 560, idealWidth: 640, minHeight: 560)
         #endif
         .task {
@@ -379,7 +404,7 @@ public struct NotificationsSettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
-                    HStack {
+                    HStack(spacing: 14) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Notifications & Alertes")
                                 .font(.largeTitle.weight(.bold))
@@ -390,15 +415,33 @@ public struct NotificationsSettingsView: View {
                         }
                         Spacer()
                         Button {
+                            guard testingKey == nil else { return }
                             Task { await runTest(channelId: nil, channelType: "all", key: "all") }
                         } label: {
                             Label(testingKey == "all" ? "Envoi…" : "Tout tester", systemImage: "paperplane.fill")
-                                .frame(minHeight: 50)
+                                .font(.callout.weight(.semibold))
+                                .opacity(testingKey != nil ? 0.55 : 1.0)
                         }
-                        .buttonStyle(.glassProminent)
-                        .tint(DesignTokens.signalTeal(colorScheme))
-                        .disabled(testingKey != nil)
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+
+                        Button {
+                            guard !(isLoading || isSaving) else { return }
+                            Task { await loadData() }
+                        } label: {
+                            Label("Actualiser", systemImage: "arrow.clockwise")
+                                .font(.callout.weight(.semibold))
+                        }
+                        .adaptivePillButtonStyle()
+
+                        Button {
+                            dismiss()
+                        } label: {
+                            Label("Fermer", systemImage: "xmark.circle.fill")
+                                .font(.callout.weight(.semibold))
+                        }
+                        .adaptivePillButtonStyle()
                     }
+                    .focusSection()
 
                     HStack(alignment: .top, spacing: 28) {
                         GlassCard(padding: 24, cornerRadius: 22) {
@@ -414,7 +457,8 @@ public struct NotificationsSettingsView: View {
                                     Button("Autoriser les alertes") {
                                         Task { _ = await viewModel.requestPushAuthorization() }
                                     }
-                                    .buttonStyle(.glass)
+                                    .font(.callout.weight(.semibold))
+                                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
                                 }
                                 Divider()
                                 let apns = channels.apns
@@ -444,8 +488,9 @@ public struct NotificationsSettingsView: View {
                                         isAddingWebhook = true
                                     } label: {
                                         Label("Ajouter", systemImage: "plus")
+                                            .font(.callout.weight(.semibold))
                                     }
-                                    .buttonStyle(.glass)
+                                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                                 }
 
                                 if channels.webhooks.isEmpty {
@@ -460,21 +505,26 @@ public struct NotificationsSettingsView: View {
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(wh.name)
                                                     .font(.headline)
+                                                    .lineLimit(1)
+                                                    .truncationMode(.middle)
                                                 Text("\(webhookTypeLabel(for: wh.type)) • \(wh.enabled ? "Actif" : "Inactif")")
                                                     .font(.caption)
                                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                                    .lineLimit(1)
                                             }
                                             Spacer()
                                             Button("Tester") {
                                                 Task { await runTest(channelId: wh.id, channelType: wh.type, key: wh.id) }
                                             }
-                                            .buttonStyle(.glass)
+                                            .font(.callout.weight(.semibold))
+                                            .adaptivePillButtonStyle()
                                             Button {
                                                 editingWebhook = wh
                                             } label: {
                                                 Image(systemName: "pencil")
                                             }
-                                            .buttonStyle(.glass)
+                                            .adaptivePillButtonStyle()
+                                            .accessibilityLabel("Modifier \(wh.name)")
                                         }
                                     }
                                 }
@@ -493,6 +543,7 @@ public struct NotificationsSettingsView: View {
                 .padding(.vertical, 32)
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
     #endif
 
@@ -776,10 +827,26 @@ private struct WebhookChannelEditorSheet: View {
                     Toggle("Alerter lors du rétablissement", isOn: $notifyOnRecovery)
                     Toggle("Inclure les détails & latence", isOn: $includeDetails)
                 }
+
+                #if os(tvOS)
+                Section {
+                    HStack(spacing: 14) {
+                        Button("Annuler") { dismiss() }
+                            .adaptivePillButtonStyle()
+                        Spacer()
+                        Button {
+                            guard isFormValid && !isSaving else { return }
+                            Task { await commit() }
+                        } label: {
+                            Text(isSaving ? "Enregistrement…" : "Enregistrer")
+                                .opacity(isFormValid && !isSaving ? 1.0 : 0.45)
+                        }
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    }
+                }
+                #endif
             }
-            #if !os(tvOS)
-            .formStyle(.grouped)
-            #endif
+            .adaptiveTVOSModalFormContainer()
             .navigationTitle(isEditing ? "Modifier le webhook" : "Nouveau webhook")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

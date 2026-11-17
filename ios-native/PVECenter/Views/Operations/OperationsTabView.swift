@@ -53,10 +53,15 @@ public struct OperationsTabView: View {
             .padding(.horizontal, DesignTokens.pageHorizontalPadding)
             .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
+        #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
+        #else
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #endif
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: incidentFilter)
         #endif
@@ -163,14 +168,26 @@ public struct OperationsTabView: View {
 
                                     HStack(spacing: 8) {
                                         Text(incident.serviceName)
+                                            #if os(tvOS)
+                                            .font(.caption.weight(.semibold))
+                                            #else
                                             .font(.caption2.weight(.semibold))
+                                            #endif
                                             .foregroundStyle(teal)
                                         Text("• Début \(ByteFormatters.formatRelativeISO(incident.startedAt))")
+                                            #if os(tvOS)
+                                            .font(.caption)
+                                            #else
                                             .font(.caption2)
+                                            #endif
                                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                         if let resolvedAt = incident.resolvedAt, !resolvedAt.isEmpty {
                                             Text("• Résolu \(ByteFormatters.formatRelativeISO(resolvedAt))")
+                                                #if os(tvOS)
+                                                .font(.caption)
+                                                #else
                                                 .font(.caption2)
+                                                #endif
                                                 .foregroundStyle(nominal)
                                         }
                                     }
@@ -179,11 +196,12 @@ public struct OperationsTabView: View {
                                 }
                             }
 
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 if incident.acknowledged {
                                     StatusPill("Acquitté", color: teal, systemImage: "checkmark.circle")
                                 } else {
                                     Button {
+                                        guard busyIncidentID != incident.id else { return }
                                         Task {
                                             busyIncidentID = incident.id
                                             await viewModel.acknowledgeIncident(id: incident.id)
@@ -194,22 +212,24 @@ public struct OperationsTabView: View {
                                             busyIncidentID == incident.id ? "Acquittement…" : "Acquitter",
                                             systemImage: "checkmark.circle"
                                         )
+                                        #if os(tvOS)
+                                        .font(.callout.weight(.semibold))
+                                        #else
                                         .font(.caption.weight(.semibold))
-                                        .lineLimit(1)
                                         .frame(minHeight: Layout.smallButtonMinHeight)
+                                        #endif
+                                        .lineLimit(1)
                                     }
-                                    #if os(tvOS)
-                                    .buttonStyle(.glass)
-                                    #else
-                                    .buttonStyle(.glassProminent)
-                                    .tint(teal)
-                                    #endif
+                                    .adaptivePillButtonStyle(tint: teal, prominent: true)
+                                    #if !os(tvOS)
                                     .disabled(busyIncidentID == incident.id)
+                                    #endif
                                     .adaptiveSmallControlSize()
                                 }
 
                                 if muted {
                                     Button {
+                                        guard busyMuteServiceID != incident.serviceId else { return }
                                         Task {
                                             busyMuteServiceID = incident.serviceId
                                             await viewModel.unmuteServiceAlerts(serviceId: incident.serviceId)
@@ -217,16 +237,23 @@ public struct OperationsTabView: View {
                                         }
                                     } label: {
                                         Label("Réactiver alertes", systemImage: "bell.badge.fill")
+                                            #if os(tvOS)
+                                            .font(.callout.weight(.semibold))
+                                            #else
                                             .font(.caption.weight(.semibold))
                                             .foregroundStyle(caution)
-                                            .lineLimit(1)
                                             .frame(minHeight: Layout.smallButtonMinHeight)
+                                            #endif
+                                            .lineLimit(1)
                                     }
-                                    .buttonStyle(.glass)
+                                    .adaptivePillButtonStyle(tint: caution)
+                                    #if !os(tvOS)
                                     .disabled(busyMuteServiceID == incident.serviceId)
+                                    #endif
                                     .adaptiveSmallControlSize()
                                 } else if incident.isActive {
                                     Button {
+                                        guard busyMuteServiceID != incident.serviceId else { return }
                                         Task {
                                             busyMuteServiceID = incident.serviceId
                                             await viewModel.muteServiceAlerts(serviceId: incident.serviceId, minutes: 60)
@@ -234,12 +261,18 @@ public struct OperationsTabView: View {
                                         }
                                     } label: {
                                         Label("Sourdine 1h", systemImage: "bell.slash")
+                                            #if os(tvOS)
+                                            .font(.callout.weight(.semibold))
+                                            #else
                                             .font(.caption.weight(.semibold))
-                                            .lineLimit(1)
                                             .frame(minHeight: Layout.smallButtonMinHeight)
+                                            #endif
+                                            .lineLimit(1)
                                     }
-                                    .buttonStyle(.glass)
+                                    .adaptivePillButtonStyle()
+                                    #if !os(tvOS)
                                     .disabled(busyMuteServiceID == incident.serviceId)
+                                    #endif
                                     .adaptiveSmallControlSize()
                                 }
 
@@ -265,6 +298,22 @@ public struct OperationsTabView: View {
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                     .lineLimit(1)
 
+                #if os(tvOS)
+                HStack(spacing: Layout.actionSpacing) {
+                    scanButton(
+                        target: "jellyfin",
+                        title: "Scanner Jellyfin",
+                        systemImage: "arrow.triangle.2.circlepath",
+                        prominent: true
+                    )
+                    scanButton(
+                        target: "plex",
+                        title: "Scanner Plex",
+                        systemImage: "arrow.clockwise",
+                        prominent: false
+                    )
+                }
+                #else
                 GlassEffectContainer(spacing: Layout.actionSpacing) {
                     HStack(spacing: Layout.actionSpacing) {
                         scanButton(
@@ -281,13 +330,15 @@ public struct OperationsTabView: View {
                         )
                     }
                 }
+                #endif
             }
         }
     }
 
     @ViewBuilder
     private func scanButton(target: String, title: String, systemImage: String, prominent: Bool) -> some View {
-        let button = Button {
+        Button {
+            guard scanningTarget == nil else { return }
             Task {
                 scanningTarget = target
                 await viewModel.triggerMediaScan(target: target)
@@ -298,23 +349,20 @@ public struct OperationsTabView: View {
                 scanningTarget == target ? "Scan en cours…" : title,
                 systemImage: systemImage
             )
+            #if os(tvOS)
+            .font(.callout.weight(.semibold))
+            #endif
             .lineLimit(1)
             .minimumScaleFactor(0.82)
             .frame(maxWidth: .infinity, minHeight: Layout.buttonMinHeight)
         }
+        #if !os(tvOS)
         .disabled(scanningTarget != nil)
-
-        #if os(tvOS)
-        button.buttonStyle(.glass)
-        #else
-        if prominent {
-            button
-                .buttonStyle(.glassProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
-        } else {
-            button.buttonStyle(.glass)
-        }
         #endif
+        .adaptivePillButtonStyle(
+            tint: prominent ? DesignTokens.signalTeal(colorScheme) : nil,
+            prominent: prominent
+        )
     }
 
     private var seerrRequestsSection: some View {
@@ -354,7 +402,11 @@ public struct OperationsTabView: View {
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.85)
                                     Text("Demandé par \(req.requestedBy)")
+                                        #if os(tvOS)
+                                        .font(.caption)
+                                        #else
                                         .font(.caption2)
+                                        #endif
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.85)
@@ -372,37 +424,45 @@ public struct OperationsTabView: View {
                             }
 
                             if req.isPending {
-                                GlassEffectContainer(spacing: Layout.actionSpacing) {
-                                    HStack(spacing: Layout.actionSpacing) {
-                                        Button {
-                                            Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
-                                        } label: {
-                                            Label("Approuver", systemImage: "checkmark")
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.82)
-                                                .frame(maxWidth: .infinity, minHeight: Layout.smallButtonMinHeight)
-                                        }
-                                        #if os(tvOS)
-                                        .buttonStyle(.glass)
-                                        #else
-                                        .buttonStyle(.glassProminent)
-                                        .tint(DesignTokens.nominal(colorScheme))
-                                        #endif
-                                        .adaptiveSmallControlSize()
-
-                                        Button(role: .destructive) {
-                                            Task { await viewModel.decideSeerrRequest(id: req.id, approve: false) }
-                                        } label: {
-                                            Label("Refuser", systemImage: "xmark")
-                                                .foregroundStyle(DesignTokens.critical(colorScheme))
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.82)
-                                                .frame(maxWidth: .infinity, minHeight: Layout.smallButtonMinHeight)
-                                        }
-                                        .buttonStyle(.glass)
-                                        .adaptiveSmallControlSize()
+                                let decisionButtons = HStack(spacing: Layout.actionSpacing) {
+                                    Button {
+                                        Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
+                                    } label: {
+                                        Label("Approuver", systemImage: "checkmark")
+                                            #if os(tvOS)
+                                            .font(.callout.weight(.semibold))
+                                            #endif
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.82)
+                                            .frame(maxWidth: .infinity, minHeight: Layout.smallButtonMinHeight)
                                     }
+                                    .adaptivePillButtonStyle(tint: DesignTokens.nominal(colorScheme), prominent: true)
+                                    .adaptiveSmallControlSize()
+
+                                    Button(role: .destructive) {
+                                        Task { await viewModel.decideSeerrRequest(id: req.id, approve: false) }
+                                    } label: {
+                                        Label("Refuser", systemImage: "xmark")
+                                            #if os(tvOS)
+                                            .font(.callout.weight(.semibold))
+                                            #else
+                                            .foregroundStyle(DesignTokens.critical(colorScheme))
+                                            #endif
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.82)
+                                            .frame(maxWidth: .infinity, minHeight: Layout.smallButtonMinHeight)
+                                    }
+                                    .adaptivePillButtonStyle(tint: DesignTokens.critical(colorScheme))
+                                    .adaptiveSmallControlSize()
                                 }
+
+                                #if os(tvOS)
+                                decisionButtons
+                                #else
+                                GlassEffectContainer(spacing: Layout.actionSpacing) {
+                                    decisionButtons
+                                }
+                                #endif
                             }
                         }
                         .padding(Layout.rowPadding)
@@ -435,25 +495,39 @@ public struct OperationsTabView: View {
                                 qbit.altSpeedEnabled ? "Tortue ON" : "Vitesse Max",
                                 systemImage: qbit.altSpeedEnabled ? "tortoise.fill" : "hare.fill"
                             )
+                            #if os(tvOS)
+                            .font(.callout.weight(.semibold))
+                            #else
                             .foregroundStyle(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
+                            #endif
                             .lineLimit(1)
                             .minimumScaleFactor(0.82)
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle(
+                            tint: qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme)
+                        )
                         .adaptiveSmallControlSize()
                     }
 
                     ForEach(qbit.torrents) { torrent in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 10) {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 3) {
                                     Text(torrent.name)
+                                        #if os(tvOS)
+                                        .font(.subheadline.weight(.semibold))
+                                        #else
                                         .font(.caption.weight(.semibold))
+                                        #endif
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.85)
                                     Text("\(String(format: "%.1f %%", torrent.progressPct)) • ↓ \(ByteFormatters.formatSpeed(torrent.dlspeed)) • ↑ \(ByteFormatters.formatSpeed(torrent.upspeed)) • ETA \(ByteFormatters.formatETA(torrent.eta))")
+                                        #if os(tvOS)
+                                        .font(.system(.caption, design: .monospaced))
+                                        #else
                                         .font(.system(.caption2, design: .monospaced))
+                                        #endif
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.82)
@@ -472,9 +546,11 @@ public struct OperationsTabView: View {
                                         systemImage: torrent.isPaused ? "play.fill" : "pause.fill"
                                     )
                                     .labelStyle(.iconOnly)
+                                    #if !os(tvOS)
                                     .frame(minWidth: Layout.buttonMinHeight, minHeight: Layout.buttonMinHeight)
+                                    #endif
                                 }
-                                .buttonStyle(.glass)
+                                .adaptivePillButtonStyle()
                                 .adaptiveSmallControlSize()
                             }
                             UsageProgressBar(
@@ -515,12 +591,20 @@ public struct OperationsTabView: View {
                                 .foregroundStyle(task.isSuccess ? DesignTokens.nominal(colorScheme) : DesignTokens.caution(colorScheme))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(task.type.uppercased()) \(task.vmid.isEmpty ? "" : "#\(task.vmid)")")
+                                    #if os(tvOS)
+                                    .font(.system(.callout, design: .monospaced, weight: .semibold))
+                                    #else
                                     .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                    #endif
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.82)
                                 Text("\(task.user) • \(ByteFormatters.formatTimestamp(task.starttime))")
+                                    #if os(tvOS)
+                                    .font(.caption)
+                                    #else
                                     .font(.caption2)
+                                    #endif
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
@@ -528,7 +612,11 @@ public struct OperationsTabView: View {
                             Spacer(minLength: 6)
                             if let sec = task.durationSec {
                                 Text("\(sec)s")
+                                    #if os(tvOS)
+                                    .font(.system(.caption, design: .monospaced))
+                                    #else
                                     .font(.system(.caption2, design: .monospaced))
+                                    #endif
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                     .lineLimit(1)
                             }

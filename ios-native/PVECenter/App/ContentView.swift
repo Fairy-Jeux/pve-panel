@@ -288,6 +288,7 @@ public struct ContentView: View {
                 tvOSHeaderBar(for: tab)
                 activeTabContent(for: tab)
             }
+            .toolbar(.hidden, for: .navigationBar)
             .background { AmbientBackgroundView() }
         }
         .tabItem {
@@ -303,8 +304,8 @@ public struct ContentView: View {
     }
 
     private func tvOSHeaderBar(for tab: AppTab) -> some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(tab.title)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(DesignTokens.primaryText(.dark))
@@ -316,13 +317,13 @@ public struct ContentView: View {
                                 ? Color.indigo
                                 : (viewModel.connectionError == nil && !viewModel.serverBaseURL.isEmpty ? Color.green : Color.orange)
                         )
-                        .frame(width: 8, height: 8)
+                        .frame(width: 10, height: 10)
                     Text(
                         viewModel.isDemoMode
                             ? "Mode Démo actif"
                             : (viewModel.serverBaseURL.isEmpty ? "Aucun serveur connecté" : viewModel.activeServerName)
                     )
-                    .font(.caption.weight(.medium))
+                    .font(.callout.weight(.medium))
                     .foregroundStyle(DesignTokens.secondaryText(.dark))
                     .lineLimit(1)
                 }
@@ -342,12 +343,11 @@ public struct ContentView: View {
                         Task { await viewModel.configureConnection(baseURL: "", demoMode: true) }
                     } label: {
                         Label("Mode Démo", systemImage: "sparkles")
+                            .font(.callout.weight(.semibold))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                            .padding(.horizontal, 10)
                     }
-                    .buttonStyle(.glassProminent)
-                    .tint(.indigo)
+                    .adaptivePillButtonStyle(tint: .indigo, prominent: true)
                 }
 
                 Button {
@@ -357,11 +357,11 @@ public struct ContentView: View {
                         tvOSServerButtonTitle,
                         systemImage: viewModel.isDemoMode ? "sparkles" : "server.rack"
                     )
+                    .font(.callout.weight(.semibold))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                    .padding(.horizontal, 10)
                 }
-                .buttonStyle(.glass)
+                .adaptivePillButtonStyle()
 
                 Button {
                     // Guard instead of .disabled so 5s silent auto-refresh never drops tvOS focus.
@@ -369,18 +369,25 @@ public struct ContentView: View {
                     Task { await viewModel.refreshAll(silent: false) }
                 } label: {
                     Label("Actualiser", systemImage: "arrow.clockwise")
+                        .font(.callout.weight(.semibold))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                         .opacity(viewModel.isRefreshing ? 0.65 : 1.0)
-                        .padding(.horizontal, 10)
                 }
-                .buttonStyle(.glass)
+                .adaptivePillButtonStyle()
                 .accessibilityLabel(viewModel.isRefreshing ? "Synchronisation…" : "Actualiser")
             }
         }
         .padding(.horizontal, DesignTokens.pageHorizontalPadding)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 16)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 1)
+                .padding(.horizontal, DesignTokens.pageHorizontalPadding)
+        }
+        .focusSection()
     }
     #endif
 

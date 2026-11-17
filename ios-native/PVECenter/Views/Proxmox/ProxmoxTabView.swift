@@ -38,7 +38,7 @@ public struct ProxmoxTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 720), spacing: 24)]
+        return [GridItem(.adaptive(minimum: 740), spacing: 24)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 340), spacing: 14)]
         #else
@@ -83,7 +83,7 @@ public struct ProxmoxTabView: View {
                     .labelsHidden()
                     .pickerStyle(.segmented)
                     #if os(tvOS)
-                    .frame(maxWidth: 560)
+                    .frame(maxWidth: 640)
                     #else
                     .frame(maxWidth: 300)
                     #endif
@@ -108,10 +108,15 @@ public struct ProxmoxTabView: View {
             .padding(.horizontal, DesignTokens.pageHorizontalPadding)
             .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
+        #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
+        #else
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #endif
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: filter)
         #endif
@@ -209,20 +214,27 @@ public struct ProxmoxTabView: View {
     private func resourceCard(_ res: PveResource) -> some View {
         let nominal = DesignTokens.nominal(colorScheme)
         let teal = DesignTokens.signalTeal(colorScheme)
+        #if os(tvOS)
+        let cardPadding: CGFloat = 20
+        let iconBoxSize: CGFloat = 52
+        #else
+        let cardPadding: CGFloat = 14
+        let iconBoxSize: CGFloat = 38
+        #endif
 
-        return GlassCard(padding: 14, cornerRadius: 18) {
+        let card = GlassCard(padding: cardPadding, cornerRadius: 18) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center, spacing: 10) {
+                HStack(alignment: .center, spacing: 12) {
                     Image(systemName: res.type.symbolName)
                         .font(.title3)
                         .foregroundStyle(res.isRunning ? teal : DesignTokens.secondaryText(colorScheme))
-                        .frame(width: 38, height: 38)
+                        .frame(width: iconBoxSize, height: iconBoxSize)
                         .background(
                             DesignTokens.surfaceElevated(colorScheme),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
                             Text(res.name)
                                 .font(.subheadline.weight(.semibold))
@@ -237,12 +249,20 @@ public struct ProxmoxTabView: View {
                         }
                         HStack(spacing: 6) {
                             Text(res.type.badgeLabel)
+                                #if os(tvOS)
+                                .font(.system(.caption, design: .monospaced, weight: .bold))
+                                #else
                                 .font(.system(.caption2, design: .monospaced, weight: .bold))
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text("•")
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text(res.isRunning ? "Uptime \(res.uptimeHuman)" : "Arrêté")
+                                #if os(tvOS)
+                                .font(.caption)
+                                #else
                                 .font(.caption2)
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.85)
@@ -261,18 +281,26 @@ public struct ProxmoxTabView: View {
                 }
 
                 if res.isRunning {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 14) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("CPU \(String(format: "%.1f %%", res.cpuPct))")
+                                #if os(tvOS)
+                                .font(.system(.caption, design: .monospaced))
+                                #else
                                 .font(.system(.caption2, design: .monospaced))
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                             UsageProgressBar(percentage: res.cpuPct, tint: teal)
                         }
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("RAM \(ByteFormatters.formatBytes(res.memUsedBytes)) / \(ByteFormatters.formatBytes(res.memTotalBytes)) (\(Int(res.memPct)) %)")
+                                #if os(tvOS)
+                                .font(.system(.caption, design: .monospaced))
+                                #else
                                 .font(.system(.caption2, design: .monospaced))
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
@@ -281,36 +309,20 @@ public struct ProxmoxTabView: View {
                     }
                 }
 
+                #if os(tvOS)
+                actionBar(for: res)
+                #else
                 GlassEffectContainer(spacing: actionSpacing) {
-                    HStack(spacing: actionSpacing) {
-                        if !res.isRunning {
-                            powerButton(resource: res, action: .start, prominent: true)
-                        } else if !res.isSelf {
-                            powerButton(resource: res, action: .reboot)
-                            powerButton(
-                                resource: res,
-                                action: .shutdown,
-                                foreground: DesignTokens.caution(colorScheme)
-                            )
-                            powerButton(
-                                resource: res,
-                                action: .stop,
-                                foreground: DesignTokens.critical(colorScheme),
-                                role: .destructive
-                            )
-                        } else {
-                            Label("Protégé contre l'auto-extinction", systemImage: "shield.checkmark.fill")
-                                .font(.caption2)
-                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                        }
-                        Spacer()
-                    }
+                    actionBar(for: res)
                 }
+                #endif
             }
         }
-        .contextMenu {
+
+        #if os(tvOS)
+        return card
+        #else
+        return card.contextMenu {
             if !res.isRunning {
                 Button {
                     pendingCommand = PendingPowerCommand(resource: res, action: .start)
@@ -335,6 +347,39 @@ public struct ProxmoxTabView: View {
                 }
             }
         }
+        #endif
+    }
+
+    private func actionBar(for res: PveResource) -> some View {
+        HStack(spacing: actionSpacing) {
+            if !res.isRunning {
+                powerButton(resource: res, action: .start, prominent: true)
+            } else if !res.isSelf {
+                powerButton(resource: res, action: .reboot)
+                powerButton(
+                    resource: res,
+                    action: .shutdown,
+                    foreground: DesignTokens.caution(colorScheme)
+                )
+                powerButton(
+                    resource: res,
+                    action: .stop,
+                    foreground: DesignTokens.critical(colorScheme),
+                    role: .destructive
+                )
+            } else {
+                Label("Protégé contre l'auto-extinction", systemImage: "shield.checkmark.fill")
+                    #if os(tvOS)
+                    .font(.caption)
+                    #else
+                    .font(.caption2)
+                    #endif
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            Spacer()
+        }
     }
 
     @ViewBuilder
@@ -345,6 +390,7 @@ public struct ProxmoxTabView: View {
         prominent: Bool = false,
         role: ButtonRole? = nil
     ) -> some View {
+        let resolvedTint = foreground ?? (prominent ? DesignTokens.signalTeal(colorScheme) : nil)
         let button = Button(role: role) {
             pendingCommand = PendingPowerCommand(resource: resource, action: action)
         } label: {
@@ -352,20 +398,7 @@ public struct ProxmoxTabView: View {
         }
         .adaptiveSmallControlSize()
 
-        if prominent {
-            #if os(tvOS)
-            button
-                .buttonStyle(.glass)
-                .tint(DesignTokens.signalTeal(colorScheme))
-            #else
-            button
-                .buttonStyle(.glassProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
-            #endif
-        } else {
-            button
-                .buttonStyle(.glass)
-        }
+        button.adaptivePillButtonStyle(tint: resolvedTint, prominent: prominent)
     }
 
     @ViewBuilder
@@ -375,13 +408,18 @@ public struct ProxmoxTabView: View {
             .fixedSize(horizontal: true, vertical: false)
             #if os(tvOS)
             .font(.callout.weight(.semibold))
-            #endif
+            #else
             .frame(minHeight: 26)
+            #endif
 
+        #if os(tvOS)
+        label
+        #else
         if let foreground {
             label.foregroundStyle(foreground)
         } else {
             label
         }
+        #endif
     }
 }

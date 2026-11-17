@@ -21,7 +21,7 @@ public struct StorageTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 560), spacing: 20)]
+        return [GridItem(.adaptive(minimum: 760), spacing: 24)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 320), spacing: 12)]
         #else
@@ -31,7 +31,7 @@ public struct StorageTabView: View {
 
     private var gridSpacing: CGFloat {
         #if os(tvOS)
-        return 20
+        return 24
         #else
         return 12
         #endif
@@ -57,10 +57,15 @@ public struct StorageTabView: View {
             .padding(.horizontal, DesignTokens.pageHorizontalPadding)
             .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
+        #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
+        #else
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #endif
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: showHealthyOnly)
         #endif
@@ -80,14 +85,20 @@ public struct StorageTabView: View {
         ]
 
         #if os(tvOS)
-        let donutSize: CGFloat = 196
-        let donutRowSpacing: CGFloat = 28
+        let donutSize: CGFloat = 220
+        let donutRowSpacing: CGFloat = 32
         #else
         let donutSize: CGFloat = 112
         let donutRowSpacing: CGFloat = 18
         #endif
 
-        return GlassCard {
+        return GlassCard(padding: {
+            #if os(tvOS)
+            22
+            #else
+            16
+            #endif
+        }(), cornerRadius: 20) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -131,7 +142,11 @@ public struct StorageTabView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
                             Text("occupé")
+                                #if os(tvOS)
+                                .font(.caption)
+                                #else
                                 .font(.caption2)
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
@@ -139,7 +154,7 @@ public struct StorageTabView: View {
                         .frame(maxWidth: donutSize * 0.62)
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         detailMetric(title: "Capacité totale", value: ByteFormatters.formatDecimalTB(pool.totalBytes), color: DesignTokens.primaryText(colorScheme))
                         detailMetric(title: "Espace utilisé", value: ByteFormatters.formatDecimalTB(pool.usedBytes), color: usedColor)
                         detailMetric(title: "Espace libre", value: ByteFormatters.formatDecimalTB(pool.availBytes), color: DesignTokens.nominal(colorScheme))
@@ -151,13 +166,21 @@ public struct StorageTabView: View {
     }
 
     private func detailMetric(title: String, value: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(title)
+                #if os(tvOS)
+                .font(.caption)
+                #else
                 .font(.caption2)
+                #endif
                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 .lineLimit(1)
             Text(value)
+                #if os(tvOS)
+                .font(.system(.headline, design: .monospaced, weight: .semibold))
+                #else
                 .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                #endif
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
@@ -166,21 +189,43 @@ public struct StorageTabView: View {
 
     private func systemSsdCard(_ ssd: SystemSsdInfo) -> some View {
         let passed = ssd.health.uppercased() == "PASSED"
-        return GlassCard(padding: 14, cornerRadius: 16) {
-            HStack(spacing: 12) {
+        return GlassCard(padding: {
+            #if os(tvOS)
+            20
+            #else
+            14
+            #endif
+        }(), cornerRadius: 18) {
+            HStack(spacing: 14) {
                 Image(systemName: "memorychip.fill")
                     .font(.title2)
                     .foregroundStyle(DesignTokens.signalTeal(colorScheme))
-                    .frame(width: 40, height: 40)
-                    .background(DesignTokens.surfaceElevated(colorScheme), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
+                    .frame(width: {
+                        #if os(tvOS)
+                        56
+                        #else
+                        40
+                        #endif
+                    }(), height: {
+                        #if os(tvOS)
+                        56
+                        #else
+                        40
+                        #endif
+                    }())
+                    .background(DesignTokens.surfaceElevated(colorScheme), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
                     Text("SSD Système Proxmox")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                     Text("\(ssd.model) • \(ssd.devpath) • \(ByteFormatters.formatBytes(ssd.sizeBytes))")
+                        #if os(tvOS)
+                        .font(.system(.caption, design: .monospaced))
+                        #else
                         .font(.system(.caption2, design: .monospaced))
+                        #endif
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -223,10 +268,13 @@ public struct StorageTabView: View {
                         showHealthyOnly ? "Sains uniquement" : "Tous (SMART)",
                         systemImage: showHealthyOnly ? "checkmark.shield.fill" : "line.3.horizontal.decrease.circle"
                     )
+                    .font(.callout.weight(.semibold))
                     .lineLimit(1)
                 }
-                .buttonStyle(.glass)
-                .tint(showHealthyOnly ? DesignTokens.nominal(colorScheme) : nil)
+                .adaptivePillButtonStyle(
+                    tint: showHealthyOnly ? DesignTokens.nominal(colorScheme) : nil,
+                    prominent: showHealthyOnly
+                )
                 .fixedSize()
                 #else
                 Toggle("Sains uniquement", isOn: $showHealthyOnly)
@@ -239,16 +287,22 @@ public struct StorageTabView: View {
                 ForEach(Array(filtered.enumerated()), id: \.element.id) { idx, drive in
                     #if os(tvOS)
                     let smartText = drive.health
+                    let cardPadding: CGFloat = 20
                     #else
                     let smartText = "SMART \(drive.health)"
+                    let cardPadding: CGFloat = 14
                     #endif
-                    GlassCard(padding: 14, cornerRadius: 16) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    GlassCard(padding: cardPadding, cornerRadius: 18) {
+                        VStack(alignment: .leading, spacing: 10) {
                             HStack(alignment: .top, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack(spacing: 6) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 8) {
                                         Text(String(format: "BAY %02d", idx + 1))
+                                            #if os(tvOS)
+                                            .font(.system(.caption, design: .monospaced, weight: .bold))
+                                            #else
                                             .font(.system(.caption2, design: .monospaced, weight: .bold))
+                                            #endif
                                             .foregroundStyle(DesignTokens.signalTeal(colorScheme))
                                             .lineLimit(1)
                                             .fixedSize(horizontal: true, vertical: false)
@@ -259,7 +313,11 @@ public struct StorageTabView: View {
                                             .minimumScaleFactor(0.82)
                                     }
                                     Text("\(drive.model) • \(drive.type) (\(drive.rpm))")
+                                        #if os(tvOS)
+                                        .font(.caption)
+                                        #else
                                         .font(.caption2)
+                                        #endif
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.82)
@@ -278,13 +336,21 @@ public struct StorageTabView: View {
 
                             HStack(spacing: 8) {
                                 Text("\(ByteFormatters.formatDecimalTB(drive.usedBytes)) / \(ByteFormatters.formatDecimalTB(drive.totalBytes))")
+                                    #if os(tvOS)
+                                    .font(.system(.callout, design: .monospaced, weight: .medium))
+                                    #else
                                     .font(.system(.caption, design: .monospaced, weight: .medium))
+                                    #endif
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.82)
                                 Spacer(minLength: 8)
                                 Text("\(drive.devpath) • \(drive.mount)")
+                                    #if os(tvOS)
+                                    .font(.system(.caption, design: .monospaced))
+                                    #else
                                     .font(.system(.caption2, design: .monospaced))
+                                    #endif
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.82)
@@ -304,8 +370,14 @@ public struct StorageTabView: View {
 
             LazyVGrid(columns: adaptiveColumns, spacing: gridSpacing) {
                 ForEach(storages) { storage in
-                    GlassCard(padding: 14, cornerRadius: 16) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    GlassCard(padding: {
+                        #if os(tvOS)
+                        20
+                        #else
+                        14
+                        #endif
+                    }(), cornerRadius: 18) {
+                        VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 8) {
                                 Label(storage.name, systemImage: "internaldrive.fill")
                                     .font(.subheadline.weight(.semibold))
@@ -313,25 +385,41 @@ public struct StorageTabView: View {
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                                 Text(storage.type)
+                                    #if os(tvOS)
+                                    .font(.system(.caption, design: .monospaced))
+                                    #else
                                     .font(.system(.caption2, design: .monospaced))
+                                    #endif
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                     .lineLimit(1)
                                 Spacer(minLength: 8)
                                 Text(String(format: "%.1f %%", storage.usedPct))
+                                    #if os(tvOS)
+                                    .font(.system(.callout, design: .monospaced, weight: .bold))
+                                    #else
                                     .font(.system(.caption, design: .monospaced, weight: .bold))
+                                    #endif
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                     .lineLimit(1)
                             }
                             UsageProgressBar(percentage: storage.usedPct, tint: DesignTokens.signalTeal(colorScheme))
                             HStack(spacing: 8) {
                                 Text("\(ByteFormatters.formatBytes(storage.usedBytes)) utilisés")
+                                    #if os(tvOS)
+                                    .font(.caption)
+                                    #else
                                     .font(.caption2)
+                                    #endif
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                                 Spacer(minLength: 8)
                                 Text("Total \(ByteFormatters.formatBytes(storage.totalBytes))")
+                                    #if os(tvOS)
+                                    .font(.caption)
+                                    #else
                                     .font(.caption2)
+                                    #endif
                                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)

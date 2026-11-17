@@ -114,13 +114,21 @@ public struct AlertsBannerView: View {
                                             .foregroundStyle(alertColor)
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(alert.title)
+                                                #if os(tvOS)
+                                                .font(.subheadline.weight(.semibold))
+                                                #else
                                                 .font(.caption.weight(.semibold))
+                                                #endif
                                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                                 .lineLimit(2)
                                                 .multilineTextAlignment(.leading)
                                                 .fixedSize(horizontal: false, vertical: true)
                                             Text(alert.subtitle)
+                                                #if os(tvOS)
+                                                .font(.caption)
+                                                #else
                                                 .font(.caption2)
+                                                #endif
                                                 .foregroundStyle(subtitleColor)
                                                 .lineLimit(2)
                                                 .multilineTextAlignment(.leading)
@@ -134,10 +142,12 @@ public struct AlertsBannerView: View {
                                     .padding(.horizontal, hPadding)
                                     .padding(.vertical, vPadding)
                                     .frame(minHeight: rowMinHeight)
+                                    #if !os(tvOS)
                                     .background(
                                         DesignTokens.surfaceElevated(colorScheme),
                                         in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     )
+                                    #endif
                                 }
                                 .cardButtonStyle(cornerRadius: 12)
                             }
@@ -263,39 +273,46 @@ public struct LiveAlertOverlayBanner: View {
                     }
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
                     if !banner.isResolved, let onAcknowledge {
                         Button(action: onAcknowledge) {
                             Label("Acquitter", systemImage: "checkmark.circle")
+                                #if os(tvOS)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .font(.caption.weight(.semibold))
+                                #endif
                                 .lineLimit(1)
                         }
-                        #if os(tvOS)
-                        .buttonStyle(.glass)
-                        #else
-                        .buttonStyle(.glassProminent)
-                        .tint(accentColor)
-                        #endif
+                        .adaptivePillButtonStyle(tint: accentColor, prominent: true)
                         .adaptiveSmallControlSize()
                     }
 
                     if !banner.isResolved, banner.serviceId != nil, let onMuteOneHour {
                         Button(action: onMuteOneHour) {
                             Label("Sourdine 1h", systemImage: "bell.slash")
+                                #if os(tvOS)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .font(.caption.weight(.semibold))
+                                #endif
                                 .lineLimit(1)
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                         .adaptiveSmallControlSize()
                     }
 
                     if let onOpenDetails {
                         Button(action: onOpenDetails) {
                             Label("Incidents", systemImage: "list.bullet.rectangle")
+                                #if os(tvOS)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .font(.caption.weight(.semibold))
+                                #endif
                                 .lineLimit(1)
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                         .adaptiveSmallControlSize()
                     }
 
@@ -303,10 +320,14 @@ public struct LiveAlertOverlayBanner: View {
 
                     Button(action: onDismiss) {
                         Label("Fermer", systemImage: "xmark")
+                            #if os(tvOS)
+                            .font(.callout.weight(.semibold))
+                            #else
                             .font(.caption.weight(.semibold))
+                            #endif
                             .lineLimit(1)
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
                     .adaptiveSmallControlSize()
                 }
             }

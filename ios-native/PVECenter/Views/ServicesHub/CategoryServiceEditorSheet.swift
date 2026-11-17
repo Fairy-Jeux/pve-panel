@@ -96,19 +96,25 @@ public struct CategoryServiceEditorSheet: View {
                     TextField("Catégorie", text: $category)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             ForEach(categorySuggestions, id: \.self) { suggestion in
+                                let selected = category == suggestion
                                 Button(suggestion) {
                                     category = suggestion
                                 }
+                                #if os(tvOS)
+                                .adaptivePillButtonStyle(
+                                    tint: selected ? DesignTokens.signalTeal(colorScheme) : nil,
+                                    prominent: selected
+                                )
+                                #else
                                 .buttonStyle(.bordered)
-                                .tint(category == suggestion ? DesignTokens.signalTeal(colorScheme) : .secondary)
-                                #if !os(tvOS)
+                                .tint(selected ? DesignTokens.signalTeal(colorScheme) : .secondary)
                                 .controlSize(.small)
                                 #endif
                             }
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
                     }
                 }
 
@@ -179,8 +185,26 @@ public struct CategoryServiceEditorSheet: View {
                     }
                     .disabled(isDeleting)
                 }
+
+                #if os(tvOS)
+                Section {
+                    HStack(spacing: 14) {
+                        Button("Annuler") { dismiss() }
+                            .adaptivePillButtonStyle()
+                        Spacer()
+                        Button {
+                            guard canSubmit && !isSaving else { return }
+                            Task { await saveChanges() }
+                        } label: {
+                            Text(isSaving ? "Enregistrement…" : "Enregistrer")
+                                .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
+                        }
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    }
+                }
+                #endif
             }
-            .formStyle(.grouped)
+            .adaptiveTVOSModalFormContainer()
             .navigationTitle("Personnaliser")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

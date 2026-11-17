@@ -245,6 +245,16 @@ public struct OnboardingFlowView: View {
                     }
                 }
             }
+            #if os(tvOS)
+            .preferredColorScheme(.dark)
+            .fullScreenCover(isPresented: $showAppleTVPairing) {
+                AppleTVPairingView(viewModel: viewModel, initialMode: .receiver) { _ in
+                    viewModel.dismissOnboarding()
+                    dismiss()
+                }
+                .preferredColorScheme(.dark)
+            }
+            #else
             .sheet(isPresented: $showQRScanner) {
                 QRScannerView { scanned in
                     applyScannedConnection(scanned)
@@ -256,6 +266,7 @@ public struct OnboardingFlowView: View {
                     dismiss()
                 }
             }
+            #endif
         }
         #if os(macOS)
         .frame(minWidth: 640, idealWidth: 720, minHeight: 620)
@@ -321,9 +332,41 @@ public struct OnboardingFlowView: View {
             AmbientBackgroundView()
 
             VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Assistant PVE Center")
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        Text("Configuration guidée en 4 étapes")
+                            .font(.caption)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    }
+                    Spacer()
+                    Button {
+                        Task { await enterDemoMode() }
+                    } label: {
+                        Label("Mode Démo", systemImage: "sparkles")
+                            .font(.callout.weight(.semibold))
+                    }
+                    .adaptivePillButtonStyle(tint: .indigo, prominent: true)
+
+                    if !viewModel.savedServers.isEmpty || viewModel.isDemoMode {
+                        Button {
+                            viewModel.dismissOnboarding()
+                            dismiss()
+                        } label: {
+                            Label("Fermer", systemImage: "xmark.circle.fill")
+                                .font(.callout.weight(.semibold))
+                        }
+                        .adaptivePillButtonStyle()
+                    }
+                }
+                .padding(.horizontal, 48)
+                .padding(.top, 24)
+                .focusSection()
+
                 stepProgressHeader
                     .padding(.horizontal, 48)
-                    .padding(.top, 20)
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -345,8 +388,10 @@ public struct OnboardingFlowView: View {
                 bottomNavigationBar
                     .padding(.horizontal, 48)
                     .padding(.bottom, 24)
+                    .focusSection()
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
     #endif
 
@@ -358,8 +403,8 @@ public struct OnboardingFlowView: View {
                 Text("Étape \(currentStep.rawValue + 1)/\(OnboardingStep.allCases.count)")
                     .font(.system(.caption, design: .monospaced, weight: .bold))
                     .foregroundStyle(DesignTokens.signalTeal(colorScheme))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                     .background(DesignTokens.signalTeal(colorScheme).opacity(0.14), in: Capsule())
 
                 Label(currentStep.title, systemImage: currentStep.systemImage)
@@ -370,7 +415,7 @@ public struct OnboardingFlowView: View {
                 Spacer()
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 ForEach(OnboardingStep.allCases) { step in
                     let isActive = step == currentStep
                     let isDone = step.rawValue < currentStep.rawValue
@@ -378,6 +423,37 @@ public struct OnboardingFlowView: View {
                         ? DesignTokens.signalTeal(colorScheme)
                         : (isDone ? DesignTokens.nominal(colorScheme) : .secondary)
 
+                    #if os(tvOS)
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(isActive || isDone ? tint.opacity(0.24) : Color.white.opacity(0.08))
+                                .frame(width: 30, height: 30)
+                            if isDone {
+                                Image(systemName: "checkmark")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(tint)
+                            } else {
+                                Text("\(step.rawValue + 1)")
+                                    .font(.system(.caption, design: .monospaced, weight: .bold))
+                                    .foregroundStyle(tint)
+                            }
+                        }
+
+                        Text(step.title)
+                            .font(.caption.weight(isActive ? .semibold : .regular))
+                            .foregroundStyle(isActive ? DesignTokens.primaryText(colorScheme) : DesignTokens.secondaryText(colorScheme))
+                            .lineLimit(1)
+
+                        Capsule()
+                            .fill(
+                                isDone
+                                    ? DesignTokens.nominal(colorScheme)
+                                    : (isActive ? DesignTokens.signalTeal(colorScheme) : Color.white.opacity(0.14))
+                            )
+                            .frame(height: isActive ? 6 : 4)
+                    }
+                    #else
                     Button {
                         if step.rawValue <= currentStep.rawValue {
                             currentStep = step
@@ -410,19 +486,16 @@ public struct OnboardingFlowView: View {
                         .padding(.vertical, 4)
                         .contentShape(Rectangle())
                     }
-                    #if os(tvOS)
-                    .cardButtonStyle(cornerRadius: 10)
-                    #else
                     .buttonStyle(.plain)
-                    #endif
                     .accessibilityLabel("Étape \(step.rawValue + 1) : \(step.title)")
+                    #endif
                 }
             }
         }
     }
 
     private var bottomNavigationBar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             if currentStep != .connection {
                 Button {
                     if let prev = OnboardingStep(rawValue: currentStep.rawValue - 1) {
@@ -434,7 +507,7 @@ public struct OnboardingFlowView: View {
                         .fixedSize(horizontal: true, vertical: false)
                 }
                 #if os(tvOS)
-                .buttonStyle(.glass)
+                .adaptivePillButtonStyle()
                 #else
                 .buttonStyle(.bordered)
                 #endif
@@ -443,12 +516,14 @@ public struct OnboardingFlowView: View {
             Spacer()
 
             if currentStep == .finalize {
+                let finishDisabled = isFinalizing || normalizedServerURL.isEmpty
                 Button {
+                    guard !finishDisabled else { return }
                     Task { await finishOnboarding() }
                 } label: {
                     if isFinalizing {
                         ProgressView()
-                            .controlSize(.small)
+                            .adaptiveSmallControlSize()
                     } else {
                         Label("Terminer", systemImage: "checkmark.circle.fill")
                             .fontWeight(.semibold)
@@ -457,14 +532,17 @@ public struct OnboardingFlowView: View {
                     }
                 }
                 #if os(tvOS)
-                .buttonStyle(.glassProminent)
+                .opacity(finishDisabled ? 0.5 : 1.0)
+                .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                 #else
                 .buttonStyle(.borderedProminent)
-                #endif
                 .tint(DesignTokens.signalTeal(colorScheme))
-                .disabled(isFinalizing || normalizedServerURL.isEmpty)
+                .disabled(finishDisabled)
+                #endif
             } else {
+                let nextDisabled = currentStep == .connection && normalizedServerURL.isEmpty
                 Button {
+                    guard !nextDisabled else { return }
                     advanceStep()
                 } label: {
                     Label("Suivant", systemImage: "chevron.right")
@@ -473,12 +551,13 @@ public struct OnboardingFlowView: View {
                         .fixedSize(horizontal: true, vertical: false)
                 }
                 #if os(tvOS)
-                .buttonStyle(.glassProminent)
+                .opacity(nextDisabled ? 0.5 : 1.0)
+                .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                 #else
                 .buttonStyle(.borderedProminent)
-                #endif
                 .tint(DesignTokens.signalTeal(colorScheme))
-                .disabled(currentStep == .connection && normalizedServerURL.isEmpty)
+                .disabled(nextDisabled)
+                #endif
             }
         }
     }
@@ -993,10 +1072,10 @@ public struct OnboardingFlowView: View {
                         showAppleTVPairing = true
                     } label: {
                         Label("Recevoir depuis iPhone (PIN 6 chiffres)", systemImage: "appletv.fill")
-                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .font(.callout.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 46)
                     }
-                    .buttonStyle(.glassProminent)
-                    .tint(DesignTokens.signalTeal(colorScheme))
+                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true, cornerRadius: 16)
 
                     Divider()
 
@@ -1004,7 +1083,7 @@ public struct OnboardingFlowView: View {
                         .font(.headline)
                     if viewModel.discoveryService.pveServers.isEmpty {
                         Text("Recherche sur le réseau local…")
-                            .font(.caption)
+                            .font(.callout)
                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     } else {
                         ForEach(viewModel.discoveryService.pveServers) { srv in
@@ -1015,8 +1094,9 @@ public struct OnboardingFlowView: View {
                         viewModel.discoveryService.startPVEDiscovery()
                     } label: {
                         Label("Actualiser Bonjour", systemImage: "arrow.clockwise")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
                 }
             }
             .frame(maxWidth: .infinity)
@@ -1027,14 +1107,17 @@ public struct OnboardingFlowView: View {
                         .font(.title3.weight(.bold))
                     TextField("Nom du serveur", text: $serverNameInput)
                     TextField("https://pve-panel.votre-tailnet.ts.net", text: $serverURLInput)
+                    let probeDisabled = isTestingConnection || normalizedServerURL.isEmpty
                     Button {
+                        guard !probeDisabled else { return }
                         Task { await testStep1Connection() }
                     } label: {
                         Label(isTestingConnection ? "Test…" : "Tester la connexion", systemImage: "checkmark.shield")
-                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .font(.callout.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .opacity(probeDisabled ? 0.5 : 1.0)
                     }
-                    .buttonStyle(.glass)
-                    .disabled(isTestingConnection || normalizedServerURL.isEmpty)
+                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), cornerRadius: 16)
 
                     if let msg = connectionProbeMessage {
                         Label(msg, systemImage: connectionProbeOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
@@ -1061,9 +1144,9 @@ public struct OnboardingFlowView: View {
                         Task { await runOnboardingInit() }
                     } label: {
                         Label("Générer le jeton administrateur", systemImage: "key.fill")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glassProminent)
-                    .tint(DesignTokens.signalTeal(colorScheme))
+                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
 
                     if let generated = generatedOneTimeToken {
                         Text("Jeton généré (affiché une seule fois) : \(generated)")
@@ -1076,9 +1159,9 @@ public struct OnboardingFlowView: View {
                         Task { await signInWithPIN() }
                     } label: {
                         Label("Se connecter via Code PIN", systemImage: "lock.open.fill")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glassProminent)
-                    .tint(DesignTokens.signalTeal(colorScheme))
+                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                 }
                 if let msg = authVerifiedMessage {
                     Label(msg, systemImage: "checkmark.seal.fill").foregroundStyle(.green)
@@ -1093,31 +1176,57 @@ public struct OnboardingFlowView: View {
     private var step3ServicesTVOS: some View {
         GlassCard(padding: 24, cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 16) {
-                HStack {
+                HStack(spacing: 14) {
                     Text("Services & Notifications")
                         .font(.title3.weight(.bold))
                     Spacer()
-                    Button("Scanner LAN") {
+                    Button {
                         Task { await runCombinedLANScan() }
+                    } label: {
+                        Label("Scanner LAN", systemImage: "dot.radiowaves.left.and.right")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glass)
-                    Button("Activer alertes") {
+                    .adaptivePillButtonStyle()
+
+                    Button {
                         Task {
                             let granted = await viewModel.requestPushAuthorization()
                             pushNotificationsOptIn = granted
                         }
+                    } label: {
+                        Label("Activer alertes", systemImage: "bell.badge.fill")
+                            .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle(tint: pushNotificationsOptIn ? DesignTokens.nominal(colorScheme) : nil, prominent: pushNotificationsOptIn)
                 }
                 Text("Modèles rapides : IP \(templateHostInput)")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                HStack(spacing: 12) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 290), spacing: 14)],
+                    spacing: 14
+                ) {
                     ForEach(HomelabTemplate.presets) { template in
-                        Button("+ \(template.name)") {
+                        Button {
                             addServiceFromTemplate(template)
+                        } label: {
+                            HStack(spacing: 12) {
+                                ServiceIconView(
+                                    icon: template.icon,
+                                    serviceId: template.id,
+                                    serviceName: template.name,
+                                    widget: nil,
+                                    isOnline: true,
+                                    size: 32
+                                )
+                                Text("+ \(template.name)")
+                                    .font(.callout.weight(.semibold))
+                                    .lineLimit(1)
+                                Spacer(minLength: 4)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 46)
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle(cornerRadius: 14)
                     }
                 }
                 Text("Services ajoutés : \(stagedServices.count)")

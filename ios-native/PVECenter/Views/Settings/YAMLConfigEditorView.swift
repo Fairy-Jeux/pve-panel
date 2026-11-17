@@ -200,11 +200,49 @@ public struct YAMLConfigEditorView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    HStack(spacing: 14) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Configuration YAML")
+                                .font(.largeTitle.weight(.bold))
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                            Text("config.yaml en lecture seule sur Apple TV")
+                                .font(.callout)
+                                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        }
+                        Spacer()
+                        Button {
+                            Task { await loadConfig() }
+                        } label: {
+                            Label("Recharger", systemImage: "arrow.clockwise")
+                                .font(.callout.weight(.semibold))
+                        }
+                        .adaptivePillButtonStyle()
+
+                        Button {
+                            guard !(isValidating || yamlText.isEmpty) else { return }
+                            Task { await validateSchema() }
+                        } label: {
+                            Label("Valider le schéma", systemImage: "checkmark.shield")
+                                .font(.callout.weight(.semibold))
+                                .opacity((isValidating || yamlText.isEmpty) ? 0.45 : 1.0)
+                        }
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+
+                        Button {
+                            dismiss()
+                        } label: {
+                            Label("Fermer", systemImage: "xmark.circle.fill")
+                                .font(.callout.weight(.semibold))
+                        }
+                        .adaptivePillButtonStyle()
+                    }
+                    .focusSection()
+
                     metadataHeaderBar
                     summaryBadgesStrip
                     validationPanel
 
-                    GlassCard(padding: 20, cornerRadius: 20) {
+                    GlassCard(padding: 24, cornerRadius: 20) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(
                                 "Mode lecture seule sur Apple TV — éditez la configuration YAML depuis iPhone, iPad, Mac ou le panneau web.",
@@ -224,31 +262,12 @@ public struct YAMLConfigEditorView: View {
                             }
                         }
                     }
-
-                    HStack(spacing: 16) {
-                        Button {
-                            Task { await loadConfig() }
-                        } label: {
-                            Label("Recharger", systemImage: "arrow.clockwise")
-                                .frame(minHeight: 50)
-                        }
-                        .buttonStyle(.glass)
-
-                        Button {
-                            Task { await validateSchema() }
-                        } label: {
-                            Label("Valider le schéma", systemImage: "checkmark.shield")
-                                .frame(minHeight: 50)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .tint(DesignTokens.signalTeal(colorScheme))
-                        .disabled(isValidating || yamlText.isEmpty)
-                    }
                 }
                 .padding(.horizontal, 48)
                 .padding(.vertical, 32)
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
     #endif
 

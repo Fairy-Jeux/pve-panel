@@ -117,7 +117,7 @@ public struct ServerSettingsSheet: View {
             tvOSBody
                 .fullScreenCover(item: $activeModal) { route in
                     modalView(for: route)
-                        .preferredColorScheme(viewModel.preferredColorScheme)
+                        .preferredColorScheme(.dark)
                 }
             #else
             standardBody
@@ -127,7 +127,11 @@ public struct ServerSettingsSheet: View {
                 }
             #endif
         }
+        #if os(tvOS)
+        .preferredColorScheme(.dark)
+        #else
         .preferredColorScheme(viewModel.preferredColorScheme)
+        #endif
         .onAppear {
             viewModel.discoveryService.startPVEDiscovery()
             #if os(tvOS)
@@ -179,60 +183,63 @@ public struct ServerSettingsSheet: View {
                             dismiss()
                         } label: {
                             Label("Fermer", systemImage: "xmark.circle.fill")
-                                .padding(.horizontal, 12)
+                                .font(.callout.weight(.semibold))
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                     }
 
                     HStack(alignment: .top, spacing: 32) {
                         VStack(spacing: 24) {
                             GlassCard(padding: 24, cornerRadius: 24) {
-                                VStack(alignment: .leading, spacing: 14) {
+                                VStack(alignment: .leading, spacing: 16) {
                                     Label("Apparence & Couleur Studio", systemImage: "paintpalette.fill")
                                         .font(.title3.weight(.bold))
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
-                                    HStack(spacing: 12) {
+                                    LazyVGrid(
+                                        columns: [GridItem(.adaptive(minimum: 220), spacing: 14)],
+                                        spacing: 14
+                                    ) {
                                         ForEach(AccentTheme.allCases) { preset in
                                             let selected = viewModel.accentTheme == preset
+                                            let presetAccent = DesignTokens.accent(preset, colorScheme)
                                             Button {
                                                 viewModel.setAccentTheme(preset)
                                             } label: {
-                                                HStack(spacing: 8) {
+                                                HStack(spacing: 10) {
                                                     Circle()
                                                         .fill(
                                                             LinearGradient(
                                                                 colors: [
-                                                                    DesignTokens.accent(preset, colorScheme),
+                                                                    presetAccent,
                                                                     DesignTokens.secondaryAccent(preset, colorScheme),
                                                                 ],
                                                                 startPoint: .topLeading,
                                                                 endPoint: .bottomTrailing
                                                             )
                                                         )
-                                                        .frame(width: 18, height: 18)
+                                                        .frame(width: 22, height: 22)
                                                     Text(preset.title)
-                                                        .font(.caption.weight(.semibold))
+                                                        .font(.callout.weight(.semibold))
+                                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                                        .lineLimit(1)
+                                                    Spacer(minLength: 4)
+                                                    if selected {
+                                                        Image(systemName: "checkmark.circle.fill")
+                                                            .foregroundStyle(presetAccent)
+                                                    }
                                                 }
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 6)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 12)
+                                                .frame(maxWidth: .infinity, minHeight: 54)
                                             }
-                                            .buttonStyle(.glass)
-                                            .overlay(
-                                                Capsule().strokeBorder(
-                                                    selected ? DesignTokens.accent(preset, colorScheme) : Color.clear,
-                                                    lineWidth: 1.8
-                                                )
+                                            .adaptiveIconTileButtonStyle(
+                                                isSelected: selected,
+                                                accent: presetAccent,
+                                                cornerRadius: 14
                                             )
                                         }
                                     }
-
-                                    Picker("Apparence", selection: appearanceBinding) {
-                                        ForEach(AppearanceMode.allCases) { mode in
-                                            Label(mode.title, systemImage: mode.systemImage).tag(mode)
-                                        }
-                                    }
-                                    .pickerStyle(.segmented)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -286,11 +293,9 @@ public struct ServerSettingsSheet: View {
                                             systemImage: "play.fill"
                                         )
                                         .font(.headline)
-                                        .foregroundStyle(isDemoButtonFocused ? Color.indigo : Color.white)
-                                        .frame(maxWidth: .infinity, minHeight: 54)
+                                        .frame(maxWidth: .infinity, minHeight: 44)
                                     }
-                                    .buttonStyle(.glassProminent)
-                                    .tint(.indigo)
+                                    .adaptivePillButtonStyle(tint: .indigo, prominent: true, cornerRadius: 16)
                                     .focused($isDemoButtonFocused)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -326,22 +331,30 @@ public struct ServerSettingsSheet: View {
                                                         VStack(alignment: .leading, spacing: 2) {
                                                             Text(server.name)
                                                                 .font(.headline)
+                                                                .lineLimit(1)
                                                             Text(server.baseURL)
                                                                 .font(.caption)
                                                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                                                 .lineLimit(1)
+                                                                .truncationMode(.middle)
                                                         }
                                                         Spacer()
                                                     }
                                                 }
-                                                .buttonStyle(.glass)
+                                                .adaptivePillButtonStyle(
+                                                    tint: isActive ? .green : DesignTokens.signalTeal(colorScheme),
+                                                    cornerRadius: 16
+                                                )
 
                                                 Button(role: .destructive) {
                                                     viewModel.removeServer(id: server.id)
                                                 } label: {
                                                     Image(systemName: "trash")
                                                 }
-                                                .buttonStyle(.glass)
+                                                .adaptivePillButtonStyle(
+                                                    tint: DesignTokens.critical(colorScheme),
+                                                    cornerRadius: 16
+                                                )
                                                 .accessibilityLabel("Supprimer \(server.name)")
                                             }
                                         }
@@ -364,17 +377,23 @@ public struct ServerSettingsSheet: View {
 
                                     let connectDisabled = testing || urlInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                     Button {
+                                        guard !connectDisabled else { return }
                                         Task { await verifyAndAddServer() }
                                     } label: {
                                         HStack {
                                             Label("Tester et connecter", systemImage: "checkmark.shield.fill")
+                                                .font(.callout.weight(.semibold))
                                             Spacer()
                                             if testing { ProgressView() }
                                         }
-                                        .frame(maxWidth: .infinity, minHeight: 50)
+                                        .frame(maxWidth: .infinity, minHeight: 42)
+                                        .opacity(connectDisabled ? 0.5 : 1.0)
                                     }
-                                    .buttonStyle(.glass)
-                                    .disabled(connectDisabled)
+                                    .adaptivePillButtonStyle(
+                                        tint: DesignTokens.signalTeal(colorScheme),
+                                        prominent: true,
+                                        cornerRadius: 16
+                                    )
 
                                     if let statusBanner {
                                         Label(
@@ -393,18 +412,21 @@ public struct ServerSettingsSheet: View {
                                         .font(.title3.weight(.semibold))
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
+                                    let wizardUnavailable = viewModel.serverBaseURL.isEmpty && !viewModel.isDemoMode
                                     Button {
+                                        guard !wizardUnavailable else { return }
                                         activeModal = .setupWizard
                                     } label: {
                                         HStack {
                                             Label("Configurer Proxmox, Tailscale & Médias…", systemImage: "slider.horizontal.3")
+                                                .font(.callout.weight(.semibold))
                                             Spacer()
                                             Image(systemName: "chevron.right")
                                         }
-                                        .frame(maxWidth: .infinity, minHeight: 50)
+                                        .frame(maxWidth: .infinity, minHeight: 42)
+                                        .opacity(wizardUnavailable ? 0.45 : 1.0)
                                     }
-                                    .buttonStyle(.glass)
-                                    .disabled(viewModel.serverBaseURL.isEmpty && !viewModel.isDemoMode)
+                                    .adaptivePillButtonStyle(cornerRadius: 16)
 
                                     Toggle(
                                         "Actualisation automatique (5s)",
@@ -431,12 +453,14 @@ public struct ServerSettingsSheet: View {
         } label: {
             HStack {
                 Label(title, systemImage: systemImage)
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(1)
                 Spacer()
                 Image(systemName: "chevron.right")
             }
-            .frame(maxWidth: .infinity, minHeight: 48)
+            .frame(maxWidth: .infinity, minHeight: 40)
         }
-        .buttonStyle(.glass)
+        .adaptivePillButtonStyle(cornerRadius: 16)
     }
     #endif
 

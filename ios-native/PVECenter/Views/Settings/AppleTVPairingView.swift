@@ -96,6 +96,11 @@ public struct AppleTVPairingView: View {
         #if os(macOS)
         .frame(minWidth: 520, idealWidth: 580, minHeight: 540)
         #endif
+        #if os(tvOS)
+        .preferredColorScheme(.dark)
+        #else
+        .preferredColorScheme(viewModel.preferredColorScheme)
+        #endif
         .task(id: roleMode) {
             await activateCurrentMode()
         }
@@ -140,7 +145,17 @@ public struct AppleTVPairingView: View {
                         }
                         .pickerStyle(.segmented)
                         .frame(maxWidth: 460)
+
+                        Button {
+                            cleanup()
+                            dismiss()
+                        } label: {
+                            Label("Fermer", systemImage: "xmark.circle.fill")
+                                .font(.callout.weight(.semibold))
+                        }
+                        .adaptivePillButtonStyle()
                     }
+                    .focusSection()
 
                     if roleMode == .receiver {
                         tvOSReceiverCard
@@ -152,6 +167,7 @@ public struct AppleTVPairingView: View {
                 .padding(.vertical, 32)
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var tvOSReceiverCard: some View {
@@ -187,9 +203,10 @@ public struct AppleTVPairingView: View {
                             Task { await restartReceiver() }
                         } label: {
                             Label("Générer un nouveau code", systemImage: "arrow.clockwise")
-                                .frame(minWidth: 260, minHeight: 50)
+                                .font(.callout.weight(.semibold))
+                                .frame(minWidth: 280, minHeight: 42)
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -212,20 +229,22 @@ public struct AppleTVPairingView: View {
                     } label: {
                         HStack {
                             Label("Relais HTTPS optionnel (VLAN différent)", systemImage: "network")
+                                .font(.callout.weight(.semibold))
                             Spacer()
                             Image(systemName: showRelayField ? "chevron.up" : "chevron.down")
                         }
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle(cornerRadius: 16)
 
                     if showRelayField {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 12) {
                             TextField("https://pve-panel.votre-tailnet.ts.net", text: $customRelayURL)
                                 .autocorrectionDisabled()
                             Button("Appliquer le relais") {
                                 Task { await restartReceiver() }
                             }
-                            .buttonStyle(.glass)
+                            .font(.callout.weight(.semibold))
+                            .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
                         }
                         .padding(.top, 4)
                     }
@@ -412,9 +431,15 @@ public struct AppleTVPairingView: View {
                 }
                 Spacer()
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .adaptiveIconTileButtonStyle(
+            isSelected: selectedTargetID == nil,
+            accent: DesignTokens.signalTeal(colorScheme),
+            cornerRadius: 12
+        )
 
         if receivers.isEmpty {
             HStack(spacing: 8) {
@@ -443,9 +468,15 @@ public struct AppleTVPairingView: View {
                         }
                         Spacer()
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .adaptiveIconTileButtonStyle(
+                    isSelected: isSelected,
+                    accent: DesignTokens.signalTeal(colorScheme),
+                    cornerRadius: 12
+                )
             }
         }
     }
@@ -489,6 +520,7 @@ public struct AppleTVPairingView: View {
             && (!viewModel.serverBaseURL.isEmpty || viewModel.isDemoMode)
 
         return Button {
+            guard canSend else { return }
             Task { await sendPayload() }
         } label: {
             HStack {
@@ -502,16 +534,17 @@ public struct AppleTVPairingView: View {
                 Spacer()
             }
             #if os(tvOS)
-            .frame(minHeight: 50)
+            .frame(minHeight: 46)
+            .opacity(canSend ? 1.0 : 0.45)
             #endif
         }
         #if os(tvOS)
-        .buttonStyle(.glassProminent)
+        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true, cornerRadius: 16)
         #else
         .buttonStyle(.borderedProminent)
-        #endif
         .tint(DesignTokens.signalTeal(colorScheme))
         .disabled(!canSend)
+        #endif
     }
 
     private func pinDigitsDisplay(pin: String, large: Bool) -> some View {
@@ -564,7 +597,7 @@ public struct AppleTVPairingView: View {
                 .foregroundStyle(.orange)
         } else {
             ProgressView("Démarrage du service d'appairage…")
-                .controlSize(.small)
+                .adaptiveSmallControlSize()
         }
     }
 

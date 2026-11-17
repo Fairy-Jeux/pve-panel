@@ -171,6 +171,68 @@ public extension View {
         self.controlSize(.small)
         #endif
     }
+
+    @ViewBuilder
+    func adaptivePillButtonStyle(
+        tint: Color? = nil,
+        prominent: Bool = false,
+        cornerRadius: CGFloat? = nil
+    ) -> some View {
+        #if os(tvOS)
+        self.buttonStyle(
+            TVGlassPillButtonStyle(
+                tint: tint,
+                prominent: prominent,
+                cornerRadius: cornerRadius
+            )
+        )
+        #else
+        if prominent {
+            if let tint {
+                self.buttonStyle(.glassProminent).tint(tint)
+            } else {
+                self.buttonStyle(.glassProminent)
+            }
+        } else {
+            if let tint {
+                self.buttonStyle(.glass).tint(tint)
+            } else {
+                self.buttonStyle(.glass)
+            }
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    func adaptiveIconTileButtonStyle(
+        isSelected: Bool,
+        accent: Color,
+        cornerRadius: CGFloat = 12
+    ) -> some View {
+        #if os(tvOS)
+        self.buttonStyle(
+            TVIconTileButtonStyle(
+                isSelected: isSelected,
+                accent: accent,
+                cornerRadius: cornerRadius
+            )
+        )
+        #else
+        self.buttonStyle(.plain)
+        #endif
+    }
+
+    @ViewBuilder
+    func adaptiveTVOSModalFormContainer(maxWidth: CGFloat = 1160) -> some View {
+        #if os(tvOS)
+        self
+            .frame(maxWidth: maxWidth)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { AmbientBackgroundView() }
+        #else
+        self.formStyle(.grouped)
+        #endif
+    }
 }
 
 #if os(tvOS)
@@ -206,8 +268,8 @@ private struct TVGlassCardButtonBody: View {
         let fillColor: Color = reduceTransparency
             ? (isFocused ? Color(red: 0.082, green: 0.118, blue: 0.196) : DesignTokens.surface(colorScheme))
             : (isFocused
-                ? Color(red: 0.055, green: 0.090, blue: 0.165).opacity(0.86)
-                : Color(red: 0.035, green: 0.051, blue: 0.098).opacity(0.62))
+                ? Color(red: 0.055, green: 0.095, blue: 0.175).opacity(0.92)
+                : Color(red: 0.038, green: 0.056, blue: 0.106).opacity(0.76))
 
         configuration.label
             .background(shape.fill(fillColor))
@@ -215,13 +277,13 @@ private struct TVGlassCardButtonBody: View {
                 shape.strokeBorder(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.22),
                             Color.white.opacity(0.06),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 0.85
+                    lineWidth: 1
                 )
                 .opacity(isFocused ? 0 : 1)
             )
@@ -244,6 +306,151 @@ private struct TVGlassCardButtonBody: View {
             .animation(
                 reduceMotion ? nil : .easeOut(duration: 0.12),
                 value: configuration.isPressed
+            )
+    }
+}
+
+/// High-contrast dark-glass pill button style for tvOS actions so focus never
+/// washes colored labels into white-on-white.
+public struct TVGlassPillButtonStyle: ButtonStyle {
+    public var tint: Color?
+    public var prominent: Bool
+    public var cornerRadius: CGFloat?
+
+    public init(tint: Color? = nil, prominent: Bool = false, cornerRadius: CGFloat? = nil) {
+        self.tint = tint
+        self.prominent = prominent
+        self.cornerRadius = cornerRadius
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        TVGlassPillButtonBody(
+            configuration: configuration,
+            tint: tint,
+            prominent: prominent,
+            cornerRadius: cornerRadius
+        )
+    }
+}
+
+private struct TVGlassPillButtonBody: View {
+    @Environment(\.isFocused) private var isFocused
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let configuration: ButtonStyleConfiguration
+    let tint: Color?
+    let prominent: Bool
+    let cornerRadius: CGFloat?
+
+    var body: some View {
+        let resolvedTint = tint ?? DesignTokens.signalTeal(colorScheme)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius ?? 999, style: .continuous)
+
+        let restFill: Color = prominent
+            ? resolvedTint.opacity(reduceTransparency ? 0.42 : 0.30)
+            : Color.white.opacity(reduceTransparency ? 0.14 : 0.085)
+        let focusFill: Color = prominent
+            ? resolvedTint.opacity(0.88)
+            : resolvedTint.opacity(0.32)
+        let restForeground: Color = prominent ? .white : (tint ?? Color.white.opacity(0.94))
+        let restBorder: Color = prominent ? resolvedTint.opacity(0.65) : Color.white.opacity(0.20)
+        let focusBorder: Color = prominent ? Color.white.opacity(0.85) : resolvedTint
+
+        configuration.label
+            .foregroundStyle(isFocused ? Color.white : restForeground)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(
+                ZStack {
+                    shape.fill(Color(red: 0.04, green: 0.06, blue: 0.12).opacity(0.92))
+                    shape.fill(isFocused ? focusFill : restFill)
+                }
+            )
+            .overlay(
+                shape.strokeBorder(
+                    isFocused ? focusBorder : restBorder,
+                    lineWidth: isFocused ? 2.5 : 1
+                )
+            )
+            .contentShape(shape)
+            .shadow(
+                color: isFocused ? resolvedTint.opacity(0.45) : .clear,
+                radius: isFocused ? 12 : 0,
+                x: 0,
+                y: isFocused ? 4 : 0
+            )
+            .scaleEffect(configuration.isPressed ? 0.96 : (isFocused ? 1.04 : 1.0))
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.20, dampingFraction: 0.82),
+                value: isFocused
+            )
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.10),
+                value: configuration.isPressed
+            )
+    }
+}
+
+/// Focusable tile style for tvOS icon grids and theme swatch selectors.
+public struct TVIconTileButtonStyle: ButtonStyle {
+    public var isSelected: Bool
+    public var accent: Color
+    public var cornerRadius: CGFloat
+
+    public init(isSelected: Bool, accent: Color, cornerRadius: CGFloat = 12) {
+        self.isSelected = isSelected
+        self.accent = accent
+        self.cornerRadius = cornerRadius
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        TVIconTileButtonBody(
+            configuration: configuration,
+            isSelected: isSelected,
+            accent: accent,
+            cornerRadius: cornerRadius
+        )
+    }
+}
+
+private struct TVIconTileButtonBody: View {
+    @Environment(\.isFocused) private var isFocused
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let configuration: ButtonStyleConfiguration
+    let isSelected: Bool
+    let accent: Color
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        configuration.label
+            .background(
+                shape.fill(
+                    isFocused
+                        ? accent.opacity(isSelected ? 0.36 : 0.24)
+                        : (isSelected ? accent.opacity(0.20) : Color.white.opacity(0.06))
+                )
+            )
+            .overlay(
+                shape.strokeBorder(
+                    isFocused ? accent : (isSelected ? accent.opacity(0.85) : Color.white.opacity(0.14)),
+                    lineWidth: isFocused ? 3 : (isSelected ? 1.75 : 1)
+                )
+            )
+            .contentShape(shape)
+            .shadow(
+                color: isFocused ? accent.opacity(0.50) : .clear,
+                radius: isFocused ? 10 : 0,
+                x: 0,
+                y: isFocused ? 3 : 0
+            )
+            .scaleEffect(configuration.isPressed ? 0.95 : (isFocused ? 1.06 : 1.0))
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.20, dampingFraction: 0.82),
+                value: isFocused
             )
     }
 }
@@ -277,6 +484,39 @@ public struct GlassCard<Content: View>: View {
 
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        #if os(tvOS)
+        if interactive {
+            // TVGlassCardButtonStyle already draws surface, specular stroke, and focus halo.
+            content
+                .padding(padding)
+        } else {
+            let fill = reduceTransparency
+                ? DesignTokens.surface(colorScheme)
+                : Color(red: 0.042, green: 0.062, blue: 0.118).opacity(elevated ? 0.90 : 0.78)
+            content
+                .padding(padding)
+                .background(shape.fill(fill))
+                .overlay(
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(elevated ? 0.24 : 0.18),
+                                Color.white.opacity(0.05),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                )
+                .shadow(
+                    color: Color.black.opacity(elevated ? 0.36 : 0.22),
+                    radius: elevated ? 16 : 10,
+                    x: 0,
+                    y: 6
+                )
+        }
+        #else
         if reduceTransparency {
             content
                 .padding(padding)
@@ -331,6 +571,7 @@ public struct GlassCard<Content: View>: View {
                     )
                 )
         }
+        #endif
     }
 }
 
@@ -433,6 +674,25 @@ public struct StatusPill: View {
     }
 
     public var body: some View {
+        #if os(tvOS)
+        let base = HStack(spacing: 7) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .foregroundStyle(color)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+
+        base
+            .background(color.opacity(reduceTransparency ? 0.24 : 0.16), in: Capsule())
+            .overlay(Capsule().strokeBorder(color.opacity(reduceTransparency ? 0.55 : 0.38), lineWidth: 1))
+        #else
         let base = HStack(spacing: 5) {
             Image(systemName: systemImage)
                 .font(.caption2.weight(.bold))
@@ -457,6 +717,7 @@ public struct StatusPill: View {
                 .glassEffect(.regular.interactive(), in: Capsule())
                 .overlay(Capsule().strokeBorder(color.opacity(0.32), lineWidth: 0.75))
         }
+        #endif
     }
 }
 
@@ -486,7 +747,7 @@ public struct RackBayMatrixView: View {
 
     private var resourceColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 155), spacing: 10)]
+        return [GridItem(.adaptive(minimum: 195), spacing: 12)]
         #else
         return [GridItem(.adaptive(minimum: 92), spacing: 6)]
         #endif
@@ -494,7 +755,7 @@ public struct RackBayMatrixView: View {
 
     private var driveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 155), spacing: 10)]
+        return [GridItem(.adaptive(minimum: 195), spacing: 12)]
         #else
         return [GridItem(.adaptive(minimum: 84), spacing: 6)]
         #endif
@@ -504,23 +765,33 @@ public struct RackBayMatrixView: View {
         Button(action: action) {
             HStack {
                 Text(title)
+                    #if os(tvOS)
+                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                    #else
                     .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                    #endif
                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                 Spacer()
                 Image(systemName: "chevron.right")
+                    #if os(tvOS)
+                    .font(.caption.weight(.semibold))
+                    #else
                     .font(.caption2.weight(.semibold))
+                    #endif
                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
             }
             #if os(tvOS)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            #endif
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(minHeight: 42)
+            #else
             .frame(minHeight: 26)
+            #endif
             .contentShape(Rectangle())
         }
-        .cardButtonStyle(cornerRadius: 10)
+        .cardButtonStyle(cornerRadius: 12)
     }
 
     public var body: some View {
@@ -529,7 +800,19 @@ public struct RackBayMatrixView: View {
         let caution = DesignTokens.caution(colorScheme)
         let critical = DesignTokens.critical(colorScheme)
 
-        GlassCard(padding: 16, cornerRadius: 22) {
+        #if os(tvOS)
+        let cardPadding: CGFloat = 24
+        let badgeFont: Font = .system(.caption2, design: .monospaced, weight: .bold)
+        let cellHPad: CGFloat = 12
+        let cellVPad: CGFloat = 10
+        #else
+        let cardPadding: CGFloat = 16
+        let badgeFont: Font = .system(size: 9, weight: .bold, design: .monospaced)
+        let cellHPad: CGFloat = 8
+        let cellVPad: CGFloat = 6
+        #endif
+
+        GlassCard(padding: cardPadding, cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -549,15 +832,15 @@ public struct RackBayMatrixView: View {
                 }
 
                 if !resources.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         sectionHeaderButton(
                             "NŒUDS & CONTENEURS (\(resources.filter(\.isRunning).count)/\(resources.count))",
                             action: onSelectMachines
                         )
 
-                        LazyVGrid(columns: resourceColumns, spacing: 8) {
+                        LazyVGrid(columns: resourceColumns, spacing: 10) {
                             ForEach(resources) { res in
-                                HStack(spacing: 5) {
+                                HStack(spacing: 6) {
                                     Image(systemName: res.isRunning ? "power.circle.fill" : "pause.circle")
                                         .font(.caption2)
                                         .foregroundStyle(res.isRunning ? nominal : DesignTokens.secondaryText(colorScheme))
@@ -568,13 +851,13 @@ public struct RackBayMatrixView: View {
                                         .minimumScaleFactor(0.8)
                                     Spacer(minLength: 0)
                                     Text(res.type.badgeLabel)
-                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .font(badgeFont)
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
+                                .padding(.horizontal, cellHPad)
+                                .padding(.vertical, cellVPad)
                                 .background(
                                     DesignTokens.surfaceElevated(colorScheme),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -586,13 +869,13 @@ public struct RackBayMatrixView: View {
                 }
 
                 if !drives.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         sectionHeaderButton(
-                            "BAIES DISQUES (\(drives.count) MONTÉS)",
+                            "BAIES DISQUES (\(drives.count) MONTÉS)",
                             action: onSelectStorage
                         )
 
-                        LazyVGrid(columns: driveColumns, spacing: 8) {
+                        LazyVGrid(columns: driveColumns, spacing: 10) {
                             ForEach(Array(drives.enumerated()), id: \.element.id) { idx, drive in
                                 let bayColor: Color = !drive.isHealthy
                                     ? critical
@@ -615,7 +898,7 @@ public struct RackBayMatrixView: View {
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)
                                 }
-                                .padding(8)
+                                .padding(cellVPad + 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     DesignTokens.surfaceElevated(colorScheme),

@@ -39,7 +39,7 @@ public struct UsersTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 560), spacing: 18)]
+        return [GridItem(.adaptive(minimum: 740), spacing: 24)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 310), spacing: 12)]
         #else
@@ -49,7 +49,7 @@ public struct UsersTabView: View {
 
     private var gridRowSpacing: CGFloat {
         #if os(tvOS)
-        return 18
+        return 22
         #else
         return 12
         #endif
@@ -57,7 +57,7 @@ public struct UsersTabView: View {
 
     private var sectionSpacing: CGFloat {
         #if os(tvOS)
-        return 20
+        return 24
         #else
         return 14
         #endif
@@ -107,6 +107,18 @@ public struct UsersTabView: View {
             .padding(.horizontal, DesignTokens.pageHorizontalPadding)
             .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
+        #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
+        .fullScreenCover(isPresented: $showCreateSheet) {
+            CreateUserSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
+        }
+        .fullScreenCover(item: $selectedUser) { user in
+            ManageUserSheet(viewModel: viewModel, user: user)
+                .preferredColorScheme(.dark)
+        }
+        #else
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
@@ -116,22 +128,25 @@ public struct UsersTabView: View {
         #endif
         .sheet(isPresented: $showCreateSheet) {
             CreateUserSheet(viewModel: viewModel)
-                #if !os(tvOS)
                 .preferredColorScheme(viewModel.preferredColorScheme)
-                #endif
         }
         .sheet(item: $selectedUser) { user in
             ManageUserSheet(viewModel: viewModel, user: user)
-                #if !os(tvOS)
                 .preferredColorScheme(viewModel.preferredColorScheme)
-                #endif
         }
+        #endif
     }
 
     private var headerActionsCard: some View {
         let counts = viewModel.usersOverview?.counts
 
-        return GlassCard {
+        return GlassCard(padding: {
+            #if os(tvOS)
+            20
+            #else
+            16
+            #endif
+        }()) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -150,21 +165,21 @@ public struct UsersTabView: View {
                         showCreateSheet = true
                     } label: {
                         Label("Créer", systemImage: "person.badge.plus")
+                            #if os(tvOS)
+                            .font(.callout.weight(.semibold))
+                            #else
+                            .frame(minHeight: 28)
+                            #endif
                             .lineLimit(1)
                             .fixedSize()
-                            .frame(minHeight: 28)
                     }
-                    #if os(tvOS)
-                    .buttonStyle(.glass)
-                    #else
-                    .buttonStyle(.glassProminent)
-                    .tint(DesignTokens.signalTeal(colorScheme))
-                    #endif
+                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                     .adaptiveSmallControlSize()
                 }
 
                 if let unsynced = counts?.unsyncedCount, unsynced > 0 {
                     Button {
+                        guard !isSyncing else { return }
                         Task {
                             isSyncing = true
                             await viewModel.syncMissingUsers()
@@ -174,17 +189,25 @@ public struct UsersTabView: View {
                         HStack {
                             Image(systemName: "arrow.triangle.2.circlepath")
                             Text(isSyncing ? "Synchronisation…" : "Importer \(unsynced) compte(s) vers Jellyseerr")
+                                #if os(tvOS)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .font(.caption.weight(.semibold))
+                                #endif
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.85)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption2)
                         }
+                        #if !os(tvOS)
                         .frame(maxWidth: .infinity, minHeight: 30)
+                        #endif
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
+                    #if !os(tvOS)
                     .disabled(isSyncing)
+                    #endif
                 }
             }
         }
@@ -195,23 +218,30 @@ public struct UsersTabView: View {
         let critical = DesignTokens.critical(colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
         let caution = DesignTokens.caution(colorScheme)
+        #if os(tvOS)
+        let cardPadding: CGFloat = 20
+        let avatarSize: CGFloat = 52
+        #else
+        let cardPadding: CGFloat = 14
+        let avatarSize: CGFloat = 40
+        #endif
 
         return Button {
             selectedUser = user
         } label: {
-            GlassCard(padding: 14, cornerRadius: 16, interactive: true) {
-                HStack(spacing: 12) {
+            GlassCard(padding: cardPadding, cornerRadius: 18, interactive: true) {
+                HStack(spacing: 14) {
                     Text(String(user.name.prefix(2)).uppercased())
                         .font(.system(.subheadline, design: .monospaced, weight: .bold))
                         .foregroundStyle(user.isDisabled ? critical : (user.isAdmin ? teal : DesignTokens.primaryText(colorScheme)))
-                        .frame(width: 40, height: 40)
+                        .frame(width: avatarSize, height: avatarSize)
                         .background(
                             DesignTokens.surfaceElevated(colorScheme),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
 
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             Text(user.name)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
@@ -219,7 +249,11 @@ public struct UsersTabView: View {
                                 .minimumScaleFactor(0.82)
                             if user.isProtected == true {
                                 Image(systemName: "shield.checkmark.fill")
+                                    #if os(tvOS)
+                                    .font(.caption)
+                                    #else
                                     .font(.caption2)
+                                    #endif
                                     .foregroundStyle(teal)
                                     .accessibilityLabel("Compte propriétaire protégé")
                             }
@@ -233,15 +267,27 @@ public struct UsersTabView: View {
 
                         HStack(spacing: 6) {
                             Text(user.inJellyseerr ? "Jellyseerr: \(user.autoApprove ? "Auto" : "Manuel")" : "Non importé")
+                                #if os(tvOS)
+                                .font(.caption)
+                                #else
                                 .font(.caption2)
+                                #endif
                                 .foregroundStyle(user.inJellyseerr ? nominal : caution)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.82)
                             Text("•")
+                                #if os(tvOS)
+                                .font(.caption)
+                                #else
                                 .font(.caption2)
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                             Text("Activité: \(ByteFormatters.formatRelativeISO(user.lastActivity))")
+                                #if os(tvOS)
+                                .font(.caption)
+                                #else
                                 .font(.caption2)
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.82)
@@ -256,10 +302,10 @@ public struct UsersTabView: View {
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .font(.subheadline)
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: 52)
             }
         }
-        .cardButtonStyle()
+        .cardButtonStyle(cornerRadius: 18)
     }
 }
 

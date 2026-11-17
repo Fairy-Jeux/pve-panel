@@ -29,7 +29,7 @@ public struct ServicesTabView: View {
 
     private var adaptiveColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 560), spacing: 20)]
+        return [GridItem(.adaptive(minimum: 760), spacing: 24)]
         #elseif os(macOS)
         return [GridItem(.adaptive(minimum: 320), spacing: 14)]
         #else
@@ -39,7 +39,7 @@ public struct ServicesTabView: View {
 
     private var gridRowSpacing: CGFloat {
         #if os(tvOS)
-        return 20
+        return 24
         #else
         return 14
         #endif
@@ -47,7 +47,7 @@ public struct ServicesTabView: View {
 
     private var categorySpacing: CGFloat {
         #if os(tvOS)
-        return 24
+        return 28
         #else
         return 18
         #endif
@@ -142,10 +142,15 @@ public struct ServicesTabView: View {
             .padding(.horizontal, DesignTokens.pageHorizontalPadding)
             .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
+        #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
+        #else
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #endif
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: filter)
         #endif
@@ -203,8 +208,14 @@ public struct ServicesTabView: View {
         let catServices = viewModel.categories.flatMap(\.services)
         let catOnline = catServices.filter(\.online).count
 
-        return GlassCard(padding: 14, cornerRadius: 18) {
-            VStack(alignment: .leading, spacing: 12) {
+        return GlassCard(padding: {
+            #if os(tvOS)
+            20
+            #else
+            14
+            #endif
+        }(), cornerRadius: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Hub de services & sondes")
@@ -222,16 +233,15 @@ public struct ServicesTabView: View {
                         showAddSheet = true
                     } label: {
                         Label("Ajouter un service", systemImage: "plus")
+                            #if os(tvOS)
+                            .font(.callout.weight(.semibold))
+                            #else
                             .font(.caption.weight(.semibold))
-                            .lineLimit(1)
                             .frame(minHeight: 28)
+                            #endif
+                            .lineLimit(1)
                     }
-                    #if os(tvOS)
-                    .buttonStyle(.glass)
-                    #else
-                    .buttonStyle(.glassProminent)
-                    .tint(teal)
-                    #endif
+                    .adaptivePillButtonStyle(tint: teal, prominent: true)
                     .adaptiveSmallControlSize()
                 }
 
@@ -256,13 +266,17 @@ public struct ServicesTabView: View {
                 Spacer()
                 if viewModel.customServices.count > 1 && canReorderCustomServices {
                     Text("Réorganiser ↑↓")
+                        #if os(tvOS)
+                        .font(.caption)
+                        #else
                         .font(.caption2)
+                        #endif
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 }
             }
 
             if filteredCustomServices.isEmpty {
-                GlassCard(padding: 16, cornerRadius: 16) {
+                GlassCard(padding: 18, cornerRadius: 16) {
                     HStack {
                         Label("Aucun service personnalisé configuré.", systemImage: "plus.app")
                             .font(.subheadline)
@@ -271,7 +285,7 @@ public struct ServicesTabView: View {
                         Button("Ajouter") {
                             showAddSheet = true
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
                         .adaptiveSmallControlSize()
                     }
                 }
@@ -294,9 +308,18 @@ public struct ServicesTabView: View {
         let muted = isServiceMuted(service)
         let isBusyTesting = testingServiceID == service.id
         let latestTest = inlineTestResults[service.id]
+        #if os(tvOS)
+        let cardPadding: CGFloat = 20
+        let iconSize: CGFloat = 52
+        let actionSpacing: CGFloat = 12
+        #else
+        let cardPadding: CGFloat = 14
+        let iconSize: CGFloat = 40
+        let actionSpacing: CGFloat = 6
+        #endif
 
-        return GlassCard(padding: 14, cornerRadius: 16) {
-            VStack(alignment: .leading, spacing: 10) {
+        return GlassCard(padding: cardPadding, cornerRadius: 18) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
                     ServiceIconView(
                         icon: service.icon,
@@ -304,11 +327,11 @@ public struct ServicesTabView: View {
                         serviceName: service.name,
                         widget: nil,
                         isOnline: service.isOnline,
-                        size: 40
+                        size: iconSize
                     )
 
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             Text(service.name)
                                 .font(.headline)
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
@@ -344,7 +367,11 @@ public struct ServicesTabView: View {
 
                         HStack(spacing: 8) {
                             Text(targetSubtitle(for: service))
+                                #if os(tvOS)
+                                .font(.system(.caption, design: .monospaced))
+                                #else
                                 .font(.system(.caption2, design: .monospaced))
+                                #endif
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
@@ -363,10 +390,18 @@ public struct ServicesTabView: View {
                 if let test = latestTest {
                     HStack(spacing: 6) {
                         Image(systemName: test.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            #if os(tvOS)
+                            .font(.caption)
+                            #else
                             .font(.caption2)
+                            #endif
                             .foregroundStyle(test.ok ? nominal : critical)
                         Text("\(test.message) (\(test.latencyMs) ms)")
+                            #if os(tvOS)
+                            .font(.caption.weight(.medium))
+                            #else
                             .font(.caption2.weight(.medium))
+                            #endif
                             .foregroundStyle(DesignTokens.primaryText(colorScheme))
                             .lineLimit(1)
                     }
@@ -379,13 +414,18 @@ public struct ServicesTabView: View {
                     )
                 } else if let msg = service.lastError ?? service.message, !msg.isEmpty, !service.isOnline {
                     Text(msg)
+                        #if os(tvOS)
+                        .font(.caption)
+                        #else
                         .font(.caption2)
+                        #endif
                         .foregroundStyle(critical)
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: actionSpacing) {
                     Button {
+                        guard !isBusyTesting else { return }
                         Task {
                             testingServiceID = service.id
                             if let res = await viewModel.testCustomService(id: service.id) {
@@ -395,11 +435,17 @@ public struct ServicesTabView: View {
                         }
                     } label: {
                         Label(isBusyTesting ? "Test…" : "Tester", systemImage: "bolt.horizontal.circle")
+                            #if os(tvOS)
+                            .font(.callout.weight(.semibold))
+                            #else
                             .font(.caption.weight(.semibold))
+                            #endif
                             .lineLimit(1)
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
+                    #if !os(tvOS)
                     .disabled(isBusyTesting)
+                    #endif
                     .adaptiveSmallControlSize()
 
                     Button {
@@ -408,7 +454,7 @@ public struct ServicesTabView: View {
                         Label("Modifier", systemImage: "pencil")
                             .labelStyle(.iconOnly)
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle()
                     .adaptiveSmallControlSize()
                     .accessibilityLabel("Modifier \(service.name)")
 
@@ -423,34 +469,38 @@ public struct ServicesTabView: View {
                     } label: {
                         Label(muted ? "Réactiver alertes" : "Sourdine 1h", systemImage: muted ? "bell.badge.fill" : "bell.slash")
                             .labelStyle(.iconOnly)
+                            #if !os(tvOS)
                             .foregroundStyle(muted ? caution : DesignTokens.secondaryText(colorScheme))
+                            #endif
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle(tint: muted ? caution : nil)
                     .adaptiveSmallControlSize()
                     .accessibilityLabel(muted ? "Lever la sourdine de \(service.name)" : "Mettre \(service.name) en sourdine 1h")
 
                     if canReorderCustomServices && total > 1 {
-                        Button {
-                            Task { await moveCustomService(at: index, offset: -1) }
-                        } label: {
-                            Label("Monter", systemImage: "arrow.up")
-                                .labelStyle(.iconOnly)
+                        if index > 0 {
+                            Button {
+                                Task { await moveCustomService(at: index, offset: -1) }
+                            } label: {
+                                Label("Monter", systemImage: "arrow.up")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .adaptivePillButtonStyle()
+                            .adaptiveSmallControlSize()
+                            .accessibilityLabel("Monter \(service.name)")
                         }
-                        .buttonStyle(.glass)
-                        .disabled(index == 0)
-                        .adaptiveSmallControlSize()
-                        .accessibilityLabel("Monter \(service.name)")
 
-                        Button {
-                            Task { await moveCustomService(at: index, offset: 1) }
-                        } label: {
-                            Label("Descendre", systemImage: "arrow.down")
-                                .labelStyle(.iconOnly)
+                        if index < total - 1 {
+                            Button {
+                                Task { await moveCustomService(at: index, offset: 1) }
+                            } label: {
+                                Label("Descendre", systemImage: "arrow.down")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .adaptivePillButtonStyle()
+                            .adaptiveSmallControlSize()
+                            .accessibilityLabel("Descendre \(service.name)")
                         }
-                        .buttonStyle(.glass)
-                        .disabled(index >= total - 1)
-                        .adaptiveSmallControlSize()
-                        .accessibilityLabel("Descendre \(service.name)")
                     }
 
                     Spacer(minLength: 4)
@@ -464,7 +514,7 @@ public struct ServicesTabView: View {
                             Label("Ouvrir", systemImage: "arrow.up.right")
                                 .labelStyle(.iconOnly)
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                         .adaptiveSmallControlSize()
                         .accessibilityLabel("Ouvrir \(service.name) dans le navigateur")
                     }
@@ -475,9 +525,11 @@ public struct ServicesTabView: View {
                     } label: {
                         Label("Supprimer", systemImage: "trash")
                             .labelStyle(.iconOnly)
+                            #if !os(tvOS)
                             .foregroundStyle(critical)
+                            #endif
                     }
-                    .buttonStyle(.glass)
+                    .adaptivePillButtonStyle(tint: critical)
                     .adaptiveSmallControlSize()
                     .accessibilityLabel("Supprimer \(service.name)")
                 }
@@ -500,9 +552,18 @@ public struct ServicesTabView: View {
             ?? (matchingCustom.map { ServiceSymbolCatalog.shortProtocolBadge($0.`protocol`) })
             ?? (service.url.lowercased().hasPrefix("http") ? "HTTP" : nil)
         let metrics = service.metrics ?? matchingCustom?.metrics
+        #if os(tvOS)
+        let cardPadding: CGFloat = 20
+        let iconSize: CGFloat = 52
+        let actionSpacing: CGFloat = 12
+        #else
+        let cardPadding: CGFloat = 14
+        let iconSize: CGFloat = 40
+        let actionSpacing: CGFloat = 8
+        #endif
 
-        return GlassCard(padding: 14, cornerRadius: 16) {
-            VStack(alignment: .leading, spacing: 10) {
+        return GlassCard(padding: cardPadding, cornerRadius: 18) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
                     ServiceIconView(
                         icon: service.icon,
@@ -510,11 +571,11 @@ public struct ServicesTabView: View {
                         serviceName: service.name,
                         widget: service.widget,
                         isOnline: service.online,
-                        size: 40
+                        size: iconSize
                     )
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
                             Text(service.name)
                                 .font(.headline)
                                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
@@ -551,7 +612,17 @@ public struct ServicesTabView: View {
                     widgetStrip(for: widgetKey)
                 }
 
-                HStack(spacing: 8) {
+                #if os(tvOS)
+                if !service.url.isEmpty {
+                    Label(service.url, systemImage: "network")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                #endif
+
+                HStack(spacing: actionSpacing) {
                     #if !os(tvOS)
                     if let url = URL(string: service.url), !service.url.isEmpty {
                         Button {
@@ -566,15 +637,7 @@ public struct ServicesTabView: View {
                             }
                             .frame(maxWidth: .infinity, minHeight: 28)
                         }
-                        .buttonStyle(.glass)
-                    }
-                    #else
-                    if !service.url.isEmpty {
-                        Label(service.url, systemImage: "network")
-                            .font(.system(.caption2, design: .monospaced))
-                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        .adaptivePillButtonStyle()
                     }
                     #endif
 
@@ -589,18 +652,27 @@ public struct ServicesTabView: View {
                             }
                         } label: {
                             Label("Tester", systemImage: "bolt.horizontal.circle")
+                                #if os(tvOS)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .font(.caption.weight(.semibold))
+                                #endif
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                         .adaptiveSmallControlSize()
 
                         Button {
                             editingService = matchingCustom
                         } label: {
-                            Label("Éditer", systemImage: "pencil")
+                            Label("Modifier", systemImage: "pencil")
+                                #if os(tvOS)
+                                .labelStyle(.titleAndIcon)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .labelStyle(.iconOnly)
+                                #endif
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                         .adaptiveSmallControlSize()
                     } else {
                         if canMoveUp {
@@ -610,7 +682,7 @@ public struct ServicesTabView: View {
                                 Label("Monter", systemImage: "arrow.up")
                                     .labelStyle(.iconOnly)
                             }
-                            .buttonStyle(.glass)
+                            .adaptivePillButtonStyle()
                             .adaptiveSmallControlSize()
                             .accessibilityLabel("Monter \(service.name)")
                         }
@@ -622,7 +694,7 @@ public struct ServicesTabView: View {
                                 Label("Descendre", systemImage: "arrow.down")
                                     .labelStyle(.iconOnly)
                             }
-                            .buttonStyle(.glass)
+                            .adaptivePillButtonStyle()
                             .adaptiveSmallControlSize()
                             .accessibilityLabel("Descendre \(service.name)")
                         }
@@ -634,12 +706,21 @@ public struct ServicesTabView: View {
                             )
                         } label: {
                             Label("Personnaliser", systemImage: "pencil")
+                                #if os(tvOS)
+                                .labelStyle(.titleAndIcon)
+                                .font(.callout.weight(.semibold))
+                                #else
                                 .labelStyle(.iconOnly)
+                                #endif
                         }
-                        .buttonStyle(.glass)
+                        .adaptivePillButtonStyle()
                         .adaptiveSmallControlSize()
                         .accessibilityLabel("Personnaliser \(service.name)")
                     }
+
+                    #if os(tvOS)
+                    Spacer(minLength: 4)
+                    #endif
                 }
             }
         }
@@ -649,17 +730,30 @@ public struct ServicesTabView: View {
 
     private func protocolBadge(_ label: String, symbol: String?) -> some View {
         let teal = DesignTokens.signalTeal(colorScheme)
-        return HStack(spacing: 3) {
+        return HStack(spacing: 4) {
             if let symbol {
                 Image(systemName: symbol)
+                    #if os(tvOS)
+                    .font(.caption2.weight(.bold))
+                    #else
                     .font(.system(size: 9, weight: .bold))
+                    #endif
             }
             Text(label)
+                #if os(tvOS)
+                .font(.system(.caption2, design: .monospaced, weight: .bold))
+                #else
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
+                #endif
         }
         .foregroundStyle(teal)
+        #if os(tvOS)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        #else
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
+        #endif
         .background(
             teal.opacity(colorScheme == .light ? 0.11 : 0.16),
             in: Capsule()
@@ -784,14 +878,22 @@ public struct ServicesTabView: View {
     }
 
     private func miniStat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(label)
+                #if os(tvOS)
+                .font(.caption)
+                #else
                 .font(.caption2)
+                #endif
                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             Text(value)
+                #if os(tvOS)
+                .font(.system(.callout, design: .monospaced, weight: .semibold))
+                #else
                 .font(.system(.caption, design: .monospaced, weight: .semibold))
+                #endif
                 .foregroundStyle(DesignTokens.primaryText(colorScheme))
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)

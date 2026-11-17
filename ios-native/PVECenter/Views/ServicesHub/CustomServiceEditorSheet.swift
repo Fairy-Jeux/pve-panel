@@ -183,8 +183,26 @@ public struct CustomServiceEditorSheet: View {
                 }
                 alertPolicySection
                 liveTestSection
+
+                #if os(tvOS)
+                Section {
+                    HStack(spacing: 14) {
+                        Button("Annuler") { dismiss() }
+                            .adaptivePillButtonStyle()
+                        Spacer()
+                        Button {
+                            guard canSubmit && !isSaving else { return }
+                            Task { await saveService() }
+                        } label: {
+                            Text(isSaving ? "Enregistrement…" : (isEditing ? "Enregistrer" : "Ajouter"))
+                                .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
+                        }
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    }
+                }
+                #endif
             }
-            .formStyle(.grouped)
+            .adaptiveTVOSModalFormContainer()
             .navigationTitle(isEditing ? "Modifier le service" : "Nouveau service")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -224,19 +242,25 @@ public struct CustomServiceEditorSheet: View {
 
             TextField("Catégorie", text: $category)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(categorySuggestions, id: \.self) { suggestion in
+                        let selected = category == suggestion
                         Button(suggestion) {
                             category = suggestion
                         }
+                        #if os(tvOS)
+                        .adaptivePillButtonStyle(
+                            tint: selected ? DesignTokens.signalTeal(colorScheme) : nil,
+                            prominent: selected
+                        )
+                        #else
                         .buttonStyle(.bordered)
-                        .tint(category == suggestion ? DesignTokens.signalTeal(colorScheme) : .secondary)
-                        #if !os(tvOS)
+                        .tint(selected ? DesignTokens.signalTeal(colorScheme) : .secondary)
                         .controlSize(.small)
                         #endif
                     }
                 }
-                .padding(.vertical, 2)
+                .padding(.vertical, 4)
             }
 
             Toggle("Supervision active", isOn: $enabled)
@@ -398,11 +422,13 @@ public struct CustomServiceEditorSheet: View {
                     } label: {
                         Image(systemName: "minus")
                     }
+                    .adaptivePillButtonStyle()
                     Button {
                         if consecutiveFailures < 10 { consecutiveFailures += 1 }
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .adaptivePillButtonStyle()
                 }
                 #else
                 Stepper(

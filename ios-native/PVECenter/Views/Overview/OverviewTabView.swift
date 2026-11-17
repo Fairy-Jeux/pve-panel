@@ -67,10 +67,15 @@ public struct OverviewTabView: View {
             .padding(.horizontal, DesignTokens.pageHorizontalPadding)
             .padding(.vertical, DesignTokens.pageVerticalPadding)
         }
+        #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
+        #else
         .contentMargins(.top, 8, for: .scrollContent)
         .refreshable {
             await viewModel.refreshAll(silent: false)
         }
+        #endif
     }
 
     private var loadingSkeleton: some View {
@@ -123,30 +128,49 @@ public struct OverviewTabView: View {
                         y: .value("Métrique", item.label)
                     )
                     .foregroundStyle(item.color)
-                    .cornerRadius(5)
+                    .cornerRadius(6)
                     .annotation(position: .trailing) {
                         Text(String(format: "%.0f %%", item.percentage))
+                            #if os(tvOS)
+                            .font(.system(.caption, design: .monospaced, weight: .semibold))
+                            #else
                             .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                            #endif
                             .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                     }
                 }
                 .chartXScale(domain: 0...100)
                 .chartXAxis(.hidden)
                 #if os(tvOS)
-                .frame(height: 164)
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisValueLabel()
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                    }
+                }
+                .frame(height: 210)
                 #else
                 .frame(height: 108)
                 #endif
 
                 HStack {
                     Text("Loadavg \(pve.node.loadavg.prefix(3).joined(separator: " / "))")
+                        #if os(tvOS)
+                        .font(.system(.caption, design: .monospaced))
+                        #else
                         .font(.system(.caption2, design: .monospaced))
+                        #endif
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                     Spacer(minLength: 8)
                     Text("\(ByteFormatters.formatBytes(pve.node.memUsedBytes)) / \(ByteFormatters.formatBytes(pve.node.memTotalBytes)) RAM")
+                        #if os(tvOS)
+                        .font(.system(.caption, design: .monospaced))
+                        #else
                         .font(.system(.caption2, design: .monospaced))
+                        #endif
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -206,17 +230,28 @@ public struct OverviewTabView: View {
                             y: .value("Service", item.name)
                         )
                         .foregroundStyle(barColor)
-                        .cornerRadius(5)
+                        .cornerRadius(6)
                         .annotation(position: .trailing) {
                             Text(item.isOnline ? "\(Int(item.latencyMs.rounded())) ms" : "HS")
+                                #if os(tvOS)
+                                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                #else
                                 .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                                #endif
                                 .foregroundStyle(item.isOnline ? DesignTokens.secondaryText(colorScheme) : DesignTokens.critical(colorScheme))
                         }
                     }
                     .chartXScale(domain: 0...maxLatency)
                     .chartXAxis(.hidden)
                     #if os(tvOS)
-                    .frame(height: CGFloat(max(140, displayed.count * 42)))
+                    .chartYAxis {
+                        AxisMarks { _ in
+                            AxisValueLabel()
+                                .font(.callout.weight(.medium))
+                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        }
+                    }
+                    .frame(height: CGFloat(max(190, displayed.count * 52)))
                     #else
                     .frame(height: CGFloat(max(96, displayed.count * 26)))
                     #endif
@@ -255,7 +290,7 @@ public struct OverviewTabView: View {
 
     private var quickStatsColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 520), spacing: 20)]
+        return Array(repeating: GridItem(.flexible(), spacing: 20), count: 4)
         #else
         return [GridItem(.adaptive(minimum: 168), spacing: 12)]
         #endif
@@ -263,7 +298,7 @@ public struct OverviewTabView: View {
 
     private var servicePreviewColumns: [GridItem] {
         #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 480), spacing: 16)]
+        return [GridItem(.adaptive(minimum: 520), spacing: 18)]
         #else
         return [GridItem(.adaptive(minimum: 145), spacing: 8)]
         #endif
@@ -350,6 +385,25 @@ public struct OverviewTabView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
+            #if os(tvOS)
+            GlassCard(padding: 20, cornerRadius: 18, interactive: true) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(title, systemImage: icon)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(accent)
+                    Text(value)
+                        .font(.system(.title3, design: .monospaced, weight: .bold))
+                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+            }
+            #else
             GlassCard(padding: 14, cornerRadius: 16, interactive: true) {
                 VStack(alignment: .leading, spacing: 6) {
                     Label(title, systemImage: icon)
@@ -367,8 +421,9 @@ public struct OverviewTabView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
             }
+            #endif
         }
-        .cardButtonStyle()
+        .cardButtonStyle(cornerRadius: 18)
     }
 
     @ViewBuilder
@@ -404,39 +459,71 @@ public struct OverviewTabView: View {
                         }
                         #else
                         Button("Tout voir") { viewModel.selectedTab = .services }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .font(.callout.weight(.semibold))
                             .lineLimit(1)
-                            .buttonStyle(.glass)
+                            .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
                             .fixedSize()
                         #endif
                     }
 
                     LazyVGrid(columns: servicePreviewColumns, spacing: servicePreviewGridSpacing) {
                         ForEach(services.prefix(6)) { svc in
-                            HStack(spacing: 8) {
-                                Image(systemName: svc.online ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(svc.online ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme))
-                                Text(svc.name)
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.85)
+                            HStack(spacing: 12) {
+                                ServiceIconView(
+                                    icon: svc.icon,
+                                    serviceId: svc.id,
+                                    serviceName: svc.name,
+                                    widget: svc.widget,
+                                    isOnline: svc.online,
+                                    size: {
+                                        #if os(tvOS)
+                                        34
+                                        #else
+                                        24
+                                        #endif
+                                    }()
+                                )
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(svc.name)
+                                        #if os(tvOS)
+                                        .font(.callout.weight(.semibold))
+                                        #else
+                                        .font(.caption.weight(.medium))
+                                        #endif
+                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
+                                    Text(svc.online ? "En ligne" : "Hors ligne")
+                                        #if os(tvOS)
+                                        .font(.caption2.weight(.medium))
+                                        #else
+                                        .font(.system(size: 10, weight: .medium))
+                                        #endif
+                                        .foregroundStyle(svc.online ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme))
+                                }
                                 Spacer(minLength: 4)
                                 if let ms = svc.latencyMs, svc.online {
-                                    Text("\(Int(ms))ms")
+                                    Text("\(Int(ms)) ms")
+                                        #if os(tvOS)
+                                        .font(.system(.caption, design: .monospaced))
+                                        #else
                                         .font(.system(.caption2, design: .monospaced))
+                                        #endif
                                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                                         .lineLimit(1)
                                         .fixedSize(horizontal: true, vertical: false)
                                 }
                             }
+                            #if os(tvOS)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            #else
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
+                            #endif
                             .background(
                                 DesignTokens.surfaceElevated(colorScheme),
-                                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                             )
                         }
                     }

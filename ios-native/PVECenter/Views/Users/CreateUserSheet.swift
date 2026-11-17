@@ -3,6 +3,7 @@ import SwiftUI
 public struct CreateUserSheet: View {
     public var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var username: String = ""
     @State private var password: String = ""
@@ -75,8 +76,42 @@ public struct CreateUserSheet: View {
                         Toggle("Approbation automatique des demandes", isOn: $autoApprove)
                     }
                 }
+
+                #if os(tvOS)
+                Section {
+                    HStack(spacing: 14) {
+                        Button("Annuler") { dismiss() }
+                            .adaptivePillButtonStyle()
+                        Spacer()
+                        Button {
+                            guard isValid && !isSubmitting else { return }
+                            Task {
+                                isSubmitting = true
+                                let ok = await viewModel.createUser(
+                                    CreateUserRequest(
+                                        username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+                                        password: password,
+                                        syncJellyseerr: syncJellyseerr,
+                                        autoApprove: autoApprove,
+                                        enableAllFolders: enableAllFolders,
+                                        enabledFolders: enableAllFolders ? [] : Array(selectedFolders),
+                                        enableDownloading: enableDownloading,
+                                        maxActiveSessions: maxActiveSessions
+                                    )
+                                )
+                                isSubmitting = false
+                                if ok { dismiss() }
+                            }
+                        } label: {
+                            Text(isSubmitting ? "Création…" : "Créer")
+                                .opacity(isValid && !isSubmitting ? 1.0 : 0.45)
+                        }
+                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    }
+                }
+                #endif
             }
-            .formStyle(.grouped)
+            .adaptiveTVOSModalFormContainer()
             .navigationTitle("Nouvel utilisateur")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
