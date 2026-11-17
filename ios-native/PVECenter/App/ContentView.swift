@@ -96,6 +96,7 @@ public struct ContentView: View {
         #else
         .preferredColorScheme(viewModel.preferredColorScheme)
         #endif
+        .tint(viewModel.tintColor(for: colorScheme))
         .animation(
             reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
             value: viewModel.toast?.id

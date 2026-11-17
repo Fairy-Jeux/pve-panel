@@ -991,6 +991,12 @@ export function App() {
       <SetupWizardModal
         open={setupModalOpen}
         initialStatus={setupStatus}
+        theme={theme}
+        onThemeChange={handleThemeChange}
+        onOpenNotifications={() => setNotificationsModalOpen(true)}
+        onOpenYamlEditor={() => setYamlModalOpen(true)}
+        onOpenServerConfig={() => setServerModalOpen(true)}
+        onOpenOnboarding={() => setOnboardingModalOpen(true)}
         onClose={() => setSetupModalOpen(false)}
         onApplied={(message) => {
           setSetupModalOpen(false);

@@ -805,10 +805,14 @@ public struct OnboardingFlowView: View {
                 #endif
 
             ForEach(HomelabTemplate.presets) { template in
-                HStack {
-                    Image(systemName: sfSymbolForTemplate(template.icon))
-                        .foregroundStyle(DesignTokens.signalTeal(colorScheme))
-                        .frame(width: 24)
+                HStack(spacing: 10) {
+                    ServiceIconView(
+                        icon: template.icon,
+                        serviceId: template.id,
+                        serviceName: template.name,
+                        isOnline: true,
+                        size: 32
+                    )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(template.name)
                             .font(.subheadline.weight(.semibold))

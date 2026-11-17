@@ -673,6 +673,28 @@ public enum AppearanceMode: String, CaseIterable, Codable, Sendable, Identifiabl
     }
 }
 
+public enum AccentTheme: String, CaseIterable, Codable, Sendable, Identifiable {
+    case cyan
+    case cider
+    case indigo
+    case emerald
+    case amber
+    case purple
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .cyan: "Cyan PVE"
+        case .cider: "Cider Ruby"
+        case .indigo: "Indigo Studio"
+        case .emerald: "Émeraude"
+        case .amber: "Ambre Proxmox"
+        case .purple: "Améthyste"
+        }
+    }
+}
+
 public struct SavedServerProfile: Codable, Sendable, Equatable, Identifiable {
     public let id: UUID
     public var name: String

@@ -69,6 +69,46 @@ public enum DesignTokens {
         }
     }
 
+    public static func accent(_ theme: AccentTheme, _ scheme: ColorScheme) -> Color {
+        switch theme {
+        case .cyan:
+            return signalTeal(scheme)
+        case .cider:
+            return scheme == .light
+                ? Color(red: 0.855, green: 0.094, blue: 0.216)
+                : Color(red: 0.980, green: 0.137, blue: 0.231)
+        case .indigo:
+            return scheme == .light
+                ? Color(red: 0.310, green: 0.275, blue: 0.898)
+                : Color(red: 0.498, green: 0.514, blue: 0.996)
+        case .emerald:
+            return nominal(scheme)
+        case .amber:
+            return caution(scheme)
+        case .purple:
+            return scheme == .light
+                ? Color(red: 0.576, green: 0.200, blue: 0.918)
+                : Color(red: 0.753, green: 0.518, blue: 0.988)
+        }
+    }
+
+    public static func secondaryAccent(_ theme: AccentTheme, _ scheme: ColorScheme) -> Color {
+        switch theme {
+        case .cyan:
+            return accent(.indigo, scheme)
+        case .cider:
+            return Color(red: 0.925, green: 0.282, blue: 0.600)
+        case .indigo:
+            return accent(.cyan, scheme)
+        case .emerald:
+            return accent(.cyan, scheme)
+        case .amber:
+            return Color(red: 0.937, green: 0.267, blue: 0.267)
+        case .purple:
+            return Color(red: 0.925, green: 0.282, blue: 0.600)
+        }
+    }
+
     public static func nominal(_ scheme: ColorScheme) -> Color {
         switch scheme {
         case .light:

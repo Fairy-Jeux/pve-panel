@@ -370,9 +370,9 @@ export function Header({
                 >
                   <Wrench className="h-4 w-4 text-indigo-500" />
                   <div>
-                    <div>Paramètres Proxmox &amp; Apps</div>
+                    <div>Studio de Configuration</div>
                     <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                      Intégrations *arr, Jellyfin &amp; disques
+                      Thème Cider, Proxmox, services &amp; icônes
                     </div>
                   </div>
                 </button>

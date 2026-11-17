@@ -13,6 +13,7 @@ public final class AppViewModel {
         static let demoMode = "pve_native_demo_mode"
         static let autoRefresh = "pve_native_auto_refresh"
         static let appearanceMode = "pve_native_appearance_mode"
+        static let accentTheme = "pve_native_accent_theme"
     }
 
     public let apiClient: APIClient
@@ -32,6 +33,7 @@ public final class AppViewModel {
     public var isDemoMode: Bool
     public var autoRefresh: Bool
     public var appearanceMode: AppearanceMode
+    public var accentTheme: AccentTheme
     public var needsOnboarding: Bool = false
     public var showServerSettings: Bool = false
     public var showServerSetupWizard: Bool = false
@@ -85,6 +87,7 @@ public final class AppViewModel {
         let savedDemo = defaults.bool(forKey: StorageKeys.demoMode)
         let savedAutoRefresh = defaults.object(forKey: StorageKeys.autoRefresh) as? Bool ?? true
         let savedAppearance = AppearanceMode(rawValue: defaults.string(forKey: StorageKeys.appearanceMode) ?? "") ?? .system
+        let savedAccent = AccentTheme(rawValue: defaults.string(forKey: StorageKeys.accentTheme) ?? "") ?? .cyan
         let savedActiveID = defaults.string(forKey: StorageKeys.activeProfileID).flatMap(UUID.init(uuidString:))
 
         self.serverBaseURL = savedURL
@@ -92,6 +95,7 @@ public final class AppViewModel {
         self.isDemoMode = savedDemo
         self.autoRefresh = savedAutoRefresh
         self.appearanceMode = savedAppearance
+        self.accentTheme = savedAccent
 
         loadAndMigrateProfiles(legacyURL: savedURL, preferredActiveID: savedActiveID)
 
@@ -183,6 +187,16 @@ public final class AppViewModel {
             }
         }
         hapticImpactTrigger += 1
+    }
+
+    public func setAccentTheme(_ theme: AccentTheme) {
+        accentTheme = theme
+        UserDefaults.standard.set(theme.rawValue, forKey: StorageKeys.accentTheme)
+        hapticImpactTrigger += 1
+    }
+
+    public func tintColor(for scheme: ColorScheme) -> Color {
+        DesignTokens.accent(accentTheme, scheme)
     }
 
     public func relaunchOnboarding() {

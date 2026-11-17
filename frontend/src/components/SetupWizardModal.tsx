@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
+  BellRing,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -9,16 +10,24 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  FileCode2,
   HardDrive,
   KeyRound,
   Layers,
   Loader2,
+  Monitor,
+  Moon,
+  Palette,
   Plus,
   RefreshCw,
+  Rocket,
+  Search,
   Server,
   ShieldCheck,
+  SlidersHorizontal,
   Smartphone,
   Sparkles,
+  Sun,
   Trash2,
   Tv,
   Wifi,
@@ -26,8 +35,21 @@ import {
   X,
 } from 'lucide-react';
 import { getServerUrl } from '../lib/apiClient';
+import {
+  ACCENT_PRESETS,
+  applyAccentPreset,
+  applyDensityMode,
+  applyGlassIntensity,
+  getAccentPreset,
+  getDensityMode,
+  getGlassIntensity,
+  type AccentPreset,
+  type DensityMode,
+  type GlassIntensity,
+  type ThemePreference,
+} from '../lib/theme';
 import { QrCodeView } from './NotificationsModal';
-import { formatServiceIconLabel, SERVICE_ICON_OPTIONS } from './ServiceIcon';
+import { ServiceIconBadge, ServiceIconPicker } from './ServiceIcon';
 import type {
   SetupCategoryConfig,
   SetupConfigUpdateRequest,
@@ -41,7 +63,7 @@ import type {
   StorageMountConfig,
 } from '../types';
 
-type SetupTab = 'proxmox' | 'media' | 'services' | 'apps';
+type SetupTab = 'appearance' | 'proxmox' | 'media' | 'services' | 'storage' | 'apps';
 
 interface SetupEnvFormState {
   dev_auth_bypass: boolean;
@@ -417,6 +439,12 @@ function TestFeedbackBadge({ state }: { state?: TestState }) {
 interface SetupWizardModalProps {
   open: boolean;
   initialStatus?: SetupStatusResponse | null;
+  theme?: ThemePreference;
+  onThemeChange?: (theme: ThemePreference) => void;
+  onOpenNotifications?: () => void;
+  onOpenYamlEditor?: () => void;
+  onOpenServerConfig?: () => void;
+  onOpenOnboarding?: () => void;
   onClose: () => void;
   onApplied: (message?: string) => void;
 }
@@ -424,10 +452,20 @@ interface SetupWizardModalProps {
 export function SetupWizardModal({
   open,
   initialStatus,
+  theme = 'system',
+  onThemeChange,
+  onOpenNotifications,
+  onOpenYamlEditor,
+  onOpenServerConfig,
+  onOpenOnboarding,
   onClose,
   onApplied,
 }: SetupWizardModalProps) {
-  const [activeTab, setActiveTab] = useState<SetupTab>('proxmox');
+  const [activeTab, setActiveTab] = useState<SetupTab>('appearance');
+  const [sidebarQuery, setSidebarQuery] = useState('');
+  const [accentPreset, setAccentPreset] = useState<AccentPreset>(() => getAccentPreset());
+  const [glassIntensity, setGlassIntensity] = useState<GlassIntensity>(() => getGlassIntensity());
+  const [densityMode, setDensityMode] = useState<DensityMode>(() => getDensityMode());
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -753,126 +791,530 @@ export function SetupWizardModal({
     }
   };
 
-  const tabs: Array<{ id: SetupTab; label: string; icon: typeof Server }> = [
-    { id: 'proxmox', label: 'Proxmox & Tailscale', icon: Server },
-    { id: 'media', label: 'Médias & Téléchargements', icon: Sparkles },
-    { id: 'services', label: 'Services & Disques', icon: Layers },
-    { id: 'apps', label: 'Apps iPhone / Mac / TV', icon: Smartphone },
+  const handleSelectAccent = (preset: AccentPreset) => {
+    setAccentPreset(preset);
+    applyAccentPreset(preset);
+  };
+
+  const handleSelectGlass = (next: GlassIntensity) => {
+    setGlassIntensity(next);
+    applyGlassIntensity(next);
+  };
+
+  const handleSelectDensity = (next: DensityMode) => {
+    setDensityMode(next);
+    applyDensityMode(next);
+  };
+
+  interface SidebarNavItem {
+    id: SetupTab;
+    group: 'PRÉFÉRENCES' | 'INFRASTRUCTURE' | 'CONNECTIVITÉ';
+    label: string;
+    subtitle: string;
+    icon: typeof Server;
+    iconBg: string;
+    keywords: string;
+  }
+
+  const navItems: SidebarNavItem[] = [
+    {
+      id: 'appearance',
+      group: 'PRÉFÉRENCES',
+      label: 'Apparence',
+      subtitle: 'Couleurs, verre & aperçu',
+      icon: Palette,
+      iconBg: 'from-rose-500 to-pink-500',
+      keywords: 'theme couleur cider verre dark light accentuation apparence',
+    },
+    {
+      id: 'proxmox',
+      group: 'INFRASTRUCTURE',
+      label: 'Proxmox & Tailscale',
+      subtitle: 'API PVE, nœud & SSO',
+      icon: Server,
+      iconBg: 'from-cyan-500 to-blue-500',
+      keywords: 'proxmox pve tailscale token sso ssl',
+    },
+    {
+      id: 'media',
+      group: 'INFRASTRUCTURE',
+      label: 'Médias & *arr',
+      subtitle: 'Jellyfin, Plex, Radarr…',
+      icon: Sparkles,
+      iconBg: 'from-violet-500 to-indigo-500',
+      keywords: 'jellyfin plex jellyseerr radarr sonarr prowlarr qbittorrent',
+    },
+    {
+      id: 'services',
+      group: 'INFRASTRUCTURE',
+      label: 'Services & Icônes',
+      subtitle: 'Cartes & icônes dédiées',
+      icon: Layers,
+      iconBg: 'from-sky-500 to-cyan-500',
+      keywords: 'services categories icones cartes widgets urls',
+    },
+    {
+      id: 'storage',
+      group: 'INFRASTRUCTURE',
+      label: 'Disques & Stockage',
+      subtitle: 'Montages /host_mnt & SMART',
+      icon: HardDrive,
+      iconBg: 'from-emerald-500 to-teal-500',
+      keywords: 'disques stockage host_mnt wwn smart mergerfs',
+    },
+    {
+      id: 'apps',
+      group: 'CONNECTIVITÉ',
+      label: 'Apps Apple & QR',
+      subtitle: 'iPhone, iPad, Mac & tvOS',
+      icon: Smartphone,
+      iconBg: 'from-indigo-500 to-purple-500',
+      keywords: 'apple ios macos tvos qr appairage deeplink tailscale',
+    },
   ];
+
+  const normalizedQuery = sidebarQuery.trim().toLowerCase();
+  const visibleNavItems = normalizedQuery
+    ? navItems.filter(
+        (it) =>
+          it.label.toLowerCase().includes(normalizedQuery) ||
+          it.subtitle.toLowerCase().includes(normalizedQuery) ||
+          it.keywords.includes(normalizedQuery)
+      )
+    : navItems;
+  const activeMeta = navItems.find((n) => n.id === activeTab) || navItems[0];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="setup-wizard-title"
-        className="ios-sheet legacy-dark-surface safe-bottom-sheet flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[32px] text-slate-900 dark:text-slate-100 sm:rounded-3xl"
+        className="cider-window legacy-dark-surface safe-bottom-sheet flex h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] text-slate-900 dark:text-slate-100 sm:h-[86dvh] sm:rounded-[28px]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="shrink-0 px-5 pt-3 sm:px-6 sm:pt-5">
-          <div className="mb-3 flex justify-center sm:hidden">
-            <div className="ios-grabber" />
-          </div>
-
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/35 bg-gradient-to-br from-cyan-400/20 to-indigo-500/20 text-cyan-300 shadow-inner">
-                <Wrench className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 id="setup-wizard-title" className="text-base font-semibold text-white">
-                    Assistant de Configuration PVE Center
-                  </h2>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      isConfigured
-                        ? 'border border-emerald-400/30 bg-emerald-500/15 text-emerald-200'
-                        : 'border border-amber-400/30 bg-amber-500/15 text-amber-200'
-                    }`}
-                  >
-                    {isConfigured ? 'Configuré' : 'Configuration requise'}
-                  </span>
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          {/* Sidebar gauche style Cider / macOS */}
+          <aside className="cider-sidebar flex shrink-0 flex-col border-b border-white/10 md:w-64 md:border-b-0 md:border-r">
+            {/* Barre de titre + Pastilles fenêtre + Recherche */}
+            <div className="shrink-0 px-4 pb-3 pt-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="hidden items-center gap-1.5 md:flex">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Fermer"
+                      className="h-3 w-3 rounded-full bg-rose-500/90 transition hover:brightness-110"
+                    />
+                    <span className="h-3 w-3 rounded-full bg-amber-400/80" />
+                    <span className="h-3 w-3 rounded-full bg-emerald-400/80" />
+                  </div>
+                  <div className="flex items-center gap-2 md:pl-2">
+                    <div className="cider-accent-btn flex h-7 w-7 items-center justify-center rounded-lg text-white">
+                      <Wrench className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2
+                        id="setup-wizard-title"
+                        className="truncate text-xs font-bold tracking-tight text-white"
+                      >
+                        Préférences Studio
+                      </h2>
+                      <p className="truncate text-[10px] text-slate-400">
+                        {isConfigured ? 'Serveur connecté' : 'Configuration requise'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="truncate text-xs text-slate-400">
-                  Configuration serveur, services, disques et appairage Apple à chaud
-                </p>
-              </div>
-            </div>
 
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => void loadSetupStatus()}
-                disabled={loading}
-                title="Recharger depuis le serveur"
-                className="liquid-pill rounded-full p-2 text-slate-300 transition hover:text-white active:scale-95 disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-cyan-300' : ''}`} />
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Fermer"
-                className="liquid-pill rounded-full p-2 text-slate-300 transition hover:text-white active:scale-95"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Navigation 4 onglets */}
-          <div className="mt-4 flex gap-1.5 overflow-x-auto pb-3">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition active:scale-95 ${
-                    active
-                      ? 'border-white/25 bg-gradient-to-b from-white/20 to-cyan-500/20 text-white shadow-inner shadow-white/10'
-                      : 'border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-slate-100'
-                  }`}
+                  onClick={onClose}
+                  aria-label="Fermer"
+                  className="liquid-pill rounded-full p-1.5 text-slate-300 md:hidden"
                 >
-                  <Icon className={`h-3.5 w-3.5 ${active ? 'text-cyan-300' : ''}`} />
-                  <span>{tab.label}</span>
+                  <X className="h-4 w-4" />
                 </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Contenu scrollable */}
-        <div className="flex-1 overflow-y-auto border-y border-white/10 bg-black/20 px-5 py-5 sm:px-6">
-          {loadError && (
-            <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3.5 text-xs text-rose-200">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-300" />
-                <span>{loadError}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => void loadSetupStatus()}
-                className="liquid-pill shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium text-white"
-              >
-                Réessayer
-              </button>
-            </div>
-          )}
 
-          {loading && !isConfigured && !form.pve_host && categories.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-slate-400">
-              <Loader2 className="h-6 w-6 animate-spin text-cyan-300" />
-              <span>Chargement de la configuration serveur…</span>
+              <div className="relative hidden md:block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={sidebarQuery}
+                  onChange={(e) => setSidebarQuery(e.target.value)}
+                  placeholder="Filtrer les réglages…"
+                  className="w-full rounded-xl border border-white/10 bg-black/25 py-1.5 pl-8 pr-3 text-xs text-white placeholder-slate-400 focus:border-cyan-400/60 focus:outline-none"
+                />
+              </div>
             </div>
-          ) : (
-            <>
+
+            {/* Navigation : barre horizontale sur mobile, sidebar groupée sur desktop */}
+            <div className="flex gap-1.5 overflow-x-auto px-4 pb-3 md:flex-1 md:flex-col md:space-y-4 md:overflow-y-auto md:px-3 md:pb-4">
+              {(['PRÉFÉRENCES', 'INFRASTRUCTURE', 'CONNECTIVITÉ'] as const).map((groupName) => {
+                const itemsInGroup = visibleNavItems.filter((item) => item.group === groupName);
+                if (itemsInGroup.length === 0) return null;
+                return (
+                  <div key={groupName} className="flex shrink-0 gap-1.5 md:flex-col md:space-y-1">
+                    <div className="hidden px-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400/80 md:block">
+                      {groupName}
+                    </div>
+                    {itemsInGroup.map((item) => {
+                      const Icon = item.icon;
+                      const active = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setActiveTab(item.id)}
+                          className={`group flex shrink-0 items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition active:scale-[0.98] md:w-full ${
+                            active
+                              ? 'cider-accent-ring text-white shadow-sm'
+                              : 'border-transparent text-slate-300 hover:border-white/10 hover:bg-white/[0.06] hover:text-white'
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${item.iconBg} text-white shadow-sm`}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs font-semibold leading-tight">
+                              {item.label}
+                            </div>
+                            <div className="hidden truncate text-[10px] text-slate-400 md:block">
+                              {item.subtitle}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+
+              {/* Raccourcis outils dans le bas de sidebar (desktop) */}
+              {(onOpenNotifications || onOpenYamlEditor || onOpenServerConfig || onOpenOnboarding) && (
+                <div className="hidden space-y-1 border-t border-white/10 pt-3 md:block">
+                  <div className="px-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400/80">
+                    OUTILS RAPIDES
+                  </div>
+                  {onOpenNotifications && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenNotifications();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-xs text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-orange-500/20 text-orange-300">
+                        <BellRing className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="truncate">Alertes &amp; Webhooks</span>
+                    </button>
+                  )}
+                  {onOpenYamlEditor && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenYamlEditor();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-xs text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                        <FileCode2 className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="truncate">Éditeur config.yaml</span>
+                    </button>
+                  )}
+                  {onOpenServerConfig && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenServerConfig();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-xs text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="truncate">Serveur &amp; Mode Démo</span>
+                    </button>
+                  )}
+                  {onOpenOnboarding && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenOnboarding();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-xs text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-cyan-500/20 text-cyan-300">
+                        <Rocket className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="truncate">Assistant initial</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Panneau principal style Cider */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {/* Hero Header de section */}
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${activeMeta.iconBg} text-white shadow-md`}
+                >
+                  <activeMeta.icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-bold text-white">{activeMeta.label}</h3>
+                  <p className="truncate text-xs text-slate-400">{activeMeta.subtitle}</p>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void loadSetupStatus()}
+                  disabled={loading}
+                  title="Recharger depuis le serveur"
+                  className="liquid-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:text-white disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Actualiser</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Fermer"
+                  className="liquid-pill hidden rounded-full p-2 text-slate-300 transition hover:text-white md:inline-flex"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu scrollable */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+              {loadError && (
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3.5 text-xs text-rose-200">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-300" />
+                    <span>{loadError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void loadSetupStatus()}
+                    className="liquid-pill shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              )}
+
+              {/* ONGLET 0 : Apparence & Thème (Studio Cider) */}
+              {activeTab === 'appearance' && (
+                <div className="space-y-5">
+                  {/* Aperçu en direct style Cider */}
+                  <div className="cider-card relative overflow-hidden p-5">
+                    <div
+                      className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-35 blur-2xl"
+                      style={{
+                        background: `radial-gradient(circle, var(--accent-hex, #06b6d4), transparent 70%)`,
+                      }}
+                    />
+                    <div className="relative flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                          Aperçu en direct
+                        </div>
+                        <h4 className="mt-0.5 text-sm font-bold text-white">
+                          Style {ACCENT_PRESETS.find((p) => p.id === accentPreset)?.label} • Verre{' '}
+                          {glassIntensity === 'cider'
+                            ? 'Acrylique Intense'
+                            : glassIntensity === 'subtle'
+                              ? 'Sobre'
+                              : 'Équilibré'}
+                        </h4>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Chaque changement s’applique instantanément à tout le panneau.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <ServiceIconBadge icon="jellyfin" size="md" />
+                        <ServiceIconBadge icon="zoraxy" size="md" />
+                        <ServiceIconBadge icon="nextcloud" size="md" />
+                        <ServiceIconBadge icon="proxmox" size="md" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Carte Mode Clair / Sombre / Système */}
+                  <div className="cider-card divide-y divide-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                      <div>
+                        <div className="text-xs font-semibold text-white">Apparence générale</div>
+                        <div className="text-[11px] text-slate-400">
+                          Adaptez automatiquement au système ou figez en Clair / Sombre
+                        </div>
+                      </div>
+                      <div className="inline-flex rounded-xl border border-white/10 bg-black/25 p-1">
+                        {(
+                          [
+                            { id: 'system', label: 'Auto', icon: Monitor },
+                            { id: 'light', label: 'Clair', icon: Sun },
+                            { id: 'dark', label: 'Sombre', icon: Moon },
+                          ] as const
+                        ).map((opt) => {
+                          const Icon = opt.icon;
+                          const selected = theme === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => onThemeChange?.(opt.id)}
+                              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                                selected
+                                  ? 'cider-accent-btn text-white'
+                                  : 'text-slate-300 hover:text-white'
+                              }`}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              <span>{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Couleurs d'accentuation */}
+                    <div className="space-y-3 px-5 py-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-semibold text-white">
+                            Couleur d’accentuation &amp; halo ambiant
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            Signature visuelle des boutons, onglets et reflets verre
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                        {ACCENT_PRESETS.map((preset) => {
+                          const selected = accentPreset === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => handleSelectAccent(preset.id)}
+                              className={`flex items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition ${
+                                selected
+                                  ? 'border-white/35 bg-white/[0.11] text-white shadow-sm'
+                                  : 'border-white/10 bg-white/[0.02] text-slate-300 hover:bg-white/[0.06]'
+                              }`}
+                            >
+                              <span
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full shadow-inner"
+                                style={{
+                                  background: `linear-gradient(135deg, ${preset.swatchHex}, ${preset.secondaryHex})`,
+                                }}
+                              >
+                                {selected && <Check className="h-3.5 w-3.5 text-white" />}
+                              </span>
+                              <span className="truncate text-xs font-semibold">{preset.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Effet Verre (Blur) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                      <div>
+                        <div className="text-xs font-semibold text-white">
+                          Transparence &amp; Verre Acrylique
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          Contrôle le flou Liquid Glass façon Cider
+                        </div>
+                      </div>
+                      <div className="inline-flex rounded-xl border border-white/10 bg-black/25 p-1">
+                        {(
+                          [
+                            { id: 'cider', label: 'Cider Intense' },
+                            { id: 'balanced', label: 'Équilibré' },
+                            { id: 'subtle', label: 'Sobre' },
+                          ] as const
+                        ).map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => handleSelectGlass(opt.id)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                              glassIntensity === opt.id
+                                ? 'cider-accent-btn text-white'
+                                : 'text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Densité */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                      <div>
+                        <div className="text-xs font-semibold text-white">Densité des cartes</div>
+                        <div className="text-[11px] text-slate-400">
+                          Aération confortable ou affichage dense pour grands homelabs
+                        </div>
+                      </div>
+                      <div className="inline-flex rounded-xl border border-white/10 bg-black/25 p-1">
+                        {(
+                          [
+                            { id: 'comfortable', label: 'Confortable' },
+                            { id: 'compact', label: 'Compacte' },
+                          ] as const
+                        ).map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => handleSelectDensity(opt.id)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                              densityMode === opt.id
+                                ? 'cider-accent-btn text-white'
+                                : 'text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {loading && !isConfigured && !form.pve_host && categories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-slate-400">
+                  <Loader2 className="h-6 w-6 animate-spin text-cyan-300" />
+                  <span>Chargement de la configuration serveur…</span>
+                </div>
+              ) : (
+                <>
               {/* ONGLET 1 : Proxmox & Tailscale */}
               {activeTab === 'proxmox' && (
                 <div className="space-y-6">
@@ -1121,9 +1563,14 @@ export function SetupWizardModal({
                           className="rounded-3xl border border-white/10 bg-white/[0.03] p-4"
                         >
                           <div className="mb-3 flex items-start justify-between gap-2">
-                            <div>
-                              <h3 className="text-sm font-semibold text-white">{svc.label}</h3>
-                              <p className="text-xs text-slate-400">{svc.subtitle}</p>
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <ServiceIconBadge icon={svc.key} size="sm" />
+                              <div className="min-w-0">
+                                <h3 className="truncate text-sm font-semibold text-white">
+                                  {svc.label}
+                                </h3>
+                                <p className="truncate text-xs text-slate-400">{svc.subtitle}</p>
+                              </div>
                             </div>
                             <button
                               type="button"
@@ -1280,9 +1727,6 @@ export function SetupWizardModal({
                             {cat.services.map((svc, svcIdx) => {
                               const rowKey = `${catIdx}-${svcIdx}`;
                               const expanded = expandedServiceKey === rowKey;
-                              const iconChoices = SERVICE_ICON_OPTIONS.includes(svc.icon)
-                                ? SERVICE_ICON_OPTIONS
-                                : [svc.icon, ...SERVICE_ICON_OPTIONS].filter(Boolean);
 
                               return (
                                 <div
@@ -1302,6 +1746,11 @@ export function SetupWizardModal({
                                       ) : (
                                         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
                                       )}
+                                      <ServiceIconBadge
+                                        icon={svc.icon}
+                                        hint={{ id: svc.id, name: svc.name, widget: svc.widget }}
+                                        size="sm"
+                                      />
                                       <div className="min-w-0 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
                                           <span className="truncate text-xs font-semibold text-white">
@@ -1413,26 +1862,7 @@ export function SetupWizardModal({
                                         />
                                       </div>
 
-                                      <div>
-                                        <label className="mb-1 block text-[11px] font-medium text-slate-400">
-                                          Icône
-                                        </label>
-                                        <select
-                                          value={svc.icon}
-                                          onChange={(e) =>
-                                            updateService(catIdx, svcIdx, { icon: e.target.value })
-                                          }
-                                          className={INPUT_CLASS}
-                                        >
-                                          {iconChoices.map((iconName) => (
-                                            <option key={iconName} value={iconName}>
-                                              {formatServiceIconLabel(iconName)}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-
-                                      <div>
+                                      <div className="sm:col-span-2">
                                         <label className="mb-1 block text-[11px] font-medium text-slate-400">
                                           Widget intégré
                                         </label>
@@ -1452,6 +1882,16 @@ export function SetupWizardModal({
                                           ))}
                                         </select>
                                       </div>
+
+                                      <div className="sm:col-span-2 rounded-2xl border border-white/10 bg-black/25 p-3">
+                                        <ServiceIconPicker
+                                          value={svc.icon}
+                                          hint={{ id: svc.id, name: svc.name, widget: svc.widget }}
+                                          onChange={(nextIcon) =>
+                                            updateService(catIdx, svcIdx, { icon: nextIcon })
+                                          }
+                                        />
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1462,7 +1902,12 @@ export function SetupWizardModal({
                       ))}
                     </div>
                   </section>
+                </div>
+              )}
 
+              {/* ONGLET 4 : Montages Disques & Stockage */}
+              {activeTab === 'storage' && (
+                <div className="space-y-4">
                   {/* Éditeur Montages Disques (storage_mounts) */}
                   <section className="space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1691,53 +2136,55 @@ export function SetupWizardModal({
           )}
         </div>
 
-        {/* Footer sticky Enregistrer & Appliquer à chaud */}
-        <div className="shrink-0 px-5 py-4 sm:px-6">
-          {saveFeedback && (
-            <div
-              className={`mb-3 flex items-start gap-2 rounded-2xl border px-3.5 py-2.5 text-xs ${
-                saveFeedback.type === 'success'
-                  ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
-                  : 'border-rose-400/30 bg-rose-500/10 text-rose-200'
-              }`}
-            >
-              {saveFeedback.type === 'success' ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-              ) : (
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+            {/* Footer sticky Enregistrer & Appliquer à chaud */}
+            <div className="shrink-0 border-t border-white/10 bg-black/20 px-5 py-4 sm:px-6">
+              {saveFeedback && (
+                <div
+                  className={`mb-3 flex items-start gap-2 rounded-2xl border px-3.5 py-2.5 text-xs ${
+                    saveFeedback.type === 'success'
+                      ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
+                      : 'border-rose-400/30 bg-rose-500/10 text-rose-200'
+                  }`}
+                >
+                  {saveFeedback.type === 'success' ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                  ) : (
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+                  )}
+                  <span>{saveFeedback.text}</span>
+                </div>
               )}
-              <span>{saveFeedback.text}</span>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={saving}
+                  className="liquid-pill rounded-2xl px-4 py-2.5 text-xs font-medium text-slate-200 transition hover:text-white active:scale-[0.98] disabled:opacity-50"
+                >
+                  Fermer
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleSaveConfig()}
+                  disabled={saving || loading}
+                  className="cider-accent-btn inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-semibold text-white transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Application en cours…</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Enregistrer &amp; Appliquer à chaud</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          )}
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="liquid-pill rounded-2xl px-4 py-2.5 text-xs font-medium text-slate-200 transition hover:text-white active:scale-[0.98] disabled:opacity-50"
-            >
-              Fermer
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void handleSaveConfig()}
-              disabled={saving || loading}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Application en cours…</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Enregistrer &amp; Appliquer à chaud</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>

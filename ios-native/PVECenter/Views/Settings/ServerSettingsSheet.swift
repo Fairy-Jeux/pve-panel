@@ -11,11 +11,64 @@ private enum SettingsModalRoute: String, Identifiable {
     var id: String { rawValue }
 }
 
+private enum SettingsSidebarTab: String, CaseIterable, Identifiable {
+    case appearance
+    case servers
+    case proxmox
+    case alertsAndTV
+    case yamlAndSync
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .appearance: "Apparence & Verre"
+        case .servers: "Serveurs & Tailscale"
+        case .proxmox: "Proxmox & Médias"
+        case .alertsAndTV: "Alertes & Apple TV"
+        case .yamlAndSync: "YAML, Sync & Démo"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .appearance: "Couleurs Cider & Aperçu"
+        case .servers: "Hôtes, Bonjour & QR"
+        case .proxmox: "Intégrations & Services"
+        case .alertsAndTV: "APNs, Webhooks & PIN"
+        case .yamlAndSync: "Config YAML & Mode Démo"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .appearance: "paintpalette.fill"
+        case .servers: "server.rack"
+        case .proxmox: "slider.horizontal.3"
+        case .alertsAndTV: "bell.badge.fill"
+        case .yamlAndSync: "sparkles"
+        }
+    }
+
+    var badgeColors: [Color] {
+        switch self {
+        case .appearance: [Color(red: 0.98, green: 0.14, blue: 0.23), .pink]
+        case .servers: [.cyan, .blue]
+        case .proxmox: [.indigo, .purple]
+        case .alertsAndTV: [.orange, .red]
+        case .yamlAndSync: [.mint, .teal]
+        }
+    }
+}
+
 public struct ServerSettingsSheet: View {
     public var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
+    @State private var selectedSidebarTab: SettingsSidebarTab = .appearance
+    @State private var sidebarSearch: String = ""
     @State private var serverNameInput: String = ""
     @State private var urlInput: String
     @State private var tokenInput: String = ""
@@ -39,6 +92,23 @@ public struct ServerSettingsSheet: View {
             get: { viewModel.appearanceMode },
             set: { viewModel.setAppearanceMode($0) }
         )
+    }
+
+    private var accentBinding: Binding<AccentTheme> {
+        Binding(
+            get: { viewModel.accentTheme },
+            set: { viewModel.setAccentTheme($0) }
+        )
+    }
+
+    private var isSplitStudioLayout: Bool {
+        #if os(macOS)
+        return true
+        #elseif os(iOS)
+        return horizontalSizeClass == .regular
+        #else
+        return false
+        #endif
     }
 
     public var body: some View {
@@ -118,9 +188,44 @@ public struct ServerSettingsSheet: View {
                         VStack(spacing: 24) {
                             GlassCard(padding: 24, cornerRadius: 24) {
                                 VStack(alignment: .leading, spacing: 14) {
-                                    Label("Apparence", systemImage: "circle.lefthalf.filled")
+                                    Label("Apparence & Couleur Studio", systemImage: "paintpalette.fill")
                                         .font(.title3.weight(.bold))
                                         .foregroundStyle(DesignTokens.primaryText(colorScheme))
+
+                                    HStack(spacing: 12) {
+                                        ForEach(AccentTheme.allCases) { preset in
+                                            let selected = viewModel.accentTheme == preset
+                                            Button {
+                                                viewModel.setAccentTheme(preset)
+                                            } label: {
+                                                HStack(spacing: 8) {
+                                                    Circle()
+                                                        .fill(
+                                                            LinearGradient(
+                                                                colors: [
+                                                                    DesignTokens.accent(preset, colorScheme),
+                                                                    DesignTokens.secondaryAccent(preset, colorScheme),
+                                                                ],
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing
+                                                            )
+                                                        )
+                                                        .frame(width: 18, height: 18)
+                                                    Text(preset.title)
+                                                        .font(.caption.weight(.semibold))
+                                                }
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 6)
+                                            }
+                                            .buttonStyle(.glass)
+                                            .overlay(
+                                                Capsule().strokeBorder(
+                                                    selected ? DesignTokens.accent(preset, colorScheme) : Color.clear,
+                                                    lineWidth: 1.8
+                                                )
+                                            )
+                                        }
+                                    }
 
                                     Picker("Apparence", selection: appearanceBinding) {
                                         ForEach(AppearanceMode.allCases) { mode in
@@ -335,9 +440,200 @@ public struct ServerSettingsSheet: View {
     }
     #endif
 
-    // MARK: - iOS & macOS Form Body
+    // MARK: - iOS & macOS Studio Body (Cider-style Sidebar on macOS/iPadOS)
+
+    private var visibleSidebarTabs: [SettingsSidebarTab] {
+        let q = sidebarSearch.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return SettingsSidebarTab.allCases }
+        return SettingsSidebarTab.allCases.filter {
+            $0.title.lowercased().contains(q) || $0.subtitle.lowercased().contains(q)
+        }
+    }
 
     private var standardBody: some View {
+        Group {
+            if isSplitStudioLayout {
+                ciderSplitStudioBody
+            } else {
+                compactFormBody
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 740, idealWidth: 820, minHeight: 580, idealHeight: 650)
+        #endif
+    }
+
+    private var ciderSplitStudioBody: some View {
+        let accent = DesignTokens.accent(viewModel.accentTheme, colorScheme)
+        let secondaryAccent = DesignTokens.secondaryAccent(viewModel.accentTheme, colorScheme)
+
+        return HStack(spacing: 0) {
+            // Sidebar translucide style Cider / macOS
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(LinearGradient(colors: [accent, secondaryAccent], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "gearshape.2.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Préférences")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        Text(viewModel.isDemoMode ? "Mode Démo" : "Studio PVE Center")
+                            .font(.caption2)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    }
+                }
+                .padding(.horizontal, 4)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    TextField("Filtrer…", text: $sidebarSearch)
+                        .textFieldStyle(.plain)
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    DesignTokens.surfaceElevated(colorScheme),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
+
+                ScrollView {
+                    VStack(spacing: 4) {
+                        ForEach(visibleSidebarTabs) { tab in
+                            let selected = selectedSidebarTab == tab
+                            Button {
+                                selectedSidebarTab = tab
+                            } label: {
+                                HStack(spacing: 10) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: tab.badgeColors,
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .frame(width: 28, height: 28)
+                                        Image(systemName: tab.systemImage)
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(tab.title)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                            .lineLimit(1)
+                                        Text(tab.subtitle)
+                                            .font(.caption2)
+                                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                            .lineLimit(1)
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(
+                                    selected
+                                        ? accent.opacity(colorScheme == .light ? 0.14 : 0.22)
+                                        : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(
+                                            selected ? accent.opacity(0.45) : Color.clear,
+                                            lineWidth: 1
+                                        )
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(viewModel.isDemoMode ? Color.indigo : (viewModel.serverBaseURL.isEmpty ? Color.orange : Color.green))
+                        .frame(width: 8, height: 8)
+                    Text(
+                        viewModel.isDemoMode
+                            ? "Session Démo"
+                            : (viewModel.serverBaseURL.isEmpty ? "Hors connexion" : "Connecté au panel")
+                    )
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    DesignTokens.surfaceElevated(colorScheme),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
+            }
+            .padding(14)
+            .frame(width: 242)
+            .background(
+                colorScheme == .light
+                    ? Color(red: 0.93, green: 0.95, blue: 0.98)
+                    : Color(red: 0.055, green: 0.067, blue: 0.105)
+            )
+
+            Divider()
+
+            NavigationStack {
+                Form {
+                    switch selectedSidebarTab {
+                    case .appearance:
+                        appearanceSection
+                    case .servers:
+                        if !viewModel.savedServers.isEmpty {
+                            savedServersSection
+                        }
+                        if !viewModel.discoveryService.pveServers.isEmpty {
+                            bonjourDiscoverySection
+                        }
+                        addServerSection
+                        deepLinkPairingSection
+                    case .proxmox:
+                        proxmoxTailscaleQuickSection
+                    case .alertsAndTV:
+                        alertsAndTVSection
+                    case .yamlAndSync:
+                        yamlAndOnboardingSection
+                        refreshOptionsSection
+                        demoModeSection
+                    }
+                }
+                .formStyle(.grouped)
+                .navigationTitle(selectedSidebarTab.title)
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Fermer") { dismiss() }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var compactFormBody: some View {
         NavigationStack {
             Form {
                 appearanceSection
@@ -358,7 +654,7 @@ public struct ServerSettingsSheet: View {
                 refreshOptionsSection
             }
             .formStyle(.grouped)
-            .navigationTitle("Paramètres & Connexion")
+            .navigationTitle("Réglages Studio")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -368,21 +664,149 @@ public struct ServerSettingsSheet: View {
                 }
             }
         }
-        #if os(macOS)
-        .frame(minWidth: 560, idealWidth: 620, minHeight: 600)
-        #endif
     }
 
     // MARK: - Sections
 
     private var appearanceSection: some View {
-        Section("Apparence") {
-            Picker("Apparence", selection: appearanceBinding) {
-                ForEach(AppearanceMode.allCases) { mode in
-                    Label(mode.title, systemImage: mode.systemImage).tag(mode)
+        let accent = DesignTokens.accent(viewModel.accentTheme, colorScheme)
+        let secondaryAccent = DesignTokens.secondaryAccent(viewModel.accentTheme, colorScheme)
+
+        return Group {
+            Section("Aperçu en direct") {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Style \(viewModel.accentTheme.title)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                        Text("Icônes dédiées & halo adaptatif")
+                            .font(.caption)
+                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    }
+                    Spacer()
+                    HStack(spacing: 6) {
+                        ServiceIconView(icon: "jellyfin", isOnline: true, size: 32)
+                        ServiceIconView(icon: "zoraxy", isOnline: true, size: 32)
+                        ServiceIconView(icon: "nextcloud", isOnline: true, size: 32)
+                    }
                 }
+                .padding(.vertical, 6)
+                .listRowBackground(
+                    LinearGradient(
+                        colors: [accent.opacity(0.16), secondaryAccent.opacity(0.12)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
             }
-            .pickerStyle(.segmented)
+
+            Section("Apparence & Couleur d'accentuation") {
+                Picker("Thème", selection: appearanceBinding) {
+                    ForEach(AppearanceMode.allCases) { mode in
+                        Label(mode.title, systemImage: mode.systemImage).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 10)], spacing: 10) {
+                    ForEach(AccentTheme.allCases) { preset in
+                        let selected = viewModel.accentTheme == preset
+                        let c1 = DesignTokens.accent(preset, colorScheme)
+                        let c2 = DesignTokens.secondaryAccent(preset, colorScheme)
+
+                        Button {
+                            viewModel.setAccentTheme(preset)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(LinearGradient(colors: [c1, c2], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .frame(width: 20, height: 20)
+                                    .overlay {
+                                        if selected {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundStyle(.white)
+                                        }
+                                    }
+                                Text(preset.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                selected ? c1.opacity(0.16) : DesignTokens.surfaceElevated(colorScheme),
+                                in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .strokeBorder(selected ? c1 : Color.clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private var alertsAndTVSection: some View {
+        Section("Alertes Push & Appareils Apple") {
+            Button {
+                activeModal = .notifications
+            } label: {
+                quickLinkRow(
+                    title: "Notifications & Alertes (APNs / Webhooks)",
+                    subtitle: "Permissions Apple, APNs serveur, Discord, Telegram, ntfy",
+                    systemImage: "bell.badge.fill",
+                    tint: .orange
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                activeModal = .appleTVPairing
+            } label: {
+                quickLinkRow(
+                    title: "Appairage Apple TV (PIN 6 chiffres)",
+                    subtitle: "Transfert chiffré CryptoKit P-256 + AES-GCM",
+                    systemImage: "appletv.fill",
+                    tint: .cyan
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var yamlAndOnboardingSection: some View {
+        Section("Configuration déclarative & Onboarding") {
+            Button {
+                activeModal = .yamlEditor
+            } label: {
+                quickLinkRow(
+                    title: "Éditeur YAML & Rechargement à chaud",
+                    subtitle: "Consulter, valider, modifier et exporter config.yaml",
+                    systemImage: "doc.text.magnifyingglass",
+                    tint: DesignTokens.signalTeal(colorScheme)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.serverBaseURL.isEmpty && !viewModel.isDemoMode)
+
+            Button {
+                activeModal = .onboarding
+            } label: {
+                quickLinkRow(
+                    title: "Relancer l'assistant d'installation",
+                    subtitle: "Assistant en 4 étapes (Bonjour, Sécurité, Services, Résumé)",
+                    systemImage: "wand.and.stars",
+                    tint: .indigo
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
