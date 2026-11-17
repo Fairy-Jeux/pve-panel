@@ -7,12 +7,12 @@ import {
   Copy,
   Loader2,
   Play,
-  Server,
   Shield,
   Webhook,
   X,
 } from 'lucide-react';
 import { getServerUrl } from '../lib/apiClient';
+import { ServiceIconBadge, ServiceIconPicker } from './ServiceIcon';
 import type {
   CustomServiceItem,
   CustomServicePayload,
@@ -59,24 +59,6 @@ const PROTOCOL_OPTIONS: Array<{
     label: 'Webhook Ingest (Push)',
     hint: 'Reçoit les heartbeats entrants de vos scripts, cron ou agents.',
   },
-];
-
-const ICON_OPTIONS = [
-  'Globe',
-  'Server',
-  'Activity',
-  'Shield',
-  'Database',
-  'Cpu',
-  'HardDrive',
-  'Wifi',
-  'Tv',
-  'Film',
-  'Cloud',
-  'Download',
-  'Radar',
-  'Router',
-  'Sparkles',
 ];
 
 function slugifyId(raw: string): string {
@@ -321,9 +303,11 @@ export function CustomServiceModal({
           </div>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/15 text-cyan-600 dark:text-cyan-300">
-                <Server className="h-5 w-5" />
-              </div>
+              <ServiceIconBadge
+                icon={icon}
+                hint={{ id: isEditing ? id : effectiveId, name }}
+                size="md"
+              />
               <div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-white">
                   {isEditing ? `Modifier « ${service?.name} »` : 'Nouveau service personnalisé'}
@@ -400,23 +384,14 @@ export function CustomServiceModal({
                   ))}
                 </datalist>
               </div>
+            </div>
 
-              <div>
-                <label className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                  Icône
-                </label>
-                <select
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  className="liquid-input"
-                >
-                  {ICON_OPTIONS.map((ic) => (
-                    <option key={ic} value={ic}>
-                      {ic}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="liquid-subcard p-4">
+              <ServiceIconPicker
+                value={icon}
+                hint={{ id: isEditing ? id : effectiveId, name }}
+                onChange={setIcon}
+              />
             </div>
 
             <div>

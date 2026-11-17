@@ -365,6 +365,28 @@ def save_services_yaml(
     return yaml_path
 
 
+def persist_categories_config(
+    categories: list[dict[str, Any]],
+    *,
+    source: str = "categories_edit",
+) -> list[dict[str, Any]]:
+    """Persist categorized service definitions to config.yaml or legacy services.yaml cleanly."""
+    sanitized = _sanitize_categories(categories)
+    manager = get_config_manager()
+    if manager.config_exists:
+        manager.update_section(
+            "categories",
+            sanitized,
+            preserve_templates=True,
+            emit_event=True,
+            source=source,
+        )
+        get_settings.cache_clear()
+    else:
+        save_services_yaml(categories=sanitized)
+    return load_services_config()
+
+
 def load_services_config() -> list[dict[str, Any]]:
     """Read service categories from active ConfigManager (config.yaml or legacy services.yaml)."""
     return [

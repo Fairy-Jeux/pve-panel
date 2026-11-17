@@ -799,3 +799,125 @@ def test_legacy_update_env_and_save_services_yaml(isolated_env) -> None:
 
     reloaded = reload_settings()
     assert reloaded.pve_host == "https://new:8006"
+
+
+def test_spa_html_has_no_store_cache_headers(tmp_path: Path) -> None:
+    from app.main import _serve_spa_file
+
+    index_html = tmp_path / "index.html"
+    index_html.write_text("<html><body>ok</body></html>", encoding="utf-8")
+    js_bundle = tmp_path / "app-abc123.js"
+    js_bundle.write_text("console.log('ok');", encoding="utf-8")
+
+    html_resp = _serve_spa_file(index_html)
+    assert html_resp.headers["cache-control"] == "no-store, no-cache, must-revalidate, max-age=0"
+    assert html_resp.headers["pragma"] == "no-cache"
+    assert html_resp.headers["expires"] == "0"
+
+    asset_resp = _serve_spa_file(js_bundle)
+    assert "cache-control" not in asset_resp.headers
+
+
+def test_category_service_crud_and_move_in_legacy_services_yaml(isolated_env) -> None:
+    from app.routers import services as services_router
+
+    env_path: Path = isolated_env["env_path"]
+    services_path: Path = isolated_env["services_path"]
+    env_path.write_text(
+        f"SESSION_SECRET=test-session-secret-legacy-32-bytes-minimum\nADMIN_PIN_HASH={hash_pin('2580')}\n",
+        encoding="utf-8",
+    )
+    services_path.write_text(
+        yaml.safe_dump(
+            {
+                "categories": [
+                    {
+                        "name": "Infrastructure & Réseau",
+                        "services": [
+                            {
+                                "id": "npm",
+                                "name": "Nginx Proxy Manager",
+                                "description": "Reverse proxy",
+                                "url": "http://192.168.1.20:81",
+                                "icon": "Globe",
+                            },
+                            {
+                                "id": "uptime-kuma",
+                                "name": "Uptime Kuma",
+                                "description": "Monitoring",
+                                "url": "http://192.168.1.30:3001",
+                                "icon": "Activity",
+                            },
+                        ],
+                    }
+                ],
+                "storage_mounts": [],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    get_config_manager().reload(emit_event=False)
+
+    app = _build_test_app()
+    app.include_router(services_router.router)
+    app.state.media_http = httpx.AsyncClient()
+    app.state.state_store = None
+
+    with TestClient(app) as client:
+        # Unauthenticated request must be blocked
+        unauth = client.put("/api/services/items/npm", json={"name": "Zoraxy"})
+        assert unauth.status_code == 401
+
+        login = client.post("/api/auth/login", json={"pin": "2580"})
+        assert login.status_code == 200
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+        # Update icon, name, url and ping_url in-place
+        put_resp = client.put(
+            "/api/services/items/npm",
+            headers=headers,
+            json={
+                "name": "Zoraxy",
+                "description": "Reverse proxy & Tunnel",
+                "icon": "zoraxy",
+                "url": "https://zoraxy.example.ts.net",
+                "ping_url": "http://192.168.1.117:80",
+            },
+        )
+        assert put_resp.status_code == 200
+        assert put_resp.json()["service"]["name"] == "Zoraxy"
+        assert put_resp.json()["service"]["icon"] == "zoraxy"
+
+        # Move second item before first
+        move_resp = client.post(
+            "/api/services/items/uptime-kuma/move",
+            headers=headers,
+            json={"direction": "up"},
+        )
+        assert move_resp.status_code == 200
+
+        raw = yaml.safe_load(services_path.read_text(encoding="utf-8"))
+        ids = [s["id"] for s in raw["categories"][0]["services"]]
+        assert ids == ["uptime-kuma", "npm"]
+        assert raw["categories"][0]["services"][1]["icon"] == "zoraxy"
+
+        # Move item to a new category
+        cat_move_resp = client.put(
+            "/api/services/items/npm",
+            headers=headers,
+            json={"category": "Proxy & Tunnels"},
+        )
+        assert cat_move_resp.status_code == 200
+        raw2 = yaml.safe_load(services_path.read_text(encoding="utf-8"))
+        assert len(raw2["categories"]) == 2
+        assert raw2["categories"][1]["name"] == "Proxy & Tunnels"
+        assert raw2["categories"][1]["services"][0]["id"] == "npm"
+
+        # Delete item prunes empty category
+        del_resp = client.delete("/api/services/items/npm", headers=headers)
+        assert del_resp.status_code == 200
+        raw3 = yaml.safe_load(services_path.read_text(encoding="utf-8"))
+        assert len(raw3["categories"]) == 1
+        assert [s["id"] for s in raw3["categories"][0]["services"]] == ["uptime-kuma"]
+

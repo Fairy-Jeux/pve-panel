@@ -1281,6 +1281,98 @@ async function handleDemoRequest(apiPath: string, init?: RequestInit): Promise<R
     return jsonResponse({ categories, custom_services: orderedCustom });
   }
 
+  if (path.startsWith('/api/services/items/')) {
+    const subPath = path.slice('/api/services/items/'.length);
+    const parts = subPath.split('/');
+    const itemId = decodeURIComponent(parts[0] || '');
+    const action = parts[1] || '';
+
+    let foundCatIdx = -1;
+    let foundSvcIdx = -1;
+    for (let c = 0; c < demoState.categories.length; c += 1) {
+      const idx = demoState.categories[c].services.findIndex((s) => s.id === itemId);
+      if (idx >= 0) {
+        foundCatIdx = c;
+        foundSvcIdx = idx;
+        break;
+      }
+    }
+
+    if (action === 'test' && method === 'POST') {
+      const candidateUrl = String(body.ping_url || body.url || '').trim();
+      return jsonResponse({
+        ok: Boolean(candidateUrl || foundSvcIdx >= 0),
+        service_id: itemId,
+        online: true,
+        status_code: 200,
+        latency_ms: 9,
+        message: 'Joignable (HTTP 200 • Mode Démo)',
+      });
+    }
+
+    if (foundCatIdx < 0 || foundSvcIdx < 0) {
+      return jsonResponse({ detail: `Service introuvable : ${itemId}` }, 404);
+    }
+
+    if (action === 'move' && method === 'POST') {
+      const list = demoState.categories[foundCatIdx].services;
+      const targetIdx = body.direction === 'up' ? foundSvcIdx - 1 : foundSvcIdx + 1;
+      if (targetIdx >= 0 && targetIdx < list.length) {
+        const [item] = list.splice(foundSvcIdx, 1);
+        list.splice(targetIdx, 0, item);
+      }
+      return jsonResponse({ ok: true, service_id: itemId });
+    }
+
+    if (!action && method === 'PUT') {
+      const currentCat = demoState.categories[foundCatIdx];
+      const currentSvc = currentCat.services[foundSvcIdx];
+      const updatedSvc = {
+        ...currentSvc,
+        name: typeof body.name === 'string' && body.name.trim() ? body.name.trim() : currentSvc.name,
+        description:
+          typeof body.description === 'string' ? body.description.trim() : currentSvc.description,
+        url: typeof body.url === 'string' ? body.url.trim() : currentSvc.url,
+        ping_url: typeof body.ping_url === 'string' ? body.ping_url.trim() : currentSvc.ping_url,
+        icon: typeof body.icon === 'string' && body.icon.trim() ? body.icon.trim() : currentSvc.icon,
+        widget:
+          typeof body.widget === 'string'
+            ? body.widget.trim() || undefined
+            : currentSvc.widget,
+      };
+      const targetCatName =
+        typeof body.category === 'string' && body.category.trim()
+          ? body.category.trim()
+          : currentCat.name;
+
+      if (targetCatName.toLowerCase() === currentCat.name.toLowerCase()) {
+        currentCat.services[foundSvcIdx] = updatedSvc;
+      } else {
+        currentCat.services.splice(foundSvcIdx, 1);
+        if (currentCat.services.length === 0) {
+          demoState.categories.splice(foundCatIdx, 1);
+        }
+        let dest = demoState.categories.find(
+          (c) => c.name.toLowerCase() === targetCatName.toLowerCase()
+        );
+        if (!dest) {
+          dest = { name: targetCatName, services: [] };
+          demoState.categories.push(dest);
+        }
+        dest.services.push(updatedSvc);
+      }
+      return jsonResponse({ ok: true, category: targetCatName, service: { ...updatedSvc, online: true, latency_ms: 8, status_code: 200 } });
+    }
+
+    if (!action && method === 'DELETE') {
+      demoState.categories[foundCatIdx].services.splice(foundSvcIdx, 1);
+      if (demoState.categories[foundCatIdx].services.length === 0) {
+        demoState.categories.splice(foundCatIdx, 1);
+      }
+      return jsonResponse({ ok: true, deleted_id: itemId });
+    }
+  }
+
   if (path === '/api/custom-services' && method === 'GET') {
     const ordered = [...demoState.customServices].sort(
       (a, b) => a.order - b.order || a.name.localeCompare(b.name)

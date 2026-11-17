@@ -750,6 +750,77 @@ public final class AppViewModel {
         }
     }
 
+    // MARK: - Categorized Apps Actions
+
+    public func updateCategoryService(id: String, payload: CategoryServiceUpdateRequest) async -> Bool {
+        do {
+            let res = try await apiClient.updateCategoryService(
+                baseURL: serverBaseURL,
+                demoMode: isDemoMode,
+                serviceId: id,
+                payload: payload
+            )
+            hapticSuccessTrigger += 1
+            showToast("Application « \(res.service.name) » personnalisée.", isError: false)
+            if let svc = try? await apiClient.fetchServices(baseURL: serverBaseURL, demoMode: isDemoMode) {
+                self.categories = svc.categories
+            }
+            return true
+        } catch {
+            showToast(error.localizedDescription, isError: true)
+            return false
+        }
+    }
+
+    public func moveCategoryService(id: String, direction: String) async {
+        do {
+            try await apiClient.moveCategoryService(
+                baseURL: serverBaseURL,
+                demoMode: isDemoMode,
+                serviceId: id,
+                direction: direction
+            )
+            if let svc = try? await apiClient.fetchServices(baseURL: serverBaseURL, demoMode: isDemoMode) {
+                self.categories = svc.categories
+            }
+        } catch {
+            showToast(error.localizedDescription, isError: true)
+        }
+    }
+
+    public func testCategoryService(id: String, override: CategoryServiceTestRequest? = nil) async -> CategoryServiceTestResponse? {
+        do {
+            return try await apiClient.testCategoryService(
+                baseURL: serverBaseURL,
+                demoMode: isDemoMode,
+                serviceId: id,
+                override: override
+            )
+        } catch {
+            showToast(error.localizedDescription, isError: true)
+            return nil
+        }
+    }
+
+    public func deleteCategoryService(id: String) async -> Bool {
+        do {
+            try await apiClient.deleteCategoryService(
+                baseURL: serverBaseURL,
+                demoMode: isDemoMode,
+                serviceId: id
+            )
+            hapticImpactTrigger += 1
+            showToast("Application retirée.", isError: false)
+            if let svc = try? await apiClient.fetchServices(baseURL: serverBaseURL, demoMode: isDemoMode) {
+                self.categories = svc.categories
+            }
+            return true
+        } catch {
+            showToast(error.localizedDescription, isError: true)
+            return false
+        }
+    }
+
     // MARK: - Incidents & Alert Banners
 
     public func refreshIncidents(activeOnly: Bool = false) async {

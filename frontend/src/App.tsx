@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { AlertsBanner } from './components/AlertsBanner';
+import { CategoryServiceModal } from './components/CategoryServiceModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { CustomServiceModal } from './components/CustomServiceModal';
 import { Header } from './components/Header';
@@ -52,6 +53,7 @@ import type {
   RealtimeTransportMode,
   ServiceCategory,
   ServiceHealthStatus,
+  ServiceItem,
   SetupStatusResponse,
   UsersOverview,
   WidgetsMap,
@@ -94,6 +96,11 @@ export function App() {
     open: boolean;
     service: CustomServiceItem | null;
   }>({ open: false, service: null });
+  const [categoryServiceModalState, setCategoryServiceModalState] = useState<{
+    open: boolean;
+    service: ServiceItem | null;
+    categoryName: string;
+  }>({ open: false, service: null, categoryName: '' });
 
   const hasLoadedOnceRef = useRef(false);
   const autoPromptedOnboardingRef = useRef(false);
@@ -481,6 +488,24 @@ export function App() {
     }
   };
 
+  const handleMoveCategoryService = async (
+    svc: ServiceItem,
+    direction: 'up' | 'down'
+  ) => {
+    try {
+      const resp = await fetch(`/api/services/items/${encodeURIComponent(svc.id)}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      await fetchServicesOnly();
+    } catch {
+      setToast({ type: 'error', message: 'Impossible de déplacer le service.' });
+      await fetchServicesOnly();
+    }
+  };
+
   const handleTestCustomService = async (
     svc: CustomServiceItem
   ): Promise<CustomServiceTestResponse | null> => {
@@ -818,21 +843,35 @@ export function App() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                  {category.services.map((service) => {
+                  {category.services.map((service, svcIndex) => {
                     const customSvc = customServiceMap.get(service.id);
                     const customIdx = customSvc
                       ? orderedCustomServices.findIndex((c) => c.id === customSvc.id)
                       : -1;
+                    const categoryServiceCount = category.services.length;
                     return (
                       <ServiceCard
                         key={service.id}
                         service={service}
                         widgets={widgets}
                         customService={customSvc}
-                        canMoveUp={customIdx > 0}
-                        canMoveDown={
-                          customIdx >= 0 && customIdx < orderedCustomServices.length - 1
+                        categoryName={category.name}
+                        canMoveUp={
+                          customSvc ? customIdx > 0 : svcIndex > 0
                         }
+                        canMoveDown={
+                          customSvc
+                            ? customIdx >= 0 && customIdx < orderedCustomServices.length - 1
+                            : svcIndex < categoryServiceCount - 1
+                        }
+                        onEditService={(target, catName) =>
+                          setCategoryServiceModalState({
+                            open: true,
+                            service: target,
+                            categoryName: catName,
+                          })
+                        }
+                        onMoveService={handleMoveCategoryService}
                         onEditCustom={(target) =>
                           setCustomServiceModalState({ open: true, service: target })
                         }
@@ -970,6 +1009,22 @@ export function App() {
         onClose={() => setCustomServiceModalState({ open: false, service: null })}
         onSaved={(message) => {
           setCustomServiceModalState({ open: false, service: null });
+          setToast({ type: 'success', message });
+          void fetchServicesOnly();
+          void fetchIncidentsOnly();
+        }}
+      />
+
+      <CategoryServiceModal
+        open={categoryServiceModalState.open}
+        service={categoryServiceModalState.service}
+        categoryName={categoryServiceModalState.categoryName}
+        existingCategories={existingCategoryNames}
+        onClose={() =>
+          setCategoryServiceModalState({ open: false, service: null, categoryName: '' })
+        }
+        onSaved={(message) => {
+          setCategoryServiceModalState({ open: false, service: null, categoryName: '' });
           setToast({ type: 'success', message });
           void fetchServicesOnly();
           void fetchIncidentsOnly();

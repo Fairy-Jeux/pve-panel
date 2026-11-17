@@ -18,6 +18,7 @@ public struct ServicesTabView: View {
     @State private var filter: ServicesFilter = .all
     @State private var showAddSheet: Bool = false
     @State private var editingService: CustomServiceConfig?
+    @State private var editingCategoryService: CategoryServiceDraft?
     @State private var pendingDeleteService: CustomServiceConfig?
     @State private var testingServiceID: String?
     @State private var inlineTestResults: [String: CustomServiceTestResult] = [:]
@@ -116,8 +117,13 @@ public struct ServicesTabView: View {
                         }
 
                         LazyVGrid(columns: adaptiveColumns, spacing: gridRowSpacing) {
-                            ForEach(category.services) { service in
-                                serviceCard(service)
+                            ForEach(Array(category.services.enumerated()), id: \.element.id) { index, service in
+                                serviceCard(
+                                    service,
+                                    categoryName: category.name,
+                                    canMoveUp: canReorderCustomServices && index > 0,
+                                    canMoveDown: canReorderCustomServices && index < category.services.count - 1
+                                )
                             }
                         }
                     }
@@ -152,6 +158,10 @@ public struct ServicesTabView: View {
             CustomServiceEditorSheet(viewModel: viewModel, existingService: service)
                 .preferredColorScheme(.dark)
         }
+        .fullScreenCover(item: $editingCategoryService) { draft in
+            CategoryServiceEditorSheet(viewModel: viewModel, draft: draft)
+                .preferredColorScheme(.dark)
+        }
         #else
         .sheet(isPresented: $showAddSheet) {
             CustomServiceEditorSheet(viewModel: viewModel, existingService: nil)
@@ -159,6 +169,10 @@ public struct ServicesTabView: View {
         }
         .sheet(item: $editingService) { service in
             CustomServiceEditorSheet(viewModel: viewModel, existingService: service)
+                .preferredColorScheme(viewModel.preferredColorScheme)
+        }
+        .sheet(item: $editingCategoryService) { draft in
+            CategoryServiceEditorSheet(viewModel: viewModel, draft: draft)
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         #endif
@@ -274,7 +288,6 @@ public struct ServicesTabView: View {
     // MARK: - Custom Service Card
 
     private func customServiceCard(_ service: CustomServiceConfig, index: Int, total: Int) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
         let caution = DesignTokens.caution(colorScheme)
         let critical = DesignTokens.critical(colorScheme)
@@ -285,14 +298,14 @@ public struct ServicesTabView: View {
         return GlassCard(padding: 14, cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: ServiceSymbolCatalog.resolveSFSymbol(service.icon))
-                        .font(.title3)
-                        .foregroundStyle(service.isOnline ? teal : critical)
-                        .frame(width: 40, height: 40)
-                        .background(
-                            DesignTokens.surfaceElevated(colorScheme),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        )
+                    ServiceIconView(
+                        icon: service.icon,
+                        serviceId: service.id,
+                        serviceName: service.name,
+                        widget: nil,
+                        isOnline: service.isOnline,
+                        size: 40
+                    )
 
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
@@ -474,8 +487,12 @@ public struct ServicesTabView: View {
 
     // MARK: - Categorized Service Card
 
-    private func serviceCard(_ service: ServiceItem) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+    private func serviceCard(
+        _ service: ServiceItem,
+        categoryName: String,
+        canMoveUp: Bool,
+        canMoveDown: Bool
+    ) -> some View {
         let nominal = DesignTokens.nominal(colorScheme)
         let critical = DesignTokens.critical(colorScheme)
         let matchingCustom = viewModel.customServices.first(where: { $0.id == service.id })
@@ -487,14 +504,14 @@ public struct ServicesTabView: View {
         return GlassCard(padding: 14, cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: ServiceSymbolCatalog.resolveSFSymbol(service.icon))
-                        .font(.title3)
-                        .foregroundStyle(service.online ? teal : critical)
-                        .frame(width: 40, height: 40)
-                        .background(
-                            DesignTokens.surfaceElevated(colorScheme),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        )
+                    ServiceIconView(
+                        icon: service.icon,
+                        serviceId: service.id,
+                        serviceName: service.name,
+                        widget: service.widget,
+                        isOnline: service.online,
+                        size: 40
+                    )
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
@@ -585,6 +602,43 @@ public struct ServicesTabView: View {
                         }
                         .buttonStyle(.glass)
                         .adaptiveSmallControlSize()
+                    } else {
+                        if canMoveUp {
+                            Button {
+                                Task { await viewModel.moveCategoryService(id: service.id, direction: "up") }
+                            } label: {
+                                Label("Monter", systemImage: "arrow.up")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .buttonStyle(.glass)
+                            .adaptiveSmallControlSize()
+                            .accessibilityLabel("Monter \(service.name)")
+                        }
+
+                        if canMoveDown {
+                            Button {
+                                Task { await viewModel.moveCategoryService(id: service.id, direction: "down") }
+                            } label: {
+                                Label("Descendre", systemImage: "arrow.down")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .buttonStyle(.glass)
+                            .adaptiveSmallControlSize()
+                            .accessibilityLabel("Descendre \(service.name)")
+                        }
+
+                        Button {
+                            editingCategoryService = CategoryServiceDraft(
+                                categoryName: categoryName,
+                                service: service
+                            )
+                        } label: {
+                            Label("Personnaliser", systemImage: "pencil")
+                                .labelStyle(.iconOnly)
+                        }
+                        .buttonStyle(.glass)
+                        .adaptiveSmallControlSize()
+                        .accessibilityLabel("Personnaliser \(service.name)")
                     }
                 }
             }

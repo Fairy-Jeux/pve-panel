@@ -321,6 +321,89 @@ public struct ServicesResponse: Codable, Sendable, Equatable {
     }
 }
 
+public struct CategoryServiceUpdateRequest: Codable, Sendable, Equatable {
+    public var name: String?
+    public var description: String?
+    public var url: String?
+    public var pingUrl: String?
+    public var icon: String?
+    public var widget: String?
+    public var category: String?
+
+    public init(
+        name: String? = nil,
+        description: String? = nil,
+        url: String? = nil,
+        pingUrl: String? = nil,
+        icon: String? = nil,
+        widget: String? = nil,
+        category: String? = nil
+    ) {
+        self.name = name
+        self.description = description
+        self.url = url
+        self.pingUrl = pingUrl
+        self.icon = icon
+        self.widget = widget
+        self.category = category
+    }
+}
+
+public struct CategoryServiceMoveRequest: Codable, Sendable, Equatable {
+    public let direction: String
+
+    public init(direction: String) {
+        self.direction = direction
+    }
+}
+
+public struct CategoryServiceTestRequest: Codable, Sendable, Equatable {
+    public var url: String?
+    public var pingUrl: String?
+
+    public init(url: String? = nil, pingUrl: String? = nil) {
+        self.url = url
+        self.pingUrl = pingUrl
+    }
+}
+
+public struct CategoryServiceTestResponse: Codable, Sendable, Equatable {
+    public let ok: Bool
+    public let serviceId: String
+    public let online: Bool
+    public let statusCode: Int?
+    public let latencyMs: Int?
+    public let message: String
+
+    public init(
+        ok: Bool,
+        serviceId: String,
+        online: Bool,
+        statusCode: Int? = nil,
+        latencyMs: Int? = nil,
+        message: String
+    ) {
+        self.ok = ok
+        self.serviceId = serviceId
+        self.online = online
+        self.statusCode = statusCode
+        self.latencyMs = latencyMs
+        self.message = message
+    }
+}
+
+public struct CategoryServiceMutationResponse: Codable, Sendable, Equatable {
+    public let ok: Bool
+    public let category: String
+    public let service: ServiceItem
+
+    public init(ok: Bool, category: String, service: ServiceItem) {
+        self.ok = ok
+        self.category = category
+        self.service = service
+    }
+}
+
 public struct JellyfinStream: Codable, Sendable, Equatable, Identifiable {
     public var id: String { "\(user)-\(title)-\(device)" }
     public let user: String

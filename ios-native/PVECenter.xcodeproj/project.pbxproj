@@ -39,6 +39,8 @@
 		A100001E0000000000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001F0000000000000001 /* OnboardingFlowView.swift */; };
 		A100001F0000000000000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000200000000000000001 /* QRScannerView.swift */; };
 		A10000200000000000000001 /* AppleTVPairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000210000000000000001 /* AppleTVPairingView.swift */; };
+		A10000210000000000000001 /* ServiceIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000220000000000000001 /* ServiceIconView.swift */; };
+		A10000220000000000000001 /* CategoryServiceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000230000000000000001 /* CategoryServiceEditorSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +78,8 @@
 		B100001F0000000000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		B10000200000000000000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		B10000210000000000000001 /* AppleTVPairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTVPairingView.swift; sourceTree = "<group>"; };
+		B10000220000000000000001 /* ServiceIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceIconView.swift; sourceTree = "<group>"; };
+		B10000230000000000000001 /* CategoryServiceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryServiceEditorSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -171,6 +175,7 @@
 				B10000070000000000000001 /* ByteFormatters.swift */,
 				B10000080000000000000001 /* GlassCard.swift */,
 				B10000090000000000000001 /* AlertsBannerView.swift */,
+				B10000220000000000000001 /* ServiceIconView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -204,6 +209,7 @@
 			children = (
 				B100000D0000000000000001 /* ServicesTabView.swift */,
 				B100001C0000000000000001 /* CustomServiceEditorSheet.swift */,
+				B10000230000000000000001 /* CategoryServiceEditorSheet.swift */,
 			);
 			path = ServicesHub;
 			sourceTree = "<group>";
@@ -353,6 +359,8 @@
 				A100001E0000000000000001 /* OnboardingFlowView.swift in Sources */,
 				A100001F0000000000000001 /* QRScannerView.swift in Sources */,
 				A10000200000000000000001 /* AppleTVPairingView.swift in Sources */,
+				A10000210000000000000001 /* ServiceIconView.swift in Sources */,
+				A10000220000000000000001 /* CategoryServiceEditorSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

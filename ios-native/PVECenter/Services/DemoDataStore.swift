@@ -16,6 +16,7 @@ public actor DemoDataStore {
     private var users: [UnifiedUser]
     private var setupEnv: SetupEnvConfig
     private var customServices: [CustomServiceConfig]
+    private var mutableCategories: [ServiceCategory]?
     private var incidents: [IncidentEvent]
     private var notificationChannels: NotificationChannelsResponse
     private var yamlConfigText: String
@@ -657,7 +658,10 @@ public actor DemoDataStore {
     }
 
     public func servicesCategories() -> [ServiceCategory] {
-        [
+        if let mutableCategories {
+            return mutableCategories
+        }
+        return [
             ServiceCategory(
                 name: "Médias & Streaming",
                 services: [
@@ -770,6 +774,106 @@ public actor DemoDataStore {
                 ]
             ),
         ]
+    }
+
+    public func updateCategoryService(id: String, payload: CategoryServiceUpdateRequest) throws -> CategoryServiceMutationResponse {
+        var cats = servicesCategories()
+        for catIdx in cats.indices {
+            if let svcIdx = cats[catIdx].services.firstIndex(where: { $0.id == id }) {
+                let current = cats[catIdx].services[svcIdx]
+                let updated = ServiceItem(
+                    id: current.id,
+                    name: payload.name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? payload.name!.trimmingCharacters(in: .whitespacesAndNewlines) : current.name,
+                    description: payload.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? current.description,
+                    url: payload.url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? current.url,
+                    pingUrl: payload.pingUrl?.trimmingCharacters(in: .whitespacesAndNewlines) ?? current.pingUrl,
+                    icon: payload.icon?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? payload.icon!.trimmingCharacters(in: .whitespacesAndNewlines) : current.icon,
+                    widget: {
+                        guard let w = payload.widget?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+                            return current.widget
+                        }
+                        return w.isEmpty ? nil : w
+                    }(),
+                    online: current.online,
+                    latencyMs: current.latencyMs,
+                    statusCode: current.statusCode,
+                    protocolType: current.protocolType,
+                    metrics: current.metrics,
+                    isCustom: current.isCustom
+                )
+                let targetCat = payload.category?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let destCatName = (targetCat?.isEmpty == false) ? targetCat! : cats[catIdx].name
+
+                if destCatName.caseInsensitiveCompare(cats[catIdx].name) == .orderedSame {
+                    var list = cats[catIdx].services
+                    list[svcIdx] = updated
+                    cats[catIdx] = ServiceCategory(name: cats[catIdx].name, services: list)
+                } else {
+                    var srcList = cats[catIdx].services
+                    srcList.remove(at: svcIdx)
+                    if srcList.isEmpty {
+                        cats.remove(at: catIdx)
+                    } else {
+                        cats[catIdx] = ServiceCategory(name: cats[catIdx].name, services: srcList)
+                    }
+                    if let destIdx = cats.firstIndex(where: { $0.name.caseInsensitiveCompare(destCatName) == .orderedSame }) {
+                        var destList = cats[destIdx].services
+                        destList.append(updated)
+                        cats[destIdx] = ServiceCategory(name: cats[destIdx].name, services: destList)
+                    } else {
+                        cats.append(ServiceCategory(name: destCatName, services: [updated]))
+                    }
+                }
+                mutableCategories = cats
+                return CategoryServiceMutationResponse(ok: true, category: destCatName, service: updated)
+            }
+        }
+        throw APIError.serverError(statusCode: 404, detail: "Service introuvable : \(id)")
+    }
+
+    public func moveCategoryService(id: String, direction: String) {
+        var cats = servicesCategories()
+        for catIdx in cats.indices {
+            if let svcIdx = cats[catIdx].services.firstIndex(where: { $0.id == id }) {
+                let targetIdx = direction == "up" ? svcIdx - 1 : svcIdx + 1
+                var list = cats[catIdx].services
+                if list.indices.contains(targetIdx) {
+                    list.swapAt(svcIdx, targetIdx)
+                    cats[catIdx] = ServiceCategory(name: cats[catIdx].name, services: list)
+                    mutableCategories = cats
+                }
+                return
+            }
+        }
+    }
+
+    public func deleteCategoryService(id: String) throws {
+        var cats = servicesCategories()
+        for catIdx in cats.indices {
+            if let svcIdx = cats[catIdx].services.firstIndex(where: { $0.id == id }) {
+                var list = cats[catIdx].services
+                list.remove(at: svcIdx)
+                if list.isEmpty {
+                    cats.remove(at: catIdx)
+                } else {
+                    cats[catIdx] = ServiceCategory(name: cats[catIdx].name, services: list)
+                }
+                mutableCategories = cats
+                return
+            }
+        }
+        throw APIError.serverError(statusCode: 404, detail: "Service introuvable : \(id)")
+    }
+
+    public func testCategoryService(id: String, override: CategoryServiceTestRequest?) -> CategoryServiceTestResponse {
+        return CategoryServiceTestResponse(
+            ok: true,
+            serviceId: id,
+            online: true,
+            statusCode: 200,
+            latencyMs: 9,
+            message: "Joignable (HTTP 200 • Mode Démo)"
+        )
     }
 
     public func widgets() -> WidgetsMap {

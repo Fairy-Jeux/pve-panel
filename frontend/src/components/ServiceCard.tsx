@@ -1,35 +1,18 @@
-import { useState, type ComponentType } from 'react';
+import { useState } from 'react';
 import {
-  Activity,
   ArrowDown,
   ArrowUp,
   BellOff,
   Check,
-  Clapperboard,
-  Cloud,
   Copy,
-  Cpu,
-  Database,
-  Download,
   ExternalLink,
-  Film,
-  Gamepad2,
-  Globe,
-  HardDrive,
-  LayoutGrid,
   Loader2,
   Pencil,
   Play,
-  Radar,
-  Router,
-  Server,
-  Shield,
-  Sparkles,
   Trash2,
-  Tv,
-  Wifi,
 } from 'lucide-react';
 import { getServerUrl } from '../lib/apiClient';
+import { ServiceIconBadge } from './ServiceIcon';
 import type {
   CustomServiceItem,
   CustomServiceTestResponse,
@@ -43,28 +26,6 @@ import type {
   SonarrWidget,
   WidgetsMap,
 } from '../types';
-
-const ICONS: Record<string, ComponentType<{ className?: string }>> = {
-  Film,
-  Play,
-  Sparkles,
-  Clapperboard,
-  Tv,
-  Radar,
-  Download,
-  Cloud,
-  Shield,
-  Gamepad2,
-  Server,
-  Globe,
-  Activity,
-  LayoutGrid,
-  Router,
-  Database,
-  Cpu,
-  HardDrive,
-  Wifi,
-};
 
 const PROTOCOL_BADGE: Record<ServiceProtocol, { label: string; cls: string }> = {
   http_rest: {
@@ -297,6 +258,9 @@ interface ServiceCardProps {
   customService?: CustomServiceItem;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  onEditService?: (svc: ServiceItem, categoryName: string) => void;
+  onMoveService?: (svc: ServiceItem, direction: 'up' | 'down') => Promise<void>;
+  categoryName?: string;
   onEditCustom?: (svc: CustomServiceItem) => void;
   onDeleteCustom?: (svc: CustomServiceItem) => Promise<void>;
   onMoveCustom?: (svc: CustomServiceItem, direction: 'up' | 'down') => Promise<void>;
@@ -309,12 +273,14 @@ export function ServiceCard({
   customService,
   canMoveUp = false,
   canMoveDown = false,
+  onEditService,
+  onMoveService,
+  categoryName = 'Services',
   onEditCustom,
   onDeleteCustom,
   onMoveCustom,
   onTestCustom,
 }: ServiceCardProps) {
-  const Icon = ICONS[service.icon] || Server;
   const [testing, setTesting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -399,67 +365,111 @@ export function ServiceCard({
     }
   };
 
-  const titleContent = (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white/80 text-cyan-600 transition group-hover:border-cyan-500/40 group-hover:bg-cyan-500/10 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-cyan-400">
-          <Icon className="h-5 w-5" />
+  const linkBody = (
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      <ServiceIconBadge
+        icon={service.icon}
+        hint={{ id: service.id, name: service.name, widget: service.widget }}
+        size="md"
+      />
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <h3 className="truncate text-sm font-semibold text-slate-900 group-hover:text-cyan-700 dark:text-slate-100 dark:group-hover:text-cyan-300">
+            {service.name}
+          </h3>
+          {service.url && (
+            <ExternalLink className="h-3 w-3 shrink-0 text-slate-400 opacity-60 transition group-hover:opacity-100" />
+          )}
+          {protoMeta && (
+            <span
+              className={`rounded-md border px-1.5 py-0.2 font-mono text-[9px] font-semibold uppercase ${protoMeta.cls}`}
+            >
+              {protoMeta.label}
+            </span>
+          )}
+          {muted && (
+            <span
+              title="Alertes en sourdine"
+              className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-amber-700 dark:text-amber-300"
+            >
+              <BellOff className="h-2.5 w-2.5" />
+              Mute
+            </span>
+          )}
         </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <h3 className="truncate text-sm font-semibold text-slate-900 group-hover:text-cyan-700 dark:text-slate-100 dark:group-hover:text-cyan-300">
-              {service.name}
-            </h3>
-            {service.url && (
-              <ExternalLink className="h-3 w-3 shrink-0 text-slate-400 opacity-60 transition group-hover:opacity-100" />
-            )}
-            {protoMeta && (
-              <span
-                className={`rounded-md border px-1.5 py-0.2 font-mono text-[9px] font-semibold uppercase ${protoMeta.cls}`}
-              >
-                {protoMeta.label}
-              </span>
-            )}
-            {muted && (
-              <span
-                title="Alertes en sourdine"
-                className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-amber-700 dark:text-amber-300"
-              >
-                <BellOff className="h-2.5 w-2.5" />
-                Mute
-              </span>
-            )}
-          </div>
-          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-            {service.description || (service.host ? `${service.host}${service.port ? `:${service.port}` : ''}` : 'Service supervisé')}
-          </p>
-        </div>
+        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+          {service.description ||
+            (service.host
+              ? `${service.host}${service.port ? `:${service.port}` : ''}`
+              : 'Service supervisé')}
+        </p>
       </div>
-
-      <span
-        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusPill.cls}`}
-      >
-        <span className={`h-1.5 w-1.5 rounded-full ${statusPill.dot}`} />
-        {statusPill.text}
-      </span>
     </div>
   );
 
   return (
     <div className="liquid-glass group flex flex-col justify-between rounded-3xl p-4 transition duration-200 hover:-translate-y-0.5 hover:!border-cyan-500/40">
       <div>
-        {service.url ? (
-          <a
-            href={service.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-          >
-            {titleContent}
-          </a>
-        ) : (
-          titleContent
-        )}
+        <div className="flex items-start justify-between gap-2.5">
+          {service.url ? (
+            <a
+              href={service.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block min-w-0 flex-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+            >
+              {linkBody}
+            </a>
+          ) : (
+            linkBody
+          )}
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {!isCustom && onMoveService && (canMoveUp || canMoveDown) && (
+              <div className="flex items-center gap-0.5 opacity-80 transition group-hover:opacity-100 md:opacity-0 md:group-focus-within:opacity-100">
+                <button
+                  type="button"
+                  disabled={!canMoveUp}
+                  onClick={() => void onMoveService(service, 'up')}
+                  className="liquid-pill rounded-full p-1 text-slate-500 transition hover:text-slate-900 disabled:opacity-25 dark:text-slate-300 dark:hover:text-white"
+                  title="Monter"
+                  aria-label={`Monter ${service.name}`}
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!canMoveDown}
+                  onClick={() => void onMoveService(service, 'down')}
+                  className="liquid-pill rounded-full p-1 text-slate-500 transition hover:text-slate-900 disabled:opacity-25 dark:text-slate-300 dark:hover:text-white"
+                  title="Descendre"
+                  aria-label={`Descendre ${service.name}`}
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
+            {!isCustom && onEditService && (
+              <button
+                type="button"
+                onClick={() => onEditService(service, categoryName)}
+                className="liquid-pill rounded-full p-1.5 text-slate-500 transition hover:text-cyan-600 dark:text-slate-300 dark:hover:text-cyan-300"
+                title={`Personnaliser ${service.name}`}
+                aria-label={`Personnaliser ${service.name}`}
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+
+            <span
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusPill.cls}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${statusPill.dot}`} />
+              {statusPill.text}
+            </span>
+          </div>
+        </div>
 
         {metricsEntries.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">

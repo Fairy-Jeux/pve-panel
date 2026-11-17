@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { getServerUrl } from '../lib/apiClient';
 import { QrCodeView } from './NotificationsModal';
+import { formatServiceIconLabel, SERVICE_ICON_OPTIONS } from './ServiceIcon';
 import type {
   SetupCategoryConfig,
   SetupConfigUpdateRequest,
@@ -171,24 +172,6 @@ const MEDIA_SERVICES: MediaServiceDescriptor[] = [
     secretLabel: 'Mot de passe WebUI',
     usernameKey: 'qbit_username',
   },
-];
-
-const SERVICE_ICON_OPTIONS = [
-  'Server',
-  'Film',
-  'Play',
-  'Sparkles',
-  'Clapperboard',
-  'Tv',
-  'Radar',
-  'Download',
-  'Cloud',
-  'Shield',
-  'Gamepad2',
-  'Globe',
-  'Activity',
-  'LayoutGrid',
-  'Router',
 ];
 
 const WIDGET_OPTIONS = [
@@ -1443,7 +1426,7 @@ export function SetupWizardModal({
                                         >
                                           {iconChoices.map((iconName) => (
                                             <option key={iconName} value={iconName}>
-                                              {iconName}
+                                              {formatServiceIconLabel(iconName)}
                                             </option>
                                           ))}
                                         </select>

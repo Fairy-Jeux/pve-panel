@@ -283,6 +283,84 @@ public actor APIClient {
         )
     }
 
+    // MARK: - Categorized Apps Customization
+
+    public func updateCategoryService(
+        baseURL: String,
+        demoMode: Bool,
+        serviceId: String,
+        payload: CategoryServiceUpdateRequest
+    ) async throws -> CategoryServiceMutationResponse {
+        if demoMode {
+            return try await demoStore.updateCategoryService(id: serviceId, payload: payload)
+        }
+        return try await send(
+            path: "/api/services/items/\(escapePath(serviceId))",
+            method: "PUT",
+            body: payload,
+            baseURL: baseURL
+        )
+    }
+
+    public func moveCategoryService(
+        baseURL: String,
+        demoMode: Bool,
+        serviceId: String,
+        direction: String
+    ) async throws {
+        if demoMode {
+            await demoStore.moveCategoryService(id: serviceId, direction: direction)
+            return
+        }
+        try await sendVoid(
+            path: "/api/services/items/\(escapePath(serviceId))/move",
+            method: "POST",
+            body: CategoryServiceMoveRequest(direction: direction),
+            baseURL: baseURL
+        )
+    }
+
+    public func testCategoryService(
+        baseURL: String,
+        demoMode: Bool,
+        serviceId: String,
+        override: CategoryServiceTestRequest? = nil
+    ) async throws -> CategoryServiceTestResponse {
+        if demoMode {
+            return await demoStore.testCategoryService(id: serviceId, override: override)
+        }
+        let encodedID = escapePath(serviceId)
+        if let override {
+            return try await send(
+                path: "/api/services/items/\(encodedID)/test",
+                method: "POST",
+                body: override,
+                baseURL: baseURL
+            )
+        }
+        return try await send(
+            path: "/api/services/items/\(encodedID)/test",
+            method: "POST",
+            baseURL: baseURL
+        )
+    }
+
+    public func deleteCategoryService(
+        baseURL: String,
+        demoMode: Bool,
+        serviceId: String
+    ) async throws {
+        if demoMode {
+            try await demoStore.deleteCategoryService(id: serviceId)
+            return
+        }
+        try await sendVoid(
+            path: "/api/services/items/\(escapePath(serviceId))",
+            method: "DELETE",
+            baseURL: baseURL
+        )
+    }
+
     // MARK: - Incidents & Alert Actions
 
     public func fetchIncidents(

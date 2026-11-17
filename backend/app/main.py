@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -133,6 +134,20 @@ app.include_router(users.router)
 app.include_router(operations.router)
 
 
+_NO_STORE_HTML_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
+def _serve_spa_file(path: Path) -> FileResponse:
+    """Serve SPA file with no-store caching on HTML so deployments never leave stale UI cached."""
+    if path.suffix.lower() == ".html":
+        return FileResponse(path, headers=_NO_STORE_HTML_HEADERS)
+    return FileResponse(path)
+
+
 _static_dir = get_settings().resolve_static_dir()
 if _static_dir:
     assets_dir = _static_dir / "assets"
@@ -150,8 +165,8 @@ if _static_dir:
             and candidate.is_file()
             and str(candidate).startswith(str(_static_dir.resolve()))
         ):
-            return FileResponse(candidate)
-        return FileResponse(_static_dir / "index.html")
+            return _serve_spa_file(candidate)
+        return _serve_spa_file(_static_dir / "index.html")
 else:
 
     @app.get("/", include_in_schema=False)

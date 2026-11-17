@@ -172,14 +172,6 @@ public struct CustomServiceEditorSheet: View {
         }
     }
 
-    private var iconColumns: [GridItem] {
-        #if os(tvOS)
-        return [GridItem(.adaptive(minimum: 72), spacing: 12)]
-        #else
-        return [GridItem(.adaptive(minimum: 42), spacing: 8)]
-        #endif
-    }
-
     public var body: some View {
         NavigationStack {
             Form {
@@ -252,53 +244,12 @@ public struct CustomServiceEditorSheet: View {
     }
 
     private var iconPickerSection: some View {
-        Section("Icône SF Symbol") {
-            HStack(spacing: 12) {
-                Image(systemName: ServiceSymbolCatalog.resolveSFSymbol(icon))
-                    .font(.title2)
-                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
-                    .frame(width: 40, height: 40)
-                    .background(
-                        DesignTokens.surfaceElevated(colorScheme),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-                TextField("Nom SF Symbol (ex: server.rack)", text: $icon)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-            }
-
-            LazyVGrid(columns: iconColumns, spacing: 8) {
-                ForEach(ServiceSymbolCatalog.options) { option in
-                    let isSelected = ServiceSymbolCatalog.resolveSFSymbol(icon) == option.symbol
-                    Button {
-                        icon = option.symbol
-                    } label: {
-                        Image(systemName: option.symbol)
-                            .font(.body)
-                            .foregroundStyle(isSelected ? DesignTokens.signalTeal(colorScheme) : .primary)
-                            .frame(maxWidth: .infinity, minHeight: 38)
-                            .background(
-                                isSelected
-                                    ? DesignTokens.signalTeal(colorScheme).opacity(0.18)
-                                    : DesignTokens.surfaceElevated(colorScheme),
-                                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                    .strokeBorder(
-                                        isSelected ? DesignTokens.signalTeal(colorScheme) : Color.clear,
-                                        lineWidth: 1.4
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(option.label)
-                }
-            }
-            .padding(.vertical, 4)
-        }
+        ServiceIconPickerSection(
+            selectedIcon: $icon,
+            serviceId: existingService?.id,
+            serviceName: name,
+            widget: nil
+        )
     }
 
     private var protocolTargetSection: some View {
