@@ -64,6 +64,7 @@ public struct PVECenterApp: App {
     public var body: some Scene {
         WindowGroup("PVE Center", id: "main") {
             ContentView(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
                 #if os(tvOS)
                 .preferredColorScheme(.dark)
                 #else
@@ -140,11 +141,13 @@ public struct PVECenterApp: App {
         #if os(macOS)
         Settings {
             ServerSettingsSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
 
         MenuBarExtra("PVE Center", systemImage: "server.rack") {
             MenuBarPanelView(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .menuBarExtraStyle(.window)
@@ -171,7 +174,7 @@ private struct MenuBarPanelView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(viewModel.accentTheme, colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
         let caution = DesignTokens.caution(colorScheme)
 

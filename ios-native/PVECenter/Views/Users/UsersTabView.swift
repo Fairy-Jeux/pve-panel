@@ -12,6 +12,7 @@ private enum UserFilter: String, CaseIterable, Identifiable {
 public struct UsersTabView: View {
     public var viewModel: AppViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @State private var filter: UserFilter = .all
     @State private var showCreateSheet = false
     @State private var selectedUser: UnifiedUser?
@@ -112,10 +113,14 @@ public struct UsersTabView: View {
         .contentMargins(.bottom, 32, for: .scrollContent)
         .fullScreenCover(isPresented: $showCreateSheet) {
             CreateUserSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         .fullScreenCover(item: $selectedUser) { user in
             ManageUserSheet(viewModel: viewModel, user: user)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         #else
@@ -128,10 +133,14 @@ public struct UsersTabView: View {
         #endif
         .sheet(isPresented: $showCreateSheet) {
             CreateUserSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(item: $selectedUser) { user in
             ManageUserSheet(viewModel: viewModel, user: user)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         #endif
@@ -173,7 +182,7 @@ public struct UsersTabView: View {
                             .lineLimit(1)
                             .fixedSize()
                     }
-                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                     .adaptiveSmallControlSize()
                 }
 
@@ -214,7 +223,7 @@ public struct UsersTabView: View {
     }
 
     private func userRow(_ user: UnifiedUser) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         let critical = DesignTokens.critical(colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
         let caution = DesignTokens.caution(colorScheme)

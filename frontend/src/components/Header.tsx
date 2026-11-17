@@ -170,7 +170,7 @@ export function Header({
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pb-3.5 pt-2 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center justify-between gap-2.5">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/35 bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 text-cyan-600 shadow-lg shadow-cyan-500/15 dark:border-cyan-400/35 dark:text-cyan-300">
+            <div className="cider-accent-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-cyan-600 shadow-lg shadow-cyan-500/15 dark:text-cyan-300">
               <Server className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -471,7 +471,7 @@ export function Header({
                   className="h-6 w-6 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-indigo-500 text-[11px] font-semibold text-white">
+                <div className="cider-accent-btn flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold text-white">
                   {initials}
                 </div>
               )}

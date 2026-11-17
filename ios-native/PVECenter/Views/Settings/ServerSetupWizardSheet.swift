@@ -4,6 +4,7 @@ public struct ServerSetupWizardSheet: View {
     public var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var isLoading: Bool = true
     @State private var isSaving: Bool = false
@@ -73,20 +74,28 @@ public struct ServerSetupWizardSheet: View {
             tvOSWizardBody
                 .fullScreenCover(isPresented: $showOnboardingFlow) {
                     OnboardingFlowView(viewModel: viewModel)
+                        .environment(\.accentTheme, viewModel.accentTheme)
+                        .tint(viewModel.tintColor(for: .dark))
                         .preferredColorScheme(.dark)
                 }
                 .fullScreenCover(isPresented: $showYAMLEditor) {
                     YAMLConfigEditorView(viewModel: viewModel)
+                        .environment(\.accentTheme, viewModel.accentTheme)
+                        .tint(viewModel.tintColor(for: .dark))
                         .preferredColorScheme(.dark)
                 }
             #else
             standardWizardBody
                 .sheet(isPresented: $showOnboardingFlow) {
                     OnboardingFlowView(viewModel: viewModel)
+                        .environment(\.accentTheme, viewModel.accentTheme)
+                        .tint(viewModel.tintColor(for: colorScheme))
                         .preferredColorScheme(viewModel.preferredColorScheme)
                 }
                 .sheet(isPresented: $showYAMLEditor) {
                     YAMLConfigEditorView(viewModel: viewModel)
+                        .environment(\.accentTheme, viewModel.accentTheme)
+                        .tint(viewModel.tintColor(for: colorScheme))
                         .preferredColorScheme(viewModel.preferredColorScheme)
                 }
             #endif
@@ -137,7 +146,7 @@ public struct ServerSetupWizardSheet: View {
                             .font(.callout.weight(.semibold))
                             .opacity((isLoading || isSaving) ? 0.5 : 1.0)
                     }
-                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
 
                     Button {
                         dismiss()
@@ -183,7 +192,7 @@ public struct ServerSetupWizardSheet: View {
                                             verifySsl: pveVerifySsl
                                         )
                                     }
-                                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
+                                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme))
                                     Divider()
                                     TextField("Emails Tailscale autorisés", text: $allowedTailscaleUsers)
                                     TextField("Compte propriétaire protégé", text: $protectedOwnerUsername)
@@ -346,7 +355,7 @@ public struct ServerSetupWizardSheet: View {
                                 }
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(.cyan)
+                            .tint(DesignTokens.accent(accentTheme, colorScheme))
                             .disabled(isSaving)
                         }
                     }

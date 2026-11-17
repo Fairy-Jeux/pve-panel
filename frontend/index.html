@@ -28,8 +28,29 @@
           root.classList.remove('light', 'dark');
           root.classList.add(resolved);
           root.style.colorScheme = resolved;
+          var accent = localStorage.getItem('pve_panel_accent') || 'cyan';
+          var bgMapDark = {
+            cyan: '#030816',
+            cider: '#120409',
+            indigo: '#06071c',
+            emerald: '#03120c',
+            amber: '#130a03',
+            purple: '#0e041a'
+          };
+          var bgMapLight = {
+            cyan: '#eef4fa',
+            cider: '#fdf2f5',
+            indigo: '#eff0fd',
+            emerald: '#ecfdf5',
+            amber: '#fff8ec',
+            purple: '#f6f0ff'
+          };
+          var darkBg = bgMapDark[accent] || '#030816';
+          var lightBg = bgMapLight[accent] || '#eef4fa';
+          root.style.setProperty('--theme-bg-dark', darkBg);
+          root.style.setProperty('--theme-bg-light', lightBg);
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#030712' : '#eef2f7');
+          if (meta) meta.setAttribute('content', resolved === 'dark' ? darkBg : lightBg);
         } catch (e) {
           document.documentElement.classList.add('dark');
         }

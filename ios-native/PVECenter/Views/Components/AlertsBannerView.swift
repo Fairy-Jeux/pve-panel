@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct AlertsBannerView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     public let alerts: [SmartAlert]
@@ -25,7 +26,7 @@ public struct AlertsBannerView: View {
         switch severity {
         case .critical: DesignTokens.critical(colorScheme)
         case .warning: DesignTokens.caution(colorScheme)
-        case .info: DesignTokens.signalTeal(colorScheme)
+        case .info: DesignTokens.accent(accentTheme, colorScheme)
         }
     }
 
@@ -163,6 +164,7 @@ public struct AlertsBannerView: View {
 
 public struct LiveAlertOverlayBanner: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public let banner: InAppAlertBanner
@@ -193,7 +195,7 @@ public struct LiveAlertOverlayBanner: View {
         case "warning":
             return DesignTokens.caution(colorScheme)
         case "info":
-            return DesignTokens.signalTeal(colorScheme)
+            return DesignTokens.accent(accentTheme, colorScheme)
         default:
             return DesignTokens.critical(colorScheme)
         }
@@ -355,6 +357,7 @@ public struct LiveAlertOverlayBanner: View {
 
 public struct RealtimeSyncPill: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     public let isDemoMode: Bool
     public let state: RealtimeConnectionState
     public let activeIncidentsCount: Int
@@ -397,7 +400,7 @@ public struct RealtimeSyncPill: View {
         case .connectedWebSocket:
             return DesignTokens.nominal(colorScheme)
         case .connectedSSE:
-            return DesignTokens.signalTeal(colorScheme)
+            return DesignTokens.accent(accentTheme, colorScheme)
         case .connecting, .reconnecting:
             return DesignTokens.caution(colorScheme)
         case .disconnected:

@@ -14,6 +14,7 @@ public struct ServicesTabView: View {
     @Environment(\.openURL) private var openURL
     #endif
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var filter: ServicesFilter = .all
     @State private var showAddSheet: Bool = false
@@ -155,29 +156,43 @@ public struct ServicesTabView: View {
         .sensoryFeedback(.selection, trigger: filter)
         #endif
         #if os(tvOS)
+        .contentMargins(.top, 18, for: .scrollContent)
+        .contentMargins(.bottom, 32, for: .scrollContent)
         .fullScreenCover(isPresented: $showAddSheet) {
             CustomServiceEditorSheet(viewModel: viewModel, existingService: nil)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         .fullScreenCover(item: $editingService) { service in
             CustomServiceEditorSheet(viewModel: viewModel, existingService: service)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         .fullScreenCover(item: $editingCategoryService) { draft in
             CategoryServiceEditorSheet(viewModel: viewModel, draft: draft)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         #else
         .sheet(isPresented: $showAddSheet) {
             CustomServiceEditorSheet(viewModel: viewModel, existingService: nil)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(item: $editingService) { service in
             CustomServiceEditorSheet(viewModel: viewModel, existingService: service)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(item: $editingCategoryService) { draft in
             CategoryServiceEditorSheet(viewModel: viewModel, draft: draft)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         #endif
@@ -203,7 +218,7 @@ public struct ServicesTabView: View {
     // MARK: - Header & Custom Services Section
 
     private var headerCard: some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         let customOnline = viewModel.customServices.filter(\.isOnline).count
         let catServices = viewModel.categories.flatMap(\.services)
         let catOnline = catServices.filter(\.online).count
@@ -285,7 +300,7 @@ public struct ServicesTabView: View {
                         Button("Ajouter") {
                             showAddSheet = true
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                         .adaptiveSmallControlSize()
                     }
                 }
@@ -729,7 +744,7 @@ public struct ServicesTabView: View {
     // MARK: - Subcomponents & Helpers
 
     private func protocolBadge(_ label: String, symbol: String?) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         return HStack(spacing: 4) {
             if let symbol {
                 Image(systemName: symbol)

@@ -991,7 +991,7 @@ export function OnboardingModal({
                 <button
                   type="button"
                   onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3 | 4)}
-                  className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/25"
+                  className="cider-accent-btn inline-flex items-center gap-1.5 rounded-2xl px-5 py-2 text-xs font-semibold text-white"
                 >
                   Suivant
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -1001,7 +1001,7 @@ export function OnboardingModal({
                   type="button"
                   disabled={submitting}
                   onClick={() => void handleInitOnboarding()}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/25 disabled:opacity-50"
+                  className="cider-accent-btn inline-flex items-center gap-2 rounded-2xl px-5 py-2 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   {submitting ? (
                     <>

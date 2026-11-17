@@ -117,19 +117,26 @@ public struct ServerSettingsSheet: View {
             tvOSBody
                 .fullScreenCover(item: $activeModal) { route in
                     modalView(for: route)
+                        .environment(\.accentTheme, viewModel.accentTheme)
+                        .tint(viewModel.tintColor(for: .dark))
                         .preferredColorScheme(.dark)
                 }
             #else
             standardBody
                 .sheet(item: $activeModal) { route in
                     modalView(for: route)
+                        .environment(\.accentTheme, viewModel.accentTheme)
+                        .tint(viewModel.tintColor(for: colorScheme))
                         .preferredColorScheme(viewModel.preferredColorScheme)
                 }
             #endif
         }
+        .environment(\.accentTheme, viewModel.accentTheme)
         #if os(tvOS)
+        .tint(viewModel.tintColor(for: .dark))
         .preferredColorScheme(.dark)
         #else
+        .tint(viewModel.tintColor(for: colorScheme))
         .preferredColorScheme(viewModel.preferredColorScheme)
         #endif
         .onAppear {
@@ -327,7 +334,7 @@ public struct ServerSettingsSheet: View {
                                                 } label: {
                                                     HStack(spacing: 12) {
                                                         Image(systemName: isActive ? "checkmark.circle.fill" : "server.rack")
-                                                            .foregroundStyle(isActive ? .green : .cyan)
+                                                            .foregroundStyle(isActive ? .green : DesignTokens.accent(viewModel.accentTheme, colorScheme))
                                                         VStack(alignment: .leading, spacing: 2) {
                                                             Text(server.name)
                                                                 .font(.headline)
@@ -342,7 +349,7 @@ public struct ServerSettingsSheet: View {
                                                     }
                                                 }
                                                 .adaptivePillButtonStyle(
-                                                    tint: isActive ? .green : DesignTokens.signalTeal(colorScheme),
+                                                    tint: isActive ? .green : DesignTokens.accent(viewModel.accentTheme, colorScheme),
                                                     cornerRadius: 16
                                                 )
 
@@ -390,7 +397,7 @@ public struct ServerSettingsSheet: View {
                                         .opacity(connectDisabled ? 0.5 : 1.0)
                                     }
                                     .adaptivePillButtonStyle(
-                                        tint: DesignTokens.signalTeal(colorScheme),
+                                        tint: DesignTokens.accent(viewModel.accentTheme, colorScheme),
                                         prominent: true,
                                         cornerRadius: 16
                                     )
@@ -604,16 +611,15 @@ public struct ServerSettingsSheet: View {
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    DesignTokens.surfaceElevated(colorScheme),
+                    DesignTokens.surfaceElevated(theme: viewModel.accentTheme, colorScheme),
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                 )
             }
             .padding(14)
             .frame(width: 242)
             .background(
-                colorScheme == .light
-                    ? Color(red: 0.93, green: 0.95, blue: 0.98)
-                    : Color(red: 0.055, green: 0.067, blue: 0.105)
+                DesignTokens.surface(theme: viewModel.accentTheme, colorScheme)
+                    .opacity(colorScheme == .light ? 0.94 : 0.88)
             )
 
             Divider()
@@ -643,6 +649,10 @@ public struct ServerSettingsSheet: View {
                     }
                 }
                 .formStyle(.grouped)
+                #if !os(tvOS)
+                .scrollContentBackground(.hidden)
+                .background { AmbientBackgroundView() }
+                #endif
                 .navigationTitle(selectedSidebarTab.title)
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
@@ -798,7 +808,7 @@ public struct ServerSettingsSheet: View {
                     title: "Appairage Apple TV (PIN 6 chiffres)",
                     subtitle: "Transfert chiffré CryptoKit P-256 + AES-GCM",
                     systemImage: "appletv.fill",
-                    tint: .cyan
+                    tint: DesignTokens.accent(viewModel.accentTheme, colorScheme)
                 )
             }
             .buttonStyle(.plain)
@@ -814,7 +824,7 @@ public struct ServerSettingsSheet: View {
                     title: "Éditeur YAML & Rechargement à chaud",
                     subtitle: "Consulter, valider, modifier et exporter config.yaml",
                     systemImage: "doc.text.magnifyingglass",
-                    tint: DesignTokens.signalTeal(colorScheme)
+                    tint: DesignTokens.accent(viewModel.accentTheme, colorScheme)
                 )
             }
             .buttonStyle(.plain)
@@ -855,7 +865,7 @@ public struct ServerSettingsSheet: View {
                     title: "Éditeur YAML & Rechargement à chaud",
                     subtitle: "Consulter, valider, modifier et exporter config.yaml",
                     systemImage: "doc.text.magnifyingglass",
-                    tint: DesignTokens.signalTeal(colorScheme)
+                    tint: DesignTokens.accent(viewModel.accentTheme, colorScheme)
                 )
             }
             .buttonStyle(.plain)
@@ -868,7 +878,7 @@ public struct ServerSettingsSheet: View {
                     title: "Appairage Apple TV (PIN 6 chiffres)",
                     subtitle: "Transfert chiffré CryptoKit P-256 + AES-GCM",
                     systemImage: "appletv.fill",
-                    tint: .cyan
+                    tint: DesignTokens.accent(viewModel.accentTheme, colorScheme)
                 )
             }
             .buttonStyle(.plain)
@@ -927,7 +937,7 @@ public struct ServerSettingsSheet: View {
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: isActive ? "checkmark.circle.fill" : "server.rack")
-                                .foregroundStyle(isActive ? .green : .cyan)
+                                .foregroundStyle(isActive ? .green : DesignTokens.accent(viewModel.accentTheme, colorScheme))
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 6) {
                                     Text(server.name)
@@ -942,12 +952,13 @@ public struct ServerSettingsSheet: View {
                                             .foregroundStyle(.green)
                                     }
                                     if server.usesTailscaleSSO {
+                                        let accent = DesignTokens.accent(viewModel.accentTheme, colorScheme)
                                         Text("SSO")
                                             .font(.caption2.weight(.semibold))
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
-                                            .background(.cyan.opacity(0.16), in: Capsule())
-                                            .foregroundStyle(.cyan)
+                                            .background(accent.opacity(0.16), in: Capsule())
+                                            .foregroundStyle(accent)
                                     }
                                     if hasToken {
                                         Image(systemName: "key.fill")
@@ -1019,7 +1030,7 @@ public struct ServerSettingsSheet: View {
                 } label: {
                     HStack {
                         Image(systemName: "bonjour")
-                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .foregroundStyle(DesignTokens.accent(viewModel.accentTheme, colorScheme))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(server.name)
                                 .font(.subheadline.weight(.semibold))
@@ -1032,7 +1043,7 @@ public struct ServerSettingsSheet: View {
                         Spacer()
                         Text("Connecter")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .foregroundStyle(DesignTokens.accent(viewModel.accentTheme, colorScheme))
                     }
                 }
                 .buttonStyle(.plain)

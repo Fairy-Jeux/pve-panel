@@ -10,6 +10,7 @@ private enum IncidentFilter: String, CaseIterable, Identifiable {
 public struct OperationsTabView: View {
     public var viewModel: AppViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @State private var scanningTarget: String?
     @State private var incidentFilter: IncidentFilter = .all
     @State private var busyIncidentID: String?
@@ -98,7 +99,7 @@ public struct OperationsTabView: View {
         let critical = DesignTokens.critical(colorScheme)
         let caution = DesignTokens.caution(colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
 
         return GlassCard(padding: Layout.cardPadding) {
             VStack(alignment: .leading, spacing: Layout.cardSpacing) {
@@ -360,7 +361,7 @@ public struct OperationsTabView: View {
         .disabled(scanningTarget != nil)
         #endif
         .adaptivePillButtonStyle(
-            tint: prominent ? DesignTokens.signalTeal(colorScheme) : nil,
+            tint: prominent ? DesignTokens.accent(accentTheme, colorScheme) : nil,
             prominent: prominent
         )
     }
@@ -394,7 +395,7 @@ public struct OperationsTabView: View {
                         VStack(alignment: .leading, spacing: Layout.cardSpacing) {
                             HStack(spacing: 10) {
                                 Image(systemName: req.mediaType == "tv" ? "tv" : "film")
-                                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                    .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(req.title)
                                         .font(.subheadline.weight(.semibold))
@@ -555,7 +556,7 @@ public struct OperationsTabView: View {
                             }
                             UsageProgressBar(
                                 percentage: torrent.progressPct,
-                                tint: torrent.isPaused ? DesignTokens.caution(colorScheme) : DesignTokens.signalTeal(colorScheme)
+                                tint: torrent.isPaused ? DesignTokens.caution(colorScheme) : DesignTokens.accent(accentTheme, colorScheme)
                             )
                         }
                         .padding(Layout.rowPadding)

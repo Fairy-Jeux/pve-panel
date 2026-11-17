@@ -205,7 +205,7 @@ export function ServerConfigModal({
               <button
                 type="button"
                 onClick={handleEnableDemo}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110 active:scale-[0.98]"
+                className="cider-accent-btn mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
                 {demoActive ? 'Relancer le Mode Démo' : 'Activer le Mode Démo'}
@@ -437,7 +437,7 @@ export function AuthLoginModal({
           <button
             type="submit"
             disabled={submitting || (mode === 'pin' ? !pin.trim() : !apiToken.trim())}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110 disabled:opacity-50"
+            className="cider-accent-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
           >
             {submitting ? (
               <>

@@ -13,6 +13,7 @@ private struct PoolSlice: Identifiable {
 public struct StorageTabView: View {
     public var viewModel: AppViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @State private var showHealthyOnly = false
 
     public init(viewModel: AppViewModel) {
@@ -72,7 +73,7 @@ public struct StorageTabView: View {
     }
 
     private func poolChartCard(_ pool: MergerfsPoolInfo) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         let usedColor = pool.usedPct >= 85 ? DesignTokens.caution(colorScheme) : teal
         let used = max(0, Double(pool.usedBytes))
         let avail = max(0, Double(pool.availBytes))
@@ -199,7 +200,7 @@ public struct StorageTabView: View {
             HStack(spacing: 14) {
                 Image(systemName: "memorychip.fill")
                     .font(.title2)
-                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                    .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                     .frame(width: {
                         #if os(tvOS)
                         56
@@ -303,7 +304,7 @@ public struct StorageTabView: View {
                                             #else
                                             .font(.system(.caption2, design: .monospaced, weight: .bold))
                                             #endif
-                                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                            .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                                             .lineLimit(1)
                                             .fixedSize(horizontal: true, vertical: false)
                                         Text(drive.label)
@@ -402,7 +403,7 @@ public struct StorageTabView: View {
                                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                                     .lineLimit(1)
                             }
-                            UsageProgressBar(percentage: storage.usedPct, tint: DesignTokens.signalTeal(colorScheme))
+                            UsageProgressBar(percentage: storage.usedPct, tint: DesignTokens.accent(accentTheme, colorScheme))
                             HStack(spacing: 8) {
                                 Text("\(ByteFormatters.formatBytes(storage.usedBytes)) utilisés")
                                     #if os(tvOS)

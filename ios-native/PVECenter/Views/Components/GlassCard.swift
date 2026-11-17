@@ -1,23 +1,112 @@
 import SwiftUI
 
+// MARK: - Reactive Accent Theme SwiftUI Environment
+
+private struct AccentThemeEnvironmentKey: EnvironmentKey {
+    static let defaultValue: AccentTheme = .cyan
+}
+
+public extension EnvironmentValues {
+    var accentTheme: AccentTheme {
+        get { self[AccentThemeEnvironmentKey.self] }
+        set { self[AccentThemeEnvironmentKey.self] = newValue }
+    }
+}
+
 // MARK: - Studio Dark & Luminous Palette for Apple Liquid Glass (.glassEffect)
 
 public enum DesignTokens {
+    public static func canvas(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
+        switch (theme, scheme) {
+        case (.cyan, .light):
+            return Color(red: 0.940, green: 0.962, blue: 0.988)
+        case (.cider, .light):
+            return Color(red: 0.992, green: 0.942, blue: 0.952)
+        case (.indigo, .light):
+            return Color(red: 0.945, green: 0.948, blue: 0.994)
+        case (.emerald, .light):
+            return Color(red: 0.932, green: 0.982, blue: 0.962)
+        case (.amber, .light):
+            return Color(red: 0.992, green: 0.960, blue: 0.928)
+        case (.purple, .light):
+            return Color(red: 0.966, green: 0.940, blue: 0.994)
+        case (.cyan, _):
+            return Color(red: 0.018, green: 0.032, blue: 0.072)
+        case (.cider, _):
+            return Color(red: 0.072, green: 0.018, blue: 0.032)
+        case (.indigo, _):
+            return Color(red: 0.025, green: 0.026, blue: 0.088)
+        case (.emerald, _):
+            return Color(red: 0.014, green: 0.052, blue: 0.042)
+        case (.amber, _):
+            return Color(red: 0.064, green: 0.034, blue: 0.014)
+        case (.purple, _):
+            return Color(red: 0.050, green: 0.018, blue: 0.080)
+        }
+    }
+
+    public static func canvasSecondary(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
+        switch (theme, scheme) {
+        case (.cyan, .light):
+            return Color(red: 0.918, green: 0.946, blue: 0.982)
+        case (.cider, .light):
+            return Color(red: 0.980, green: 0.916, blue: 0.934)
+        case (.indigo, .light):
+            return Color(red: 0.924, green: 0.928, blue: 0.986)
+        case (.emerald, .light):
+            return Color(red: 0.908, green: 0.968, blue: 0.946)
+        case (.amber, .light):
+            return Color(red: 0.984, green: 0.942, blue: 0.896)
+        case (.purple, .light):
+            return Color(red: 0.946, green: 0.914, blue: 0.986)
+        case (.cyan, _):
+            return Color(red: 0.010, green: 0.018, blue: 0.044)
+        case (.cider, _):
+            return Color(red: 0.038, green: 0.008, blue: 0.018)
+        case (.indigo, _):
+            return Color(red: 0.014, green: 0.014, blue: 0.052)
+        case (.emerald, _):
+            return Color(red: 0.008, green: 0.028, blue: 0.022)
+        case (.amber, _):
+            return Color(red: 0.034, green: 0.016, blue: 0.006)
+        case (.purple, _):
+            return Color(red: 0.026, green: 0.008, blue: 0.046)
+        }
+    }
+
     public static func canvas(_ scheme: ColorScheme) -> Color {
-        switch scheme {
-        case .light:
-            return Color(red: 0.945, green: 0.961, blue: 0.984)
-        default:
-            return Color(red: 0.020, green: 0.031, blue: 0.067)
+        canvas(theme: .cyan, scheme)
+    }
+
+    public static func surface(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
+        switch (theme, scheme) {
+        case (_, .light):
+            return Color(red: 0.992, green: 0.996, blue: 1.000)
+        case (.cyan, _):
+            return Color(red: 0.068, green: 0.094, blue: 0.152)
+        case (.cider, _):
+            return Color(red: 0.145, green: 0.052, blue: 0.076)
+        case (.indigo, _):
+            return Color(red: 0.078, green: 0.082, blue: 0.175)
+        case (.emerald, _):
+            return Color(red: 0.048, green: 0.125, blue: 0.104)
+        case (.amber, _):
+            return Color(red: 0.138, green: 0.086, blue: 0.044)
+        case (.purple, _):
+            return Color(red: 0.116, green: 0.056, blue: 0.168)
         }
     }
 
     public static func surface(_ scheme: ColorScheme) -> Color {
+        surface(theme: .cyan, scheme)
+    }
+
+    public static func surfaceElevated(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
         switch scheme {
         case .light:
-            return Color(red: 0.992, green: 0.996, blue: 1.000)
+            return accent(theme, .light).opacity(0.075)
         default:
-            return Color(red: 0.075, green: 0.094, blue: 0.145)
+            return accent(theme, .dark).opacity(0.085)
         }
     }
 
@@ -28,6 +117,64 @@ public enum DesignTokens {
         default:
             return Color.white.opacity(0.065)
         }
+    }
+
+    public static func ambientGlows(theme: AccentTheme, _ scheme: ColorScheme) -> (topLeading: Color, topTrailing: Color, bottom: Color) {
+        switch theme {
+        case .cyan:
+            return (
+                Color(red: 0.055, green: 0.647, blue: 0.914),
+                Color(red: 0.388, green: 0.400, blue: 0.945),
+                Color(red: 0.063, green: 0.725, blue: 0.506)
+            )
+        case .cider:
+            return (
+                accent(.cider, scheme),
+                secondaryAccent(.cider, scheme),
+                Color(red: 0.855, green: 0.110, blue: 0.280)
+            )
+        case .indigo:
+            return (
+                accent(.indigo, scheme),
+                Color(red: 0.220, green: 0.741, blue: 0.973),
+                Color(red: 0.545, green: 0.361, blue: 0.965)
+            )
+        case .emerald:
+            return (
+                accent(.emerald, scheme),
+                Color(red: 0.078, green: 0.722, blue: 0.651),
+                Color(red: 0.055, green: 0.647, blue: 0.914)
+            )
+        case .amber:
+            return (
+                accent(.amber, scheme),
+                secondaryAccent(.amber, scheme),
+                Color(red: 0.980, green: 0.450, blue: 0.090)
+            )
+        case .purple:
+            return (
+                accent(.purple, scheme),
+                secondaryAccent(.purple, scheme),
+                Color(red: 0.486, green: 0.227, blue: 0.929)
+            )
+        }
+    }
+
+    public static func tvCardFill(
+        theme: AccentTheme,
+        focused: Bool,
+        elevated: Bool,
+        reduceTransparency: Bool,
+        scheme: ColorScheme
+    ) -> Color {
+        let base = surface(theme: theme, .dark)
+        if reduceTransparency {
+            return focused ? accent(theme, .dark).opacity(0.24) : base
+        }
+        if focused {
+            return base.opacity(0.95)
+        }
+        return base.opacity(elevated ? 0.86 : 0.74)
     }
 
     public static func primaryText(_ scheme: ColorScheme) -> Color {
@@ -256,6 +403,7 @@ public struct TVGlassCardButtonStyle: ButtonStyle {
 private struct TVGlassCardButtonBody: View {
     @Environment(\.isFocused) private var isFocused
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -264,21 +412,30 @@ private struct TVGlassCardButtonBody: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        let teal = DesignTokens.signalTeal(colorScheme)
-        let fillColor: Color = reduceTransparency
-            ? (isFocused ? Color(red: 0.082, green: 0.118, blue: 0.196) : DesignTokens.surface(colorScheme))
-            : (isFocused
-                ? Color(red: 0.055, green: 0.095, blue: 0.175).opacity(0.92)
-                : Color(red: 0.038, green: 0.056, blue: 0.106).opacity(0.76))
+        let themeAccent = DesignTokens.accent(accentTheme, colorScheme)
+        let fillColor = DesignTokens.tvCardFill(
+            theme: accentTheme,
+            focused: isFocused,
+            elevated: false,
+            reduceTransparency: reduceTransparency,
+            scheme: colorScheme
+        )
 
         configuration.label
-            .background(shape.fill(fillColor))
+            .background(
+                ZStack {
+                    shape.fill(fillColor)
+                    if isFocused && !reduceTransparency {
+                        shape.fill(themeAccent.opacity(0.14))
+                    }
+                }
+            )
             .overlay(
                 shape.strokeBorder(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.22),
-                            Color.white.opacity(0.06),
+                            themeAccent.opacity(0.28),
+                            Color.white.opacity(0.07),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -288,12 +445,12 @@ private struct TVGlassCardButtonBody: View {
                 .opacity(isFocused ? 0 : 1)
             )
             .overlay(
-                shape.strokeBorder(teal, lineWidth: 3)
+                shape.strokeBorder(themeAccent, lineWidth: 3)
                     .opacity(isFocused ? 1 : 0)
             )
             .contentShape(shape)
             .shadow(
-                color: isFocused ? teal.opacity(0.45) : .clear,
+                color: isFocused ? themeAccent.opacity(0.48) : .clear,
                 radius: isFocused ? 14 : 0,
                 x: 0,
                 y: isFocused ? 4 : 0
@@ -336,6 +493,7 @@ public struct TVGlassPillButtonStyle: ButtonStyle {
 private struct TVGlassPillButtonBody: View {
     @Environment(\.isFocused) private var isFocused
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -345,8 +503,9 @@ private struct TVGlassPillButtonBody: View {
     let cornerRadius: CGFloat?
 
     var body: some View {
-        let resolvedTint = tint ?? DesignTokens.signalTeal(colorScheme)
+        let resolvedTint = tint ?? DesignTokens.accent(accentTheme, colorScheme)
         let shape = RoundedRectangle(cornerRadius: cornerRadius ?? 999, style: .continuous)
+        let darkBase = DesignTokens.surface(theme: accentTheme, .dark).opacity(0.92)
 
         let restFill: Color = prominent
             ? resolvedTint.opacity(reduceTransparency ? 0.42 : 0.30)
@@ -364,7 +523,7 @@ private struct TVGlassPillButtonBody: View {
             .padding(.vertical, 10)
             .background(
                 ZStack {
-                    shape.fill(Color(red: 0.04, green: 0.06, blue: 0.12).opacity(0.92))
+                    shape.fill(darkBase)
                     shape.fill(isFocused ? focusFill : restFill)
                 }
             )
@@ -460,6 +619,7 @@ private struct TVIconTileButtonBody: View {
 
 public struct GlassCard<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     private let padding: CGFloat
@@ -484,15 +644,20 @@ public struct GlassCard<Content: View>: View {
 
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let themeAccent = DesignTokens.accent(accentTheme, colorScheme)
         #if os(tvOS)
         if interactive {
             // TVGlassCardButtonStyle already draws surface, specular stroke, and focus halo.
             content
                 .padding(padding)
         } else {
-            let fill = reduceTransparency
-                ? DesignTokens.surface(colorScheme)
-                : Color(red: 0.042, green: 0.062, blue: 0.118).opacity(elevated ? 0.90 : 0.78)
+            let fill = DesignTokens.tvCardFill(
+                theme: accentTheme,
+                focused: false,
+                elevated: elevated,
+                reduceTransparency: reduceTransparency,
+                scheme: colorScheme
+            )
             content
                 .padding(padding)
                 .background(shape.fill(fill))
@@ -500,8 +665,8 @@ public struct GlassCard<Content: View>: View {
                     shape.strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(elevated ? 0.24 : 0.18),
-                                Color.white.opacity(0.05),
+                                themeAccent.opacity(elevated ? 0.34 : 0.24),
+                                Color.white.opacity(0.06),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -520,7 +685,7 @@ public struct GlassCard<Content: View>: View {
         if reduceTransparency {
             content
                 .padding(padding)
-                .background(DesignTokens.surface(colorScheme), in: shape)
+                .background(DesignTokens.surface(theme: accentTheme, colorScheme), in: shape)
                 .overlay(
                     shape.strokeBorder(
                         DesignTokens.hairBorder(colorScheme, highContrast: contrast == .increased),
@@ -532,13 +697,14 @@ public struct GlassCard<Content: View>: View {
                 .padding(padding)
                 .background(.ultraThinMaterial, in: shape)
                 .background(Color.white.opacity(elevated ? 0.46 : 0.30), in: shape)
+                .background(themeAccent.opacity(elevated ? 0.055 : 0.03), in: shape)
                 .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
                 .overlay(
                     shape.strokeBorder(
                         LinearGradient(
                             colors: [
                                 Color.white.opacity(0.92),
-                                Color(red: 0.067, green: 0.098, blue: 0.173).opacity(contrast == .increased ? 0.24 : 0.09),
+                                themeAccent.opacity(contrast == .increased ? 0.28 : 0.14),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -555,14 +721,17 @@ public struct GlassCard<Content: View>: View {
         } else {
             content
                 .padding(padding)
-                .background(Color.white.opacity(elevated ? 0.05 : 0.025), in: shape)
+                .background(
+                    DesignTokens.surface(theme: accentTheme, .dark).opacity(elevated ? 0.56 : 0.40),
+                    in: shape
+                )
                 .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
                 .overlay(
                     shape.strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.24),
-                                Color.white.opacity(0.06),
+                                themeAccent.opacity(0.28),
+                                Color.white.opacity(0.07),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -575,85 +744,71 @@ public struct GlassCard<Content: View>: View {
     }
 }
 
-/// Arrière-plan atmosphérique profond (sombre) ou nacré ardoise (clair) permettant aux surfaces
-/// Liquid Glass de réfracter naturellement lumière et couleur sans jamais masquer le contenu.
+/// Arrière-plan atmosphérique profond (sombre) ou nacré (clair) piloté dynamiquement
+/// par l'AccentTheme actif afin de colorer tout le canevas et les halos ambiants.
 public struct AmbientBackgroundView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     public init() {}
 
     public var body: some View {
         #if os(tvOS)
-        let isLight = false
+        let effectiveScheme: ColorScheme = .dark
+        let radiusLead: CGFloat = 1080
+        let radiusTrail: CGFloat = 960
+        let radiusBottom: CGFloat = 860
         #else
-        let isLight = colorScheme == .light
+        let effectiveScheme: ColorScheme = colorScheme
+        let radiusLead: CGFloat = 620
+        let radiusTrail: CGFloat = 560
+        let radiusBottom: CGFloat = 520
         #endif
 
+        let isLight = effectiveScheme == .light
+        let glows = DesignTokens.ambientGlows(theme: accentTheme, effectiveScheme)
+
         ZStack {
-            DesignTokens.canvas(isLight ? .light : .dark)
+            LinearGradient(
+                colors: [
+                    DesignTokens.canvas(theme: accentTheme, effectiveScheme),
+                    DesignTokens.canvasSecondary(theme: accentTheme, effectiveScheme),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-            if isLight {
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.055, green: 0.647, blue: 0.914).opacity(0.11),
-                        Color.clear,
-                    ],
-                    center: .topLeading,
-                    startRadius: 20,
-                    endRadius: 560
-                )
+            RadialGradient(
+                colors: [
+                    glows.topLeading.opacity(isLight ? 0.16 : 0.28),
+                    Color.clear,
+                ],
+                center: .topLeading,
+                startRadius: 20,
+                endRadius: radiusLead
+            )
 
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.388, green: 0.400, blue: 0.945).opacity(0.08),
-                        Color.clear,
-                    ],
-                    center: .topTrailing,
-                    startRadius: 20,
-                    endRadius: 520
-                )
+            RadialGradient(
+                colors: [
+                    glows.topTrailing.opacity(isLight ? 0.13 : 0.24),
+                    Color.clear,
+                ],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: radiusTrail
+            )
 
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.06),
-                        Color.clear,
-                    ],
-                    center: .bottom,
-                    startRadius: 20,
-                    endRadius: 480
-                )
-            } else {
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.055, green: 0.647, blue: 0.914).opacity(0.22),
-                        Color.clear,
-                    ],
-                    center: .topLeading,
-                    startRadius: 20,
-                    endRadius: 560
-                )
-
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.388, green: 0.400, blue: 0.945).opacity(0.20),
-                        Color.clear,
-                    ],
-                    center: .topTrailing,
-                    startRadius: 20,
-                    endRadius: 520
-                )
-
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.10),
-                        Color.clear,
-                    ],
-                    center: .bottom,
-                    startRadius: 20,
-                    endRadius: 480
-                )
-            }
+            RadialGradient(
+                colors: [
+                    glows.bottom.opacity(isLight ? 0.09 : 0.16),
+                    Color.clear,
+                ],
+                center: .bottom,
+                startRadius: 20,
+                endRadius: radiusBottom
+            )
         }
+        .animation(.easeInOut(duration: 0.35), value: accentTheme)
         .ignoresSafeArea()
     }
 }
@@ -725,6 +880,7 @@ public struct StatusPill: View {
 
 public struct RackBayMatrixView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     public let node: NodeSummary
     public let resources: [PveResource]
     public let drives: [PhysicalDriveInfo]
@@ -795,7 +951,7 @@ public struct RackBayMatrixView: View {
     }
 
     public var body: some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         let nominal = DesignTokens.nominal(colorScheme)
         let caution = DesignTokens.caution(colorScheme)
         let critical = DesignTokens.critical(colorScheme)
@@ -859,7 +1015,7 @@ public struct RackBayMatrixView: View {
                                 .padding(.horizontal, cellHPad)
                                 .padding(.vertical, cellVPad)
                                 .background(
-                                    DesignTokens.surfaceElevated(colorScheme),
+                                    DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                                 .accessibilityLabel("\(res.type.badgeLabel) \(res.vmid) \(res.name), \(res.isRunning ? "en ligne" : "arrêté")")
@@ -901,7 +1057,7 @@ public struct RackBayMatrixView: View {
                                 .padding(cellVPad + 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
-                                    DesignTokens.surfaceElevated(colorScheme),
+                                    DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                                 .accessibilityLabel("Baie \(idx + 1) \(drive.label), utilisé à \(Int(drive.usedPct)) pourcent, SMART \(drive.health)")
@@ -916,6 +1072,7 @@ public struct RackBayMatrixView: View {
 
 public struct UsageProgressBar: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     public let percentage: Double
     public var tint: Color?
 
@@ -928,7 +1085,7 @@ public struct UsageProgressBar: View {
         if let tint { return tint }
         if percentage >= 90 { return DesignTokens.critical(colorScheme) }
         if percentage >= 75 { return DesignTokens.caution(colorScheme) }
-        return DesignTokens.signalTeal(colorScheme)
+        return DesignTokens.accent(accentTheme, colorScheme)
     }
 
     public var body: some View {

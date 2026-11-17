@@ -20,6 +20,7 @@ private struct ServiceLatencyPoint: Identifiable {
 public struct OverviewTabView: View {
     public var viewModel: AppViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -90,7 +91,7 @@ public struct OverviewTabView: View {
 
     #if canImport(Charts)
     private func nodeTelemetryChart(_ pve: PveOverview) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         let rootPct = pve.node.rootfsTotalBytes > 0
             ? (Double(pve.node.rootfsUsedBytes) / Double(pve.node.rootfsTotalBytes)) * 100
             : 0
@@ -223,7 +224,7 @@ public struct OverviewTabView: View {
                             ? DesignTokens.critical(colorScheme)
                             : (item.latencyMs >= 100
                                 ? DesignTokens.caution(colorScheme)
-                                : (item.latencyMs >= 40 ? DesignTokens.signalTeal(colorScheme) : DesignTokens.nominal(colorScheme)))
+                                : (item.latencyMs >= 40 ? DesignTokens.accent(accentTheme, colorScheme) : DesignTokens.nominal(colorScheme)))
 
                         BarMark(
                             x: .value("Latence (ms)", item.isOnline ? max(1.0, item.latencyMs) : maxLatency * 0.12),
@@ -325,7 +326,7 @@ public struct OverviewTabView: View {
         let mergedServices = mergedLatencyPoints
         let onlineServices = mergedServices.filter(\.isOnline).count
         let qbit = viewModel.widgets?.qbittorrent
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
 
         return LazyVGrid(columns: quickStatsColumns, spacing: quickStatsGridSpacing) {
             statTile(
@@ -446,14 +447,14 @@ public struct OverviewTabView: View {
                             } label: {
                                 Label("Tout voir", systemImage: "chevron.right")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                    .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                                     .lineLimit(1)
                             }
                             .fixedSize()
                         } else {
                             Button("Tout voir") { viewModel.selectedTab = .services }
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                                .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                                 .lineLimit(1)
                                 .fixedSize()
                         }
@@ -461,7 +462,7 @@ public struct OverviewTabView: View {
                         Button("Tout voir") { viewModel.selectedTab = .services }
                             .font(.callout.weight(.semibold))
                             .lineLimit(1)
-                            .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
+                            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme))
                             .fixedSize()
                         #endif
                     }
@@ -547,7 +548,7 @@ public struct OverviewTabView: View {
                         Spacer(minLength: 8)
                         StatusPill(
                             "\(streams.count) actif\(streams.count > 1 ? "s" : "")",
-                            color: DesignTokens.signalTeal(colorScheme),
+                            color: DesignTokens.accent(accentTheme, colorScheme),
                             systemImage: "play.fill"
                         )
                         .lineLimit(1)
@@ -558,7 +559,7 @@ public struct OverviewTabView: View {
                         HStack(spacing: 10) {
                             Image(systemName: stream.isPaused ? "pause.circle.fill" : "play.circle.fill")
                                 .font(.title3)
-                                .foregroundStyle(stream.isPaused ? DesignTokens.caution(colorScheme) : DesignTokens.signalTeal(colorScheme))
+                                .foregroundStyle(stream.isPaused ? DesignTokens.caution(colorScheme) : DesignTokens.accent(accentTheme, colorScheme))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(stream.title)
                                     .font(.subheadline.weight(.medium))

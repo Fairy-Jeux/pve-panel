@@ -83,6 +83,7 @@ public struct CustomServiceEditorSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var name: String
     @State private var description: String
@@ -197,7 +198,7 @@ public struct CustomServiceEditorSheet: View {
                             Text(isSaving ? "Enregistrement…" : (isEditing ? "Enregistrer" : "Ajouter"))
                                 .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                     }
                 }
                 #endif
@@ -250,12 +251,12 @@ public struct CustomServiceEditorSheet: View {
                         }
                         #if os(tvOS)
                         .adaptivePillButtonStyle(
-                            tint: selected ? DesignTokens.signalTeal(colorScheme) : nil,
+                            tint: selected ? DesignTokens.accent(accentTheme, colorScheme) : nil,
                             prominent: selected
                         )
                         #else
                         .buttonStyle(.bordered)
-                        .tint(selected ? DesignTokens.signalTeal(colorScheme) : .secondary)
+                        .tint(selected ? DesignTokens.accent(accentTheme, colorScheme) : .secondary)
                         .controlSize(.small)
                         #endif
                     }

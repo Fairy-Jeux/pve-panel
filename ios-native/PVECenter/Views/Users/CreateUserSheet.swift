@@ -4,6 +4,7 @@ public struct CreateUserSheet: View {
     public var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var username: String = ""
     @State private var password: String = ""
@@ -57,7 +58,7 @@ public struct CreateUserSheet: View {
                                     Spacer()
                                     if included {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.cyan)
+                                            .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                                     }
                                 }
                             }
@@ -106,7 +107,7 @@ public struct CreateUserSheet: View {
                             Text(isSubmitting ? "Création…" : "Créer")
                                 .opacity(isValid && !isSubmitting ? 1.0 : 0.45)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                     }
                 }
                 #endif

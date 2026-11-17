@@ -30,6 +30,7 @@ public struct AppleTVPairingView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var roleMode: PairingRoleMode
     @State private var selectedTargetID: String?
@@ -187,7 +188,7 @@ public struct AppleTVPairingView: View {
                     } else {
                         Text("CODE PIN D'APPAIRAGE")
                             .font(.system(.caption, design: .monospaced, weight: .bold))
-                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
 
                         pinDigitsDisplay(pin: viewModel.pairingService.activePIN ?? "------", large: true)
 
@@ -206,7 +207,7 @@ public struct AppleTVPairingView: View {
                                 .font(.callout.weight(.semibold))
                                 .frame(minWidth: 280, minHeight: 42)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -244,7 +245,7 @@ public struct AppleTVPairingView: View {
                                 Task { await restartReceiver() }
                             }
                             .font(.callout.weight(.semibold))
-                            .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
+                            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme))
                         }
                         .padding(.top, 4)
                     }
@@ -420,7 +421,7 @@ public struct AppleTVPairingView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: selectedTargetID == nil ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selectedTargetID == nil ? DesignTokens.signalTeal(colorScheme) : .secondary)
+                    .foregroundStyle(selectedTargetID == nil ? DesignTokens.accent(accentTheme, colorScheme) : .secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Relais HTTPS du serveur")
                         .font(.subheadline.weight(.semibold))
@@ -437,7 +438,7 @@ public struct AppleTVPairingView: View {
         }
         .adaptiveIconTileButtonStyle(
             isSelected: selectedTargetID == nil,
-            accent: DesignTokens.signalTeal(colorScheme),
+            accent: DesignTokens.accent(accentTheme, colorScheme),
             cornerRadius: 12
         )
 
@@ -457,7 +458,7 @@ public struct AppleTVPairingView: View {
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "appletv.fill")
-                            .foregroundStyle(isSelected ? DesignTokens.signalTeal(colorScheme) : .secondary)
+                            .foregroundStyle(isSelected ? DesignTokens.accent(accentTheme, colorScheme) : .secondary)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(receiver.name)
                                 .font(.subheadline.weight(.semibold))
@@ -474,7 +475,7 @@ public struct AppleTVPairingView: View {
                 }
                 .adaptiveIconTileButtonStyle(
                     isSelected: isSelected,
-                    accent: DesignTokens.signalTeal(colorScheme),
+                    accent: DesignTokens.accent(accentTheme, colorScheme),
                     cornerRadius: 12
                 )
             }
@@ -493,7 +494,7 @@ public struct AppleTVPairingView: View {
         case .encrypting:
             Label("Chiffrement ECDH P-256 + AES-GCM…", systemImage: "lock.shield")
                 .font(.caption)
-                .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
         case .waitingForAck:
             Label("Envoi et attente de confirmation…", systemImage: "paperplane.fill")
                 .font(.caption)
@@ -539,10 +540,10 @@ public struct AppleTVPairingView: View {
             #endif
         }
         #if os(tvOS)
-        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true, cornerRadius: 16)
+        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 16)
         #else
         .buttonStyle(.borderedProminent)
-        .tint(DesignTokens.signalTeal(colorScheme))
+        .tint(DesignTokens.accent(accentTheme, colorScheme))
         .disabled(!canSend)
         #endif
     }
@@ -576,7 +577,7 @@ public struct AppleTVPairingView: View {
     private var receiverCountdownView: some View {
         if case .advertising(_, let transport, let expiresAt) = viewModel.pairingService.receiverState {
             VStack(spacing: 6) {
-                StatusPill(transport.label, color: DesignTokens.signalTeal(colorScheme), systemImage: "antenna.radiowaves.left.and.right")
+                StatusPill(transport.label, color: DesignTokens.accent(accentTheme, colorScheme), systemImage: "antenna.radiowaves.left.and.right")
 
                 if let expiresAt {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -605,9 +606,9 @@ public struct AppleTVPairingView: View {
         HStack(alignment: .top, spacing: 14) {
             Text(step)
                 .font(.system(.callout, design: .monospaced, weight: .bold))
-                .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                 .frame(width: 28, height: 28)
-                .background(DesignTokens.signalTeal(colorScheme).opacity(0.16), in: Circle())
+                .background(DesignTokens.accent(accentTheme, colorScheme).opacity(0.16), in: Circle())
             Text(text)
                 .font(.callout)
                 .foregroundStyle(DesignTokens.primaryText(colorScheme))

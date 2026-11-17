@@ -915,7 +915,7 @@ export function NotificationsModal({
 
               {tab === 'pairing' && (
                 <div className="space-y-4">
-                  <div className="rounded-3xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 via-indigo-500/5 to-transparent p-5">
+                  <div className="cider-accent-ring rounded-3xl border p-5">
                     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
                       <div className="shrink-0 text-center">
                         <QrCodeView value={qrData?.deep_link || ''} size={172} />
@@ -997,7 +997,7 @@ export function NotificationsModal({
                               </button>
                               <a
                                 href={qrData.deep_link}
-                                className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/20"
+                                className="cider-accent-btn inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-semibold text-white"
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Ouvrir dans PVE Center
@@ -1027,7 +1027,7 @@ export function NotificationsModal({
               type="button"
               disabled={saving || loading}
               onClick={() => void handleSaveChannels()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110 disabled:opacity-50"
+              className="cider-accent-btn inline-flex items-center gap-2 rounded-2xl px-5 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
             >
               {saving ? (
                 <>

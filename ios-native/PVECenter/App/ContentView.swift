@@ -47,6 +47,8 @@ public struct ContentView: View {
 
     public var body: some View {
         ZStack {
+            AmbientBackgroundView()
+
             #if os(macOS)
             macOSBody
             #elseif os(tvOS)
@@ -96,6 +98,7 @@ public struct ContentView: View {
         #else
         .preferredColorScheme(viewModel.preferredColorScheme)
         #endif
+        .environment(\.accentTheme, viewModel.accentTheme)
         .tint(viewModel.tintColor(for: colorScheme))
         .animation(
             reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85),
@@ -116,10 +119,14 @@ public struct ContentView: View {
             }
         ) {
             ServerSettingsSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         .fullScreenCover(isPresented: $viewModel.showServerSetupWizard) {
             ServerSetupWizardSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         .fullScreenCover(
@@ -127,6 +134,8 @@ public struct ContentView: View {
             onDismiss: handleOnboardingDismiss
         ) {
             OnboardingFlowView(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
         }
         #elseif os(macOS)
@@ -140,10 +149,14 @@ public struct ContentView: View {
             }
         ) {
             ServerSettingsSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(isPresented: $viewModel.showServerSetupWizard) {
             ServerSetupWizardSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(
@@ -151,6 +164,8 @@ public struct ContentView: View {
             onDismiss: handleOnboardingDismiss
         ) {
             OnboardingFlowView(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         #else
@@ -164,10 +179,14 @@ public struct ContentView: View {
             }
         ) {
             ServerSettingsSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .sheet(isPresented: $viewModel.showServerSetupWizard) {
             ServerSetupWizardSheet(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         .fullScreenCover(
@@ -175,6 +194,8 @@ public struct ContentView: View {
             onDismiss: handleOnboardingDismiss
         ) {
             OnboardingFlowView(viewModel: viewModel)
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
         }
         #endif
@@ -260,7 +281,7 @@ public struct ContentView: View {
                     }
             }
         }
-        .tint(DesignTokens.signalTeal(colorScheme))
+        .tint(viewModel.tintColor(for: colorScheme))
     }
 
     private func sidebarRow(for tab: AppTab, badge: Int = 0) -> some View {

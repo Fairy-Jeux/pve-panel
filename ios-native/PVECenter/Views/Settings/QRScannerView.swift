@@ -23,6 +23,7 @@ public struct QRScannedConnection: Sendable, Equatable {
 public struct QRScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     #if os(iOS)
     @Environment(\.openURL) private var openURL
     #endif
@@ -157,7 +158,7 @@ public struct QRScannerView: View {
 
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .strokeBorder(
-                        DesignTokens.signalTeal(.dark),
+                        DesignTokens.accent(accentTheme, .dark),
                         style: StrokeStyle(lineWidth: 3, dash: [24, 14])
                     )
                     .frame(width: 240, height: 240)
@@ -214,7 +215,7 @@ public struct QRScannerView: View {
                             .padding(.vertical, 10)
                     }
                     .buttonStyle(.glassProminent)
-                    .tint(DesignTokens.signalTeal(colorScheme))
+                    .tint(DesignTokens.accent(accentTheme, colorScheme))
                 }
                 .padding(.bottom, 28)
             }
@@ -238,7 +239,7 @@ public struct QRScannerView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.signalTeal(colorScheme))
+            .tint(DesignTokens.accent(accentTheme, colorScheme))
 
             Button("Coller un lien manuellement") {
                 showManualFallbackSheet = true
@@ -331,7 +332,7 @@ public struct QRScannerView: View {
                         .frame(maxWidth: .infinity, minHeight: 52)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
+                .tint(DesignTokens.accent(accentTheme, colorScheme))
                 .disabled(manualInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(36)
@@ -382,7 +383,7 @@ public struct QRScannerView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
+                .tint(DesignTokens.accent(accentTheme, colorScheme))
                 .disabled(manualInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }

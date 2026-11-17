@@ -374,7 +374,7 @@ export function CategoryServiceModal({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110 disabled:opacity-50"
+                className="cider-accent-btn inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Enregistrer

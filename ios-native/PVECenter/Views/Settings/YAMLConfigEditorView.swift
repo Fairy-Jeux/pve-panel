@@ -11,6 +11,7 @@ public struct YAMLConfigEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var yamlText: String = ""
     @State private var originalYamlText: String = ""
@@ -185,7 +186,7 @@ public struct YAMLConfigEditorView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.signalTeal(colorScheme))
+            .tint(DesignTokens.accent(accentTheme, colorScheme))
             .disabled(isSaving || isValidating || yamlText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
     }
@@ -226,7 +227,7 @@ public struct YAMLConfigEditorView: View {
                                 .font(.callout.weight(.semibold))
                                 .opacity((isValidating || yamlText.isEmpty) ? 0.45 : 1.0)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
 
                         Button {
                             dismiss()
@@ -249,7 +250,7 @@ public struct YAMLConfigEditorView: View {
                                 systemImage: "info.circle.fill"
                             )
                             .font(.callout)
-                            .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                            .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
 
                             if isLoading {
                                 ProgressView("Chargement de config.yaml…")

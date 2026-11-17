@@ -9,6 +9,7 @@ public struct NotificationsSettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     #if os(iOS)
     @Environment(\.openURL) private var openURL
     #endif
@@ -69,6 +70,8 @@ public struct NotificationsSettingsView: View {
                         await saveWebhook(newChannel, isNew: true)
                     }
                 )
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
             }
             .fullScreenCover(item: $editingWebhook) { channel in
@@ -78,6 +81,8 @@ public struct NotificationsSettingsView: View {
                         await saveWebhook(updated, isNew: false)
                     }
                 )
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
             }
             #else
@@ -88,6 +93,8 @@ public struct NotificationsSettingsView: View {
                         await saveWebhook(newChannel, isNew: true)
                     }
                 )
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
             }
             .sheet(item: $editingWebhook) { channel in
@@ -97,6 +104,8 @@ public struct NotificationsSettingsView: View {
                         await saveWebhook(updated, isNew: false)
                     }
                 )
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
                 .preferredColorScheme(viewModel.preferredColorScheme)
             }
             #endif
@@ -140,7 +149,7 @@ public struct NotificationsSettingsView: View {
                     Label("Activer les notifications sur cet appareil", systemImage: "bell.badge.fill")
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
+                .tint(DesignTokens.accent(accentTheme, colorScheme))
             } else if viewModel.pushManager.authorizationStatus == .denied {
                 #if os(iOS)
                 Button {
@@ -385,7 +394,7 @@ public struct NotificationsSettingsView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.signalTeal(colorScheme))
+            .tint(DesignTokens.accent(accentTheme, colorScheme))
             .disabled(testingKey != nil)
 
             if let result = lastTestResult {
@@ -422,7 +431,7 @@ public struct NotificationsSettingsView: View {
                                 .font(.callout.weight(.semibold))
                                 .opacity(testingKey != nil ? 0.55 : 1.0)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
 
                         Button {
                             guard !(isLoading || isSaving) else { return }
@@ -458,7 +467,7 @@ public struct NotificationsSettingsView: View {
                                         Task { _ = await viewModel.requestPushAuthorization() }
                                     }
                                     .font(.callout.weight(.semibold))
-                                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme))
+                                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme))
                                 }
                                 Divider()
                                 let apns = channels.apns
@@ -490,7 +499,7 @@ public struct NotificationsSettingsView: View {
                                         Label("Ajouter", systemImage: "plus")
                                             .font(.callout.weight(.semibold))
                                     }
-                                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                                 }
 
                                 if channels.webhooks.isEmpty {
@@ -649,7 +658,7 @@ public struct NotificationsSettingsView: View {
         switch type.lowercased() {
         case "discord": return .indigo
         case "telegram": return .cyan
-        default: return DesignTokens.signalTeal(colorScheme)
+        default: return DesignTokens.accent(accentTheme, colorScheme)
         }
     }
 
@@ -729,6 +738,7 @@ private struct WebhookChannelEditorSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var name: String = ""
     @State private var type: String = "discord"
@@ -841,7 +851,7 @@ private struct WebhookChannelEditorSheet: View {
                             Text(isSaving ? "Enregistrement…" : "Enregistrer")
                                 .opacity(isFormValid && !isSaving ? 1.0 : 0.45)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                     }
                 }
                 #endif

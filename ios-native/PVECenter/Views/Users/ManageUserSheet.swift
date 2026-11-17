@@ -5,6 +5,7 @@ public struct ManageUserSheet: View {
     public let user: UnifiedUser
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var isDisabled: Bool
     @State private var isAdmin: Bool
@@ -71,7 +72,7 @@ public struct ManageUserSheet: View {
                                     Spacer()
                                     if included {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.cyan)
+                                            .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                                     }
                                 }
                             }
@@ -152,7 +153,7 @@ public struct ManageUserSheet: View {
                             Text(isSaving ? "Enregistrement…" : "Enregistrer")
                                 .opacity(isSaving ? 0.5 : 1.0)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                     }
                 }
                 #endif

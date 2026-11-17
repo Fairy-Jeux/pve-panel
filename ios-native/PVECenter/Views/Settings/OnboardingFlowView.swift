@@ -124,6 +124,7 @@ public struct OnboardingFlowView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     @State private var currentStep: OnboardingStep = .connection
 
@@ -252,6 +253,8 @@ public struct OnboardingFlowView: View {
                     viewModel.dismissOnboarding()
                     dismiss()
                 }
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: .dark))
                 .preferredColorScheme(.dark)
             }
             #else
@@ -259,12 +262,18 @@ public struct OnboardingFlowView: View {
                 QRScannerView { scanned in
                     applyScannedConnection(scanned)
                 }
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
+                .preferredColorScheme(viewModel.preferredColorScheme)
             }
             .sheet(isPresented: $showAppleTVPairing) {
                 AppleTVPairingView(viewModel: viewModel, initialMode: .receiver) { _ in
                     viewModel.dismissOnboarding()
                     dismiss()
                 }
+                .environment(\.accentTheme, viewModel.accentTheme)
+                .tint(viewModel.tintColor(for: colorScheme))
+                .preferredColorScheme(viewModel.preferredColorScheme)
             }
             #endif
         }
@@ -402,10 +411,10 @@ public struct OnboardingFlowView: View {
             HStack(spacing: 10) {
                 Text("Étape \(currentStep.rawValue + 1)/\(OnboardingStep.allCases.count)")
                     .font(.system(.caption, design: .monospaced, weight: .bold))
-                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                    .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(DesignTokens.signalTeal(colorScheme).opacity(0.14), in: Capsule())
+                    .background(DesignTokens.accent(accentTheme, colorScheme).opacity(0.14), in: Capsule())
 
                 Label(currentStep.title, systemImage: currentStep.systemImage)
                     .font(.subheadline.weight(.semibold))
@@ -420,7 +429,7 @@ public struct OnboardingFlowView: View {
                     let isActive = step == currentStep
                     let isDone = step.rawValue < currentStep.rawValue
                     let tint: Color = isActive
-                        ? DesignTokens.signalTeal(colorScheme)
+                        ? DesignTokens.accent(accentTheme, colorScheme)
                         : (isDone ? DesignTokens.nominal(colorScheme) : .secondary)
 
                     #if os(tvOS)
@@ -449,7 +458,7 @@ public struct OnboardingFlowView: View {
                             .fill(
                                 isDone
                                     ? DesignTokens.nominal(colorScheme)
-                                    : (isActive ? DesignTokens.signalTeal(colorScheme) : Color.white.opacity(0.14))
+                                    : (isActive ? DesignTokens.accent(accentTheme, colorScheme) : Color.white.opacity(0.14))
                             )
                             .frame(height: isActive ? 6 : 4)
                     }
@@ -479,7 +488,7 @@ public struct OnboardingFlowView: View {
                                 .fill(
                                     isDone
                                         ? DesignTokens.nominal(colorScheme)
-                                        : (isActive ? DesignTokens.signalTeal(colorScheme) : Color.secondary.opacity(0.22))
+                                        : (isActive ? DesignTokens.accent(accentTheme, colorScheme) : Color.secondary.opacity(0.22))
                                 )
                                 .frame(height: isActive ? 5 : 4)
                         }
@@ -533,10 +542,10 @@ public struct OnboardingFlowView: View {
                 }
                 #if os(tvOS)
                 .opacity(finishDisabled ? 0.5 : 1.0)
-                .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                 #else
                 .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
+                .tint(DesignTokens.accent(accentTheme, colorScheme))
                 .disabled(finishDisabled)
                 #endif
             } else {
@@ -552,10 +561,10 @@ public struct OnboardingFlowView: View {
                 }
                 #if os(tvOS)
                 .opacity(nextDisabled ? 0.5 : 1.0)
-                .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                 #else
                 .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
+                .tint(DesignTokens.accent(accentTheme, colorScheme))
                 .disabled(nextDisabled)
                 #endif
             }
@@ -733,7 +742,7 @@ public struct OnboardingFlowView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.signalTeal(colorScheme))
+                .tint(DesignTokens.accent(accentTheme, colorScheme))
                 .disabled(isAuthenticating || normalizedServerURL.isEmpty)
             }
 
@@ -1036,7 +1045,7 @@ public struct OnboardingFlowView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.signalTeal(colorScheme))
+            .tint(DesignTokens.accent(accentTheme, colorScheme))
             .disabled(isFinalizing || normalizedServerURL.isEmpty)
 
             Button {
@@ -1063,7 +1072,7 @@ public struct OnboardingFlowView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Label("Appairage recommandé sur Apple TV", systemImage: "iphone.and.arrow.forward")
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                        .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
                     Text("Transférez l'adresse et le jeton depuis votre iPhone sans saisir d'URL avec la télécommande.")
                         .font(.callout)
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
@@ -1075,7 +1084,7 @@ public struct OnboardingFlowView: View {
                             .font(.callout.weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 46)
                     }
-                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true, cornerRadius: 16)
+                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 16)
 
                     Divider()
 
@@ -1117,7 +1126,7 @@ public struct OnboardingFlowView: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .opacity(probeDisabled ? 0.5 : 1.0)
                     }
-                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), cornerRadius: 16)
+                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), cornerRadius: 16)
 
                     if let msg = connectionProbeMessage {
                         Label(msg, systemImage: connectionProbeOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
@@ -1146,7 +1155,7 @@ public struct OnboardingFlowView: View {
                         Label("Générer le jeton administrateur", systemImage: "key.fill")
                             .font(.callout.weight(.semibold))
                     }
-                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
 
                     if let generated = generatedOneTimeToken {
                         Text("Jeton généré (affiché une seule fois) : \(generated)")
@@ -1161,7 +1170,7 @@ public struct OnboardingFlowView: View {
                         Label("Se connecter via Code PIN", systemImage: "lock.open.fill")
                             .font(.callout.weight(.semibold))
                     }
-                    .adaptivePillButtonStyle(tint: DesignTokens.signalTeal(colorScheme), prominent: true)
+                    .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                 }
                 if let msg = authVerifiedMessage {
                     Label(msg, systemImage: "checkmark.seal.fill").foregroundStyle(.green)
@@ -1267,7 +1276,7 @@ public struct OnboardingFlowView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "server.rack")
-                    .foregroundStyle(isSelected ? .green : DesignTokens.signalTeal(colorScheme))
+                    .foregroundStyle(isSelected ? .green : DesignTokens.accent(accentTheme, colorScheme))
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(server.name)
@@ -1287,7 +1296,7 @@ public struct OnboardingFlowView: View {
                 Spacer()
                 Text("Choisir")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(DesignTokens.signalTeal(colorScheme))
+                    .foregroundStyle(DesignTokens.accent(accentTheme, colorScheme))
             }
             #if os(tvOS)
             .padding(.horizontal, 12)

@@ -694,7 +694,7 @@ export function App() {
       />
 
       {/* Barre d'onglets Liquid Glass (Desktop / iPad) */}
-      <div className="hidden border-b border-slate-200/80 bg-white/50 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/35 md:block">
+      <div className="hidden border-b border-slate-200/80 bg-white/50 backdrop-blur-xl dark:border-white/10 dark:bg-black/25 md:block">
         <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-2.5 sm:px-6">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
@@ -706,7 +706,7 @@ export function App() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium transition active:scale-95 ${
                   active
-                    ? 'border-cyan-500/35 bg-gradient-to-b from-cyan-500/20 to-indigo-500/15 text-slate-900 shadow-inner dark:border-white/25 dark:from-white/20 dark:to-cyan-500/20 dark:text-white dark:shadow-white/15'
+                    ? 'cider-accent-ring text-slate-900 shadow-inner dark:text-white'
                     : 'border-transparent bg-transparent text-slate-600 hover:border-slate-300/70 hover:bg-white/60 hover:text-slate-900 dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/[0.06] dark:hover:text-slate-100'
                 }`}
               >
@@ -752,7 +752,7 @@ export function App() {
                 }}
                 className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[10px] font-medium transition active:scale-95 ${
                   active
-                    ? 'border border-cyan-500/30 bg-gradient-to-b from-cyan-500/20 to-indigo-500/15 text-slate-900 shadow-inner dark:border-white/20 dark:from-white/20 dark:to-cyan-400/20 dark:text-white'
+                    ? 'cider-accent-ring border text-slate-900 shadow-inner dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
               >
@@ -824,7 +824,7 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setCustomServiceModalState({ open: true, service: null })}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110 active:scale-95"
+                className="cider-accent-btn inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white transition hover:brightness-110 active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Ajouter un service

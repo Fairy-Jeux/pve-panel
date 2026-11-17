@@ -2074,7 +2074,7 @@ export function SetupWizardModal({
                           {computedDeepLink && (
                             <a
                               href={computedDeepLink}
-                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110 active:scale-[0.98]"
+                              className="cider-accent-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
                             >
                               <ExternalLink className="h-4 w-4" />
                               <span>Ouvrir dans PVE Center</span>

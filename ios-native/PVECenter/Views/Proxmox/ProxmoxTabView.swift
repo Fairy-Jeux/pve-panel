@@ -18,6 +18,7 @@ private struct PendingPowerCommand: Identifiable {
 public struct ProxmoxTabView: View {
     public var viewModel: AppViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     @State private var filter: ResourceFilter = .all
     @State private var pendingCommand: PendingPowerCommand?
 
@@ -147,7 +148,7 @@ public struct ProxmoxTabView: View {
     }
 
     private func nodeOverviewCard(_ node: NodeSummary) -> some View {
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
 
         return GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -213,7 +214,7 @@ public struct ProxmoxTabView: View {
 
     private func resourceCard(_ res: PveResource) -> some View {
         let nominal = DesignTokens.nominal(colorScheme)
-        let teal = DesignTokens.signalTeal(colorScheme)
+        let teal = DesignTokens.accent(accentTheme, colorScheme)
         #if os(tvOS)
         let cardPadding: CGFloat = 20
         let iconBoxSize: CGFloat = 52
@@ -390,7 +391,7 @@ public struct ProxmoxTabView: View {
         prominent: Bool = false,
         role: ButtonRole? = nil
     ) -> some View {
-        let resolvedTint = foreground ?? (prominent ? DesignTokens.signalTeal(colorScheme) : nil)
+        let resolvedTint = foreground ?? (prominent ? DesignTokens.accent(accentTheme, colorScheme) : nil)
         let button = Button(role: role) {
             pendingCommand = PendingPowerCommand(resource: resource, action: action)
         } label: {

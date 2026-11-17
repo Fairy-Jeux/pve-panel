@@ -193,7 +193,7 @@ export const BRAND_ICONS: BrandIconMeta[] = [
     id: 'sonarr',
     label: 'Sonarr',
     tintClass:
-      'border-sky-500/35 bg-gradient-to-br from-sky-500/15 to-cyan-500/15 dark:border-sky-400/30',
+      'border-sky-500/35 bg-gradient-to-br from-sky-500/15 to-blue-500/15 dark:border-sky-400/30',
     aliases: ['sonarr'],
     keywords: ['sonarr'],
     renderSvg: () => (
@@ -321,7 +321,7 @@ export const BRAND_ICONS: BrandIconMeta[] = [
     id: 'zoraxy',
     label: 'Zoraxy',
     tintClass:
-      'border-cyan-500/35 bg-gradient-to-br from-cyan-500/20 to-teal-500/15 dark:border-cyan-400/30',
+      'border-teal-500/35 bg-gradient-to-br from-teal-500/20 to-emerald-500/15 dark:border-teal-400/30',
     aliases: ['zoraxy', 'zoraxy-tunnel'],
     keywords: ['zoraxy'],
     renderSvg: () => (
@@ -450,7 +450,7 @@ export const BRAND_ICONS: BrandIconMeta[] = [
     id: 'home-assistant',
     label: 'Home Assistant',
     tintClass:
-      'border-sky-500/35 bg-gradient-to-br from-sky-500/20 to-cyan-500/15 dark:border-sky-400/30',
+      'border-sky-500/35 bg-gradient-to-br from-sky-500/20 to-blue-500/15 dark:border-sky-400/30',
     aliases: ['home-assistant', 'homeassistant', 'hass'],
     keywords: ['home assistant', 'home-assistant', 'hass'],
     renderSvg: () => (
@@ -539,7 +539,7 @@ export const BRAND_ICONS: BrandIconMeta[] = [
     id: 'portainer',
     label: 'Portainer',
     tintClass:
-      'border-cyan-500/35 bg-gradient-to-br from-cyan-500/20 to-sky-500/15 dark:border-cyan-400/30',
+      'border-sky-500/35 bg-gradient-to-br from-sky-500/20 to-blue-500/15 dark:border-sky-400/30',
     aliases: ['portainer'],
     keywords: ['portainer'],
     renderSvg: () => (

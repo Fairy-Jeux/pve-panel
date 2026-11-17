@@ -138,6 +138,7 @@ public struct ServiceIconView: View {
     public let size: CGFloat
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     public init(
         icon: String?,
@@ -195,7 +196,7 @@ public struct ServiceIconView: View {
             let symbolName = ServiceSymbolCatalog.resolveSFSymbol(
                 ServiceBrandCatalog.cleanGenericIconName(icon ?? "")
             )
-            let fallbackColor = isOnline ? DesignTokens.signalTeal(colorScheme) : DesignTokens.critical(colorScheme)
+            let fallbackColor = isOnline ? DesignTokens.accent(accentTheme, colorScheme) : DesignTokens.critical(colorScheme)
 
             Image(systemName: symbolName)
                 .font(.system(size: size * 0.46, weight: .semibold))
@@ -467,6 +468,7 @@ public struct ServiceIconPickerSection: View {
     public let widget: String?
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
 
     public init(
         selectedIcon: Binding<String>,
@@ -581,14 +583,14 @@ public struct ServiceIconPickerSection: View {
                         .padding(.horizontal, 4)
                         .background(
                             isSelected
-                                ? DesignTokens.signalTeal(colorScheme).opacity(0.18)
+                                ? DesignTokens.accent(accentTheme, colorScheme).opacity(0.18)
                                 : DesignTokens.surfaceElevated(colorScheme),
                             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .strokeBorder(
-                                    isSelected ? DesignTokens.signalTeal(colorScheme) : Color.clear,
+                                    isSelected ? DesignTokens.accent(accentTheme, colorScheme) : Color.clear,
                                     lineWidth: 1.5
                                 )
                         )
@@ -596,7 +598,7 @@ public struct ServiceIconPickerSection: View {
                     }
                     .adaptiveIconTileButtonStyle(
                         isSelected: isSelected,
-                        accent: DesignTokens.signalTeal(colorScheme),
+                        accent: DesignTokens.accent(accentTheme, colorScheme),
                         cornerRadius: 12
                     )
                     .accessibilityLabel(brand.label)
@@ -625,18 +627,18 @@ public struct ServiceIconPickerSection: View {
                             .font(.body)
                             .frame(maxWidth: .infinity, minHeight: 38)
                             #endif
-                            .foregroundStyle(isSelected ? DesignTokens.signalTeal(colorScheme) : .primary)
+                            .foregroundStyle(isSelected ? DesignTokens.accent(accentTheme, colorScheme) : .primary)
                             #if !os(tvOS)
                             .background(
                                 isSelected
-                                    ? DesignTokens.signalTeal(colorScheme).opacity(0.18)
+                                    ? DesignTokens.accent(accentTheme, colorScheme).opacity(0.18)
                                     : DesignTokens.surfaceElevated(colorScheme),
                                 in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                                     .strokeBorder(
-                                        isSelected ? DesignTokens.signalTeal(colorScheme) : Color.clear,
+                                        isSelected ? DesignTokens.accent(accentTheme, colorScheme) : Color.clear,
                                         lineWidth: 1.4
                                     )
                             )
@@ -644,7 +646,7 @@ public struct ServiceIconPickerSection: View {
                     }
                     .adaptiveIconTileButtonStyle(
                         isSelected: isSelected,
-                        accent: DesignTokens.signalTeal(colorScheme),
+                        accent: DesignTokens.accent(accentTheme, colorScheme),
                         cornerRadius: 12
                     )
                     .accessibilityLabel(option.label)
