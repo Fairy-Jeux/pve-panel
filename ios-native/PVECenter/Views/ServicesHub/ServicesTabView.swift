@@ -156,8 +156,6 @@ public struct ServicesTabView: View {
         .sensoryFeedback(.selection, trigger: filter)
         #endif
         #if os(tvOS)
-        .contentMargins(.top, 18, for: .scrollContent)
-        .contentMargins(.bottom, 32, for: .scrollContent)
         .fullScreenCover(isPresented: $showAddSheet) {
             CustomServiceEditorSheet(viewModel: viewModel, existingService: nil)
                 .environment(\.accentTheme, viewModel.accentTheme)
@@ -260,13 +258,11 @@ public struct ServicesTabView: View {
                     .adaptiveSmallControlSize()
                 }
 
-                Picker("Filtrer les services", selection: $filter) {
-                    ForEach(ServicesFilter.allCases) { item in
-                        Text(item.rawValue).tag(item)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
+                AdaptiveSegmentedControl(
+                    options: ServicesFilter.allCases,
+                    selection: $filter,
+                    title: \.rawValue
+                )
             }
         }
     }
@@ -484,9 +480,6 @@ public struct ServicesTabView: View {
                     } label: {
                         Label(muted ? "Réactiver alertes" : "Sourdine 1h", systemImage: muted ? "bell.badge.fill" : "bell.slash")
                             .labelStyle(.iconOnly)
-                            #if !os(tvOS)
-                            .foregroundStyle(muted ? caution : DesignTokens.secondaryText(colorScheme))
-                            #endif
                     }
                     .adaptivePillButtonStyle(tint: muted ? caution : nil)
                     .adaptiveSmallControlSize()
@@ -540,9 +533,6 @@ public struct ServicesTabView: View {
                     } label: {
                         Label("Supprimer", systemImage: "trash")
                             .labelStyle(.iconOnly)
-                            #if !os(tvOS)
-                            .foregroundStyle(critical)
-                            #endif
                     }
                     .adaptivePillButtonStyle(tint: critical)
                     .adaptiveSmallControlSize()
@@ -795,7 +785,7 @@ public struct ServicesTabView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(
-                            DesignTokens.surfaceElevated(colorScheme),
+                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                         )
                     }
@@ -915,6 +905,6 @@ public struct ServicesTabView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
-        .background(DesignTokens.surfaceElevated(colorScheme), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(DesignTokens.surfaceElevated(theme: accentTheme, colorScheme), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }

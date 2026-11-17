@@ -145,7 +145,7 @@ public struct AlertsBannerView: View {
                                     .frame(minHeight: rowMinHeight)
                                     #if !os(tvOS)
                                     .background(
-                                        DesignTokens.surfaceElevated(colorScheme),
+                                        DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                                         in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     )
                                     #endif

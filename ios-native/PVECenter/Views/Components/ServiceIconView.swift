@@ -203,7 +203,7 @@ public struct ServiceIconView: View {
                 .foregroundStyle(fallbackColor)
                 .frame(width: size, height: size)
                 .background(
-                    DesignTokens.surfaceElevated(colorScheme),
+                    DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                     in: RoundedRectangle(cornerRadius: radius, style: .continuous)
                 )
         }
@@ -499,6 +499,24 @@ public struct ServiceIconPickerSection: View {
     }
 
     public var body: some View {
+        #if os(tvOS)
+        GlassCard(padding: 24, cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Icône de l'application")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                pickerContent
+            }
+        }
+        #else
+        Section("Icône de l'application") {
+            pickerContent
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var pickerContent: some View {
         let activeBrand = ServiceBrandCatalog.resolveBrand(
             icon: selectedIcon,
             serviceId: serviceId,
@@ -506,159 +524,157 @@ public struct ServiceIconPickerSection: View {
             widget: widget
         )
 
-        Section("Icône de l'application") {
-            HStack(spacing: 14) {
-                ServiceIconView(
-                    icon: selectedIcon,
-                    serviceId: serviceId,
-                    serviceName: serviceName,
-                    widget: widget,
-                    isOnline: true,
-                    size: {
-                        #if os(tvOS)
-                        56
-                        #else
-                        44
-                        #endif
-                    }()
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(
-                        ServiceBrandCatalog.displayLabel(
-                            icon: selectedIcon,
-                            serviceId: serviceId,
-                            serviceName: serviceName,
-                            widget: widget
-                        )
+        HStack(spacing: 14) {
+            ServiceIconView(
+                icon: selectedIcon,
+                serviceId: serviceId,
+                serviceName: serviceName,
+                widget: widget,
+                isOnline: true,
+                size: {
+                    #if os(tvOS)
+                    56
+                    #else
+                    44
+                    #endif
+                }()
+            )
+            VStack(alignment: .leading, spacing: 3) {
+                Text(
+                    ServiceBrandCatalog.displayLabel(
+                        icon: selectedIcon,
+                        serviceId: serviceId,
+                        serviceName: serviceName,
+                        widget: widget
                     )
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                )
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(DesignTokens.primaryText(colorScheme))
 
-                    Text("Choisissez une icône dédiée Homelab ou un symbole générique")
-                        #if os(tvOS)
-                        .font(.caption)
-                        #else
-                        .font(.caption2)
-                        #endif
-                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                        .lineLimit(1)
-                }
+                Text("Choisissez une icône dédiée Homelab ou un symbole générique")
+                    #if os(tvOS)
+                    .font(.caption)
+                    #else
+                    .font(.caption2)
+                    #endif
+                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                    .lineLimit(1)
             }
+        }
 
-            LazyVGrid(columns: gridColumns, spacing: {
-                #if os(tvOS)
-                14
-                #else
-                8
-                #endif
-            }()) {
-                ForEach(ServiceBrandCatalog.brands) { brand in
-                    let isSelected = activeBrand?.id == brand.id
-                    Button {
-                        selectedIcon = brand.id
-                    } label: {
-                        VStack(spacing: 6) {
-                            ServiceIconView(icon: brand.id, size: {
-                                #if os(tvOS)
-                                42
-                                #else
-                                32
-                                #endif
-                            }())
-                            Text(brand.shortLabel)
-                                #if os(tvOS)
-                                .font(.caption.weight(.medium))
-                                #else
-                                .font(.system(size: 10, weight: .medium))
-                                #endif
-                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity)
+        LazyVGrid(columns: gridColumns, spacing: {
+            #if os(tvOS)
+            14
+            #else
+            8
+            #endif
+        }()) {
+            ForEach(ServiceBrandCatalog.brands) { brand in
+                let isSelected = activeBrand?.id == brand.id
+                Button {
+                    selectedIcon = brand.id
+                } label: {
+                    VStack(spacing: 6) {
+                        ServiceIconView(icon: brand.id, size: {
+                            #if os(tvOS)
+                            42
+                            #else
+                            32
+                            #endif
+                        }())
+                        Text(brand.shortLabel)
+                            #if os(tvOS)
+                            .font(.caption.weight(.medium))
+                            #else
+                            .font(.system(size: 10, weight: .medium))
+                            #endif
+                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity)
+                    #if os(tvOS)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 8)
+                    #else
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 4)
+                    .background(
+                        isSelected
+                            ? DesignTokens.accent(accentTheme, colorScheme).opacity(0.18)
+                            : DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(
+                                isSelected ? DesignTokens.accent(accentTheme, colorScheme) : Color.clear,
+                                lineWidth: 1.5
+                            )
+                    )
+                    #endif
+                }
+                .adaptiveIconTileButtonStyle(
+                    isSelected: isSelected,
+                    accent: DesignTokens.accent(accentTheme, colorScheme),
+                    cornerRadius: 12
+                )
+                .accessibilityLabel(brand.label)
+            }
+        }
+        .padding(.vertical, 6)
+
+        LazyVGrid(columns: symbolColumns, spacing: {
+            #if os(tvOS)
+            14
+            #else
+            8
+            #endif
+        }()) {
+            ForEach(ServiceSymbolCatalog.options) { option in
+                let cleaned = ServiceBrandCatalog.cleanGenericIconName(selectedIcon)
+                let isSelected = activeBrand == nil && ServiceSymbolCatalog.resolveSFSymbol(cleaned) == option.symbol
+                Button {
+                    selectedIcon = "sf:\(option.symbol)"
+                } label: {
+                    Image(systemName: option.symbol)
                         #if os(tvOS)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 8)
+                        .font(.title3)
+                        .frame(maxWidth: .infinity, minHeight: 56)
                         #else
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 4)
+                        .font(.body)
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        #endif
+                        .foregroundStyle(isSelected ? DesignTokens.accent(accentTheme, colorScheme) : .primary)
+                        #if !os(tvOS)
                         .background(
                             isSelected
                                 ? DesignTokens.accent(accentTheme, colorScheme).opacity(0.18)
-                                : DesignTokens.surfaceElevated(colorScheme),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                : DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
                                 .strokeBorder(
                                     isSelected ? DesignTokens.accent(accentTheme, colorScheme) : Color.clear,
-                                    lineWidth: 1.5
+                                    lineWidth: 1.4
                                 )
                         )
                         #endif
-                    }
-                    .adaptiveIconTileButtonStyle(
-                        isSelected: isSelected,
-                        accent: DesignTokens.accent(accentTheme, colorScheme),
-                        cornerRadius: 12
-                    )
-                    .accessibilityLabel(brand.label)
                 }
+                .adaptiveIconTileButtonStyle(
+                    isSelected: isSelected,
+                    accent: DesignTokens.accent(accentTheme, colorScheme),
+                    cornerRadius: 12
+                )
+                .accessibilityLabel(option.label)
             }
-            .padding(.vertical, 6)
-
-            LazyVGrid(columns: symbolColumns, spacing: {
-                #if os(tvOS)
-                14
-                #else
-                8
-                #endif
-            }()) {
-                ForEach(ServiceSymbolCatalog.options) { option in
-                    let cleaned = ServiceBrandCatalog.cleanGenericIconName(selectedIcon)
-                    let isSelected = activeBrand == nil && ServiceSymbolCatalog.resolveSFSymbol(cleaned) == option.symbol
-                    Button {
-                        selectedIcon = "sf:\(option.symbol)"
-                    } label: {
-                        Image(systemName: option.symbol)
-                            #if os(tvOS)
-                            .font(.title3)
-                            .frame(maxWidth: .infinity, minHeight: 56)
-                            #else
-                            .font(.body)
-                            .frame(maxWidth: .infinity, minHeight: 38)
-                            #endif
-                            .foregroundStyle(isSelected ? DesignTokens.accent(accentTheme, colorScheme) : .primary)
-                            #if !os(tvOS)
-                            .background(
-                                isSelected
-                                    ? DesignTokens.accent(accentTheme, colorScheme).opacity(0.18)
-                                    : DesignTokens.surfaceElevated(colorScheme),
-                                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                    .strokeBorder(
-                                        isSelected ? DesignTokens.accent(accentTheme, colorScheme) : Color.clear,
-                                        lineWidth: 1.4
-                                    )
-                            )
-                            #endif
-                    }
-                    .adaptiveIconTileButtonStyle(
-                        isSelected: isSelected,
-                        accent: DesignTokens.accent(accentTheme, colorScheme),
-                        cornerRadius: 12
-                    )
-                    .accessibilityLabel(option.label)
-                }
-            }
-            .padding(.vertical, 6)
-
-            TextField("Nom personnalisé ou SF Symbol (ex: zoraxy, sf:server.rack)", text: $selectedIcon)
-                .autocorrectionDisabled()
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                #endif
         }
+        .padding(.vertical, 6)
+
+        TextField("Nom personnalisé ou SF Symbol (ex: zoraxy, sf:server.rack)", text: $selectedIcon)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            #endif
     }
 }

@@ -322,6 +322,8 @@ public struct OnboardingFlowView: View {
                 }
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .background { AmbientBackgroundView() }
 
             Divider()
 
@@ -515,11 +517,7 @@ public struct OnboardingFlowView: View {
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                 }
-                #if os(tvOS)
                 .adaptivePillButtonStyle()
-                #else
-                .buttonStyle(.bordered)
-                #endif
             }
 
             Spacer()
@@ -540,12 +538,9 @@ public struct OnboardingFlowView: View {
                             .fixedSize(horizontal: true, vertical: false)
                     }
                 }
-                #if os(tvOS)
                 .opacity(finishDisabled ? 0.5 : 1.0)
                 .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
-                #else
-                .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.accent(accentTheme, colorScheme))
+                #if !os(tvOS)
                 .disabled(finishDisabled)
                 #endif
             } else {
@@ -559,12 +554,9 @@ public struct OnboardingFlowView: View {
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                 }
-                #if os(tvOS)
                 .opacity(nextDisabled ? 0.5 : 1.0)
                 .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
-                #else
-                .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.accent(accentTheme, colorScheme))
+                #if !os(tvOS)
                 .disabled(nextDisabled)
                 #endif
             }
@@ -741,8 +733,7 @@ public struct OnboardingFlowView: View {
                         }
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.accent(accentTheme, colorScheme))
+                .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 12)
                 .disabled(isAuthenticating || normalizedServerURL.isEmpty)
             }
 
@@ -1044,8 +1035,7 @@ public struct OnboardingFlowView: View {
                     Spacer()
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.accent(accentTheme, colorScheme))
+            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 12)
             .disabled(isFinalizing || normalizedServerURL.isEmpty)
 
             Button {

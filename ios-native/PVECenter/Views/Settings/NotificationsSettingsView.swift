@@ -131,6 +131,8 @@ public struct NotificationsSettingsView: View {
             globalTestSection
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background { AmbientBackgroundView() }
     }
 
     private var localPermissionsSection: some View {
@@ -148,8 +150,7 @@ public struct NotificationsSettingsView: View {
                 } label: {
                     Label("Activer les notifications sur cet appareil", systemImage: "bell.badge.fill")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(DesignTokens.accent(accentTheme, colorScheme))
+                .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 12)
             } else if viewModel.pushManager.authorizationStatus == .denied {
                 #if os(iOS)
                 Button {
@@ -393,8 +394,7 @@ public struct NotificationsSettingsView: View {
                     }
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.accent(accentTheme, colorScheme))
+            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 12)
             .disabled(testingKey != nil)
 
             if let result = lastTestResult {
@@ -786,75 +786,82 @@ private struct WebhookChannelEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Canal") {
-                    TextField("Nom (ex: Discord Homelab, ntfy Mobile)", text: $name)
+            #if os(tvOS)
+            ZStack {
+                AmbientBackgroundView()
 
-                    Picker("Type", selection: $type) {
-                        Text("Discord").tag("discord")
-                        Text("Telegram").tag("telegram")
-                        Text("Générique / ntfy / Gotify / HA").tag("generic")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(isEditing ? "Modifier le webhook" : "Nouveau webhook")
+                                    .font(.largeTitle.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                Text("Discord, Telegram ou endpoint HTTP / ntfy / Gotify")
+                                    .font(.callout)
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            }
+                            Spacer()
+                            Button("Annuler") { dismiss() }
+                                .adaptivePillButtonStyle()
+                            Button {
+                                guard isFormValid && !isSaving else { return }
+                                Task { await commit() }
+                            } label: {
+                                Text(isSaving ? "Enregistrement…" : "Enregistrer")
+                                    .opacity(isFormValid && !isSaving ? 1.0 : 0.45)
+                            }
+                            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
+                        }
+                        .focusSection()
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Canal")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                channelFields
+                            }
+                        }
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text(type == "telegram" ? "Paramètres Telegram" : (type == "discord" ? "Webhook Discord" : "Webhook HTTP / ntfy / Gotify / HA"))
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                destinationFields
+                            }
+                        }
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Déclencheurs")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                triggerFields
+                            }
+                        }
                     }
-
-                    Toggle("Canal actif", isOn: $enabled)
+                    .padding(.horizontal, 48)
+                    .padding(.vertical, 32)
+                    .frame(maxWidth: 1080)
+                    .frame(maxWidth: .infinity)
                 }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            #else
+            Form {
+                Section("Canal") { channelFields }
 
                 if type == "telegram" {
-                    Section("Paramètres Telegram") {
-                        SecureField(
-                            existing?.botTokenSet == true ? "Token du bot (défini — laisser vide pour conserver)" : "Bot Token (@BotFather)",
-                            text: $botToken
-                        )
-                        TextField("Chat ID (ex: -100123456789)", text: $chatId)
-                            .autocorrectionDisabled()
-                    }
+                    Section("Paramètres Telegram") { destinationFields }
                 } else {
                     Section(type == "discord" ? "Webhook Discord" : "Webhook HTTP / ntfy / Gotify / HA") {
-                        TextField(
-                            type == "discord" ? "https://discord.com/api/webhooks/..." : "https://ntfy.sh/mon-topic",
-                            text: $url
-                        )
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-
-                        if type == "generic" {
-                            TextField("En-têtes HTTP (un par ligne : Clé: Valeur)", text: $headersText, axis: .vertical)
-                                .lineLimit(2...5)
-                                .font(.system(.caption, design: .monospaced))
-                                .autocorrectionDisabled()
-                                #if os(iOS)
-                                .textInputAutocapitalization(.never)
-                                #endif
-                        }
+                        destinationFields
                     }
                 }
 
-                Section("Déclencheurs") {
-                    Toggle("Alerter quand un service tombe", isOn: $notifyOnDown)
-                    Toggle("Alerter lors du rétablissement", isOn: $notifyOnRecovery)
-                    Toggle("Inclure les détails & latence", isOn: $includeDetails)
-                }
-
-                #if os(tvOS)
-                Section {
-                    HStack(spacing: 14) {
-                        Button("Annuler") { dismiss() }
-                            .adaptivePillButtonStyle()
-                        Spacer()
-                        Button {
-                            guard isFormValid && !isSaving else { return }
-                            Task { await commit() }
-                        } label: {
-                            Text(isSaving ? "Enregistrement…" : "Enregistrer")
-                                .opacity(isFormValid && !isSaving ? 1.0 : 0.45)
-                        }
-                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
-                    }
-                }
-                #endif
+                Section("Déclencheurs") { triggerFields }
             }
             .adaptiveTVOSModalFormContainer()
             .navigationTitle(isEditing ? "Modifier le webhook" : "Nouveau webhook")
@@ -872,10 +879,63 @@ private struct WebhookChannelEditorSheet: View {
                     .disabled(!isFormValid || isSaving)
                 }
             }
+            #endif
         }
         #if os(macOS)
         .frame(minWidth: 460, idealWidth: 520, minHeight: 460)
         #endif
+    }
+
+    @ViewBuilder
+    private var channelFields: some View {
+        TextField("Nom (ex: Discord Homelab, ntfy Mobile)", text: $name)
+
+        Picker("Type", selection: $type) {
+            Text("Discord").tag("discord")
+            Text("Telegram").tag("telegram")
+            Text("Générique / ntfy / Gotify / HA").tag("generic")
+        }
+
+        Toggle("Canal actif", isOn: $enabled)
+    }
+
+    @ViewBuilder
+    private var destinationFields: some View {
+        if type == "telegram" {
+            SecureField(
+                existing?.botTokenSet == true ? "Token du bot (défini — laisser vide pour conserver)" : "Bot Token (@BotFather)",
+                text: $botToken
+            )
+            TextField("Chat ID (ex: -100123456789)", text: $chatId)
+                .autocorrectionDisabled()
+        } else {
+            TextField(
+                type == "discord" ? "https://discord.com/api/webhooks/..." : "https://ntfy.sh/mon-topic",
+                text: $url
+            )
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .keyboardType(.URL)
+            .textInputAutocapitalization(.never)
+            #endif
+
+            if type == "generic" {
+                TextField("En-têtes HTTP (un par ligne : Clé: Valeur)", text: $headersText, axis: .vertical)
+                    .lineLimit(2...5)
+                    .font(.system(.caption, design: .monospaced))
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var triggerFields: some View {
+        Toggle("Alerter quand un service tombe", isOn: $notifyOnDown)
+        Toggle("Alerter lors du rétablissement", isOn: $notifyOnRecovery)
+        Toggle("Inclure les détails & latence", isOn: $includeDetails)
     }
 
     private func commit() async {

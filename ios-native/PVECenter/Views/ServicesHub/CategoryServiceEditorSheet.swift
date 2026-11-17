@@ -90,33 +90,117 @@ public struct CategoryServiceEditorSheet: View {
 
     public var body: some View {
         NavigationStack {
-            Form {
-                Section("Application") {
-                    TextField("Nom affiché", text: $name)
-                    TextField("Description", text: $description)
-                    TextField("Catégorie", text: $category)
+            #if os(tvOS)
+            ZStack {
+                AmbientBackgroundView()
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(categorySuggestions, id: \.self) { suggestion in
-                                let selected = category == suggestion
-                                Button(suggestion) {
-                                    category = suggestion
-                                }
-                                #if os(tvOS)
-                                .adaptivePillButtonStyle(
-                                    tint: selected ? DesignTokens.accent(accentTheme, colorScheme) : nil,
-                                    prominent: selected
-                                )
-                                #else
-                                .buttonStyle(.bordered)
-                                .tint(selected ? DesignTokens.accent(accentTheme, colorScheme) : .secondary)
-                                .controlSize(.small)
-                                #endif
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Personnaliser \(draft.service.name)")
+                                    .font(.largeTitle.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                Text("Application, icône Homelab, liens et widget temps réel")
+                                    .font(.callout)
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            }
+                            Spacer()
+                            Button("Annuler") { dismiss() }
+                                .adaptivePillButtonStyle()
+                            Button {
+                                guard canSubmit && !isSaving else { return }
+                                Task { await saveChanges() }
+                            } label: {
+                                Text(isSaving ? "Enregistrement…" : "Enregistrer")
+                                    .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
+                            }
+                            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
+                        }
+                        .focusSection()
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Application")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                applicationFields
                             }
                         }
-                        .padding(.vertical, 4)
+
+                        ServiceIconPickerSection(
+                            selectedIcon: $icon,
+                            serviceId: draft.service.id,
+                            serviceName: name,
+                            widget: widget
+                        )
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Liens & Supervision")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                linksFields
+                            }
+                        }
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Test de joignabilité")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                testControls
+                            }
+                        }
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Zone de danger")
+                                        .font(.headline)
+                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    Text("Retire cette application du catalogue sur le serveur.")
+                                        .font(.caption)
+                                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                                }
+                                Spacer()
+                                Button(role: .destructive) {
+                                    guard !isDeleting else { return }
+                                    confirmDelete = true
+                                } label: {
+                                    Label(isDeleting ? "Suppression…" : "Retirer du panneau", systemImage: "trash")
+                                }
+                                .adaptivePillButtonStyle(tint: DesignTokens.critical(colorScheme))
+                            }
+                        }
                     }
+                    .padding(.horizontal, 48)
+                    .padding(.vertical, 32)
+                    .frame(maxWidth: 1180)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .confirmationDialog(
+                "Retirer « \(draft.service.name) » du panneau ?",
+                isPresented: $confirmDelete,
+                titleVisibility: .visible
+            ) {
+                Button("Supprimer", role: .destructive) {
+                    Task {
+                        isDeleting = true
+                        let ok = await viewModel.deleteCategoryService(id: draft.service.id)
+                        isDeleting = false
+                        if ok { dismiss() }
+                    }
+                }
+                Button("Annuler", role: .cancel) {}
+            }
+            #else
+            Form {
+                Section("Application") {
+                    applicationFields
                 }
 
                 ServiceIconPickerSection(
@@ -127,55 +211,11 @@ public struct CategoryServiceEditorSheet: View {
                 )
 
                 Section("Liens & Supervision") {
-                    TextField("URL d'ouverture (https://…)", text: $url)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        #endif
-
-                    TextField("URL Healthcheck interne (ping_url, optionnelle)", text: $pingUrl)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        #endif
-
-                    Picker("Widget temps réel", selection: $widget) {
-                        ForEach(WIDGET_OPTIONS) { opt in
-                            Text(opt.label).tag(opt.id)
-                        }
-                    }
+                    linksFields
                 }
 
                 Section("Test de joignabilité") {
-                    Button {
-                        Task { await runTest() }
-                    } label: {
-                        HStack {
-                            Label(isTesting ? "Test en cours…" : "Tester maintenant", systemImage: "bolt.horizontal.circle")
-                            Spacer()
-                            if isTesting {
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(isTesting)
-
-                    if let res = testResult {
-                        HStack(spacing: 8) {
-                            Image(systemName: res.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                                .foregroundStyle(res.ok ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme))
-                            Text(res.message)
-                                .font(.caption)
-                            Spacer()
-                            if let ms = res.latencyMs {
-                                Text("\(ms) ms")
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
-                            }
-                        }
-                    }
+                    testControls
                 }
 
                 Section {
@@ -186,24 +226,6 @@ public struct CategoryServiceEditorSheet: View {
                     }
                     .disabled(isDeleting)
                 }
-
-                #if os(tvOS)
-                Section {
-                    HStack(spacing: 14) {
-                        Button("Annuler") { dismiss() }
-                            .adaptivePillButtonStyle()
-                        Spacer()
-                        Button {
-                            guard canSubmit && !isSaving else { return }
-                            Task { await saveChanges() }
-                        } label: {
-                            Text(isSaving ? "Enregistrement…" : "Enregistrer")
-                                .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
-                        }
-                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
-                    }
-                }
-                #endif
             }
             .adaptiveTVOSModalFormContainer()
             .navigationTitle("Personnaliser")
@@ -231,17 +253,99 @@ public struct CategoryServiceEditorSheet: View {
                         isDeleting = true
                         let ok = await viewModel.deleteCategoryService(id: draft.service.id)
                         isDeleting = false
-                        if ok {
-                            dismiss()
-                        }
+                        if ok { dismiss() }
                     }
                 }
                 Button("Annuler", role: .cancel) {}
             }
+            #endif
         }
         #if os(macOS)
         .frame(minWidth: 520, idealWidth: 580, minHeight: 560)
         #endif
+    }
+
+    @ViewBuilder
+    private var applicationFields: some View {
+        TextField("Nom affiché", text: $name)
+        TextField("Description", text: $description)
+        TextField("Catégorie", text: $category)
+
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(categorySuggestions, id: \.self) { suggestion in
+                    let selected = category == suggestion
+                    Button(suggestion) {
+                        category = suggestion
+                    }
+                    .adaptivePillButtonStyle(
+                        tint: selected ? DesignTokens.accent(accentTheme, colorScheme) : nil,
+                        prominent: selected
+                    )
+                    .adaptiveSmallControlSize()
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private var linksFields: some View {
+        TextField("URL d'ouverture (https://…)", text: $url)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            .keyboardType(.URL)
+            #endif
+
+        TextField("URL Healthcheck interne (ping_url, optionnelle)", text: $pingUrl)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            .keyboardType(.URL)
+            #endif
+
+        Picker("Widget temps réel", selection: $widget) {
+            ForEach(WIDGET_OPTIONS) { opt in
+                Text(opt.label).tag(opt.id)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var testControls: some View {
+        Button {
+            guard !isTesting else { return }
+            Task { await runTest() }
+        } label: {
+            HStack {
+                Label(isTesting ? "Test en cours…" : "Tester maintenant", systemImage: "bolt.horizontal.circle")
+                Spacer()
+                if isTesting {
+                    ProgressView()
+                }
+            }
+        }
+        #if os(tvOS)
+        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme))
+        #else
+        .disabled(isTesting)
+        #endif
+
+        if let res = testResult {
+            HStack(spacing: 8) {
+                Image(systemName: res.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(res.ok ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme))
+                Text(res.message)
+                    .font(.caption)
+                Spacer()
+                if let ms = res.latencyMs {
+                    Text("\(ms) ms")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                }
+            }
+        }
     }
 
     private func runTest() async {

@@ -75,18 +75,11 @@ public struct UsersTabView: View {
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .lineLimit(1)
                     Spacer()
-                    Picker("Filtre des comptes", selection: $filter) {
-                        ForEach(UserFilter.allCases) { item in
-                            Text(item.rawValue).tag(item)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    #if os(tvOS)
-                    .frame(maxWidth: 680)
-                    #else
-                    .frame(maxWidth: 360)
-                    #endif
+                    AdaptiveSegmentedControl(
+                        options: UserFilter.allCases,
+                        selection: $filter,
+                        title: \.rawValue
+                    )
                 }
 
                 LazyVGrid(columns: adaptiveColumns, spacing: gridRowSpacing) {
@@ -245,7 +238,7 @@ public struct UsersTabView: View {
                         .foregroundStyle(user.isDisabled ? critical : (user.isAdmin ? teal : DesignTokens.primaryText(colorScheme)))
                         .frame(width: avatarSize, height: avatarSize)
                         .background(
-                            DesignTokens.surfaceElevated(colorScheme),
+                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
 

@@ -532,7 +532,7 @@ public struct ServerSettingsSheet: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
                 .background(
-                    DesignTokens.surfaceElevated(colorScheme),
+                    DesignTokens.surfaceElevated(theme: viewModel.accentTheme, colorScheme),
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                 )
 
@@ -688,6 +688,10 @@ public struct ServerSettingsSheet: View {
                 refreshOptionsSection
             }
             .formStyle(.grouped)
+            #if !os(tvOS)
+            .scrollContentBackground(.hidden)
+            .background { AmbientBackgroundView() }
+            #endif
             .navigationTitle("Réglages Studio")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -771,7 +775,7 @@ public struct ServerSettingsSheet: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
                             .background(
-                                selected ? c1.opacity(0.16) : DesignTokens.surfaceElevated(colorScheme),
+                                selected ? c1.opacity(0.16) : DesignTokens.surfaceElevated(theme: viewModel.accentTheme, colorScheme),
                                 in: RoundedRectangle(cornerRadius: 11, style: .continuous)
                             )
                             .overlay(
@@ -1176,12 +1180,10 @@ public struct ServerSettingsSheet: View {
                         systemImage: "play.fill"
                     )
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 4)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.indigo)
+                .adaptivePillButtonStyle(tint: .indigo, prominent: true, cornerRadius: 12)
             }
             .padding(.vertical, 4)
         }

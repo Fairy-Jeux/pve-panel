@@ -79,7 +79,7 @@ public struct StorageTabView: View {
         let avail = max(0, Double(pool.availBytes))
         let availSliceColor = colorScheme == .light
             ? Color(red: 0.067, green: 0.098, blue: 0.173).opacity(0.11)
-            : DesignTokens.surfaceElevated(colorScheme)
+            : DesignTokens.surfaceElevated(theme: accentTheme, colorScheme)
         let slices: [PoolSlice] = [
             PoolSlice(id: "used", label: "Utilisé", bytes: used, color: usedColor),
             PoolSlice(id: "avail", label: "Disponible", bytes: avail, color: availSliceColor),
@@ -214,7 +214,7 @@ public struct StorageTabView: View {
                         40
                         #endif
                     }())
-                    .background(DesignTokens.surfaceElevated(colorScheme), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(DesignTokens.surfaceElevated(theme: accentTheme, colorScheme), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
                     Text("SSD Système Proxmox")
                         .font(.subheadline.weight(.semibold))
@@ -261,7 +261,6 @@ public struct StorageTabView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                 Spacer()
-                #if os(tvOS)
                 Button {
                     showHealthyOnly.toggle()
                 } label: {
@@ -269,19 +268,19 @@ public struct StorageTabView: View {
                         showHealthyOnly ? "Sains uniquement" : "Tous (SMART)",
                         systemImage: showHealthyOnly ? "checkmark.shield.fill" : "line.3.horizontal.decrease.circle"
                     )
+                    #if os(tvOS)
                     .font(.callout.weight(.semibold))
+                    #else
+                    .font(.caption.weight(.semibold))
+                    #endif
                     .lineLimit(1)
                 }
                 .adaptivePillButtonStyle(
                     tint: showHealthyOnly ? DesignTokens.nominal(colorScheme) : nil,
                     prominent: showHealthyOnly
                 )
+                .adaptiveSmallControlSize()
                 .fixedSize()
-                #else
-                Toggle("Sains uniquement", isOn: $showHealthyOnly)
-                    .toggleStyle(.button)
-                    .controlSize(.small)
-                #endif
             }
 
             LazyVGrid(columns: adaptiveColumns, spacing: gridSpacing) {

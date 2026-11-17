@@ -53,9 +53,9 @@ PHYSICAL_LINES="$(echo "$DEVICES_OUT" | grep -E "connected|available" | grep -v 
 
 if [[ -z "$DEVICE_ID" ]]; then
     if [[ "$TARGET_PLATFORM" == "tvos" ]]; then
-        DEVICE_ID="$(echo "$PHYSICAL_LINES" | grep -i "Apple TV" | head -n 1 | grep -oE "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-Fa-f]{24,}" | head -n 1 || true)"
+        DEVICE_ID="$(echo "$PHYSICAL_LINES" | grep -i "Apple TV" | head -n 1 | grep -oE "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{16}|[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-Fa-f]{24,}" | head -n 1 || true)"
     else
-        DEVICE_ID="$(echo "$PHYSICAL_LINES" | grep -iE "iPhone|iPad" | head -n 1 | grep -oE "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-Fa-f]{24,}" | head -n 1 || true)"
+        DEVICE_ID="$(echo "$PHYSICAL_LINES" | grep -iE "iPhone|iPad" | head -n 1 | grep -oE "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{16}|[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-Fa-f]{24,}" | head -n 1 || true)"
     fi
 fi
 
@@ -94,7 +94,7 @@ xcodebuild \
     -destination "$DEST" \
     -derivedDataPath "$DERIVED_DATA" \
     -allowProvisioningUpdates \
-    "${TEAM_ARGS[@]}" \
+    ${TEAM_ARGS[@]+"${TEAM_ARGS[@]}"} \
     build
 
 APP_PATH="$DERIVED_DATA/Build/Products/$PRODUCT_DIR/PVE Center.app"

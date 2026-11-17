@@ -354,12 +354,15 @@ public struct ServerSetupWizardSheet: View {
                                     Spacer()
                                 }
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(DesignTokens.accent(accentTheme, colorScheme))
+                            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 12)
                             .disabled(isSaving)
                         }
                     }
                     .formStyle(.grouped)
+                    #if !os(tvOS)
+                    .scrollContentBackground(.hidden)
+                    #endif
+                    .background { AmbientBackgroundView() }
                 }
             }
             .navigationTitle("Configuration Serveur")

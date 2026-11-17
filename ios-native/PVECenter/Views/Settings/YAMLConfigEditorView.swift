@@ -185,8 +185,7 @@ public struct YAMLConfigEditorView: View {
                         .fontWeight(.semibold)
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(DesignTokens.accent(accentTheme, colorScheme))
+            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 10)
             .disabled(isSaving || isValidating || yamlText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
     }

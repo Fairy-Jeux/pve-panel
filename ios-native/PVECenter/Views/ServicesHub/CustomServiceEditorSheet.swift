@@ -175,33 +175,102 @@ public struct CustomServiceEditorSheet: View {
 
     public var body: some View {
         NavigationStack {
-            Form {
-                identitySection
-                iconPickerSection
-                protocolTargetSection
-                if supportsAuth {
-                    authSection
-                }
-                alertPolicySection
-                liveTestSection
+            #if os(tvOS)
+            ZStack {
+                AmbientBackgroundView()
 
-                #if os(tvOS)
-                Section {
-                    HStack(spacing: 14) {
-                        Button("Annuler") { dismiss() }
-                            .adaptivePillButtonStyle()
-                        Spacer()
-                        Button {
-                            guard canSubmit && !isSaving else { return }
-                            Task { await saveService() }
-                        } label: {
-                            Text(isSaving ? "Enregistrement…" : (isEditing ? "Enregistrer" : "Ajouter"))
-                                .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(isEditing ? "Modifier \(trimmedName.isEmpty ? "le service" : trimmedName)" : "Nouveau service")
+                                    .font(.largeTitle.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                Text("Sonde, protocole, icône et politique d'alerte")
+                                    .font(.callout)
+                                    .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                            }
+                            Spacer()
+                            Button("Annuler") { dismiss() }
+                                .adaptivePillButtonStyle()
+                            Button {
+                                guard canSubmit && !isSaving else { return }
+                                Task { await saveService() }
+                            } label: {
+                                Text(isSaving ? "Enregistrement…" : (isEditing ? "Enregistrer" : "Ajouter"))
+                                    .opacity(canSubmit && !isSaving ? 1.0 : 0.45)
+                            }
+                            .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
                         }
-                        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true)
+                        .focusSection()
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Identité")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                identityFields
+                            }
+                        }
+
+                        iconPickerSection
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Protocole & Cible")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                protocolTargetFields
+                            }
+                        }
+
+                        if supportsAuth {
+                            GlassCard(padding: 24, cornerRadius: 22) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    Text("Authentification")
+                                        .font(.title3.weight(.bold))
+                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    authFields
+                                }
+                            }
+                        }
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Politique d'alerte")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                alertPolicyFields
+                            }
+                        }
+
+                        GlassCard(padding: 24, cornerRadius: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Diagnostic préalable")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                liveTestFields
+                            }
+                        }
                     }
+                    .padding(.horizontal, 48)
+                    .padding(.vertical, 32)
+                    .frame(maxWidth: 1180)
+                    .frame(maxWidth: .infinity)
                 }
-                #endif
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            #else
+            Form {
+                Section("Identité") { identityFields }
+                iconPickerSection
+                Section("Protocole & Cible") { protocolTargetFields }
+                if supportsAuth {
+                    Section("Authentification") { authFields }
+                }
+                Section("Politique d'alerte") { alertPolicyFields }
+                Section("Diagnostic préalable") { liveTestFields }
             }
             .adaptiveTVOSModalFormContainer()
             .navigationTitle(isEditing ? "Modifier le service" : "Nouveau service")
@@ -219,6 +288,7 @@ public struct CustomServiceEditorSheet: View {
                     .disabled(!canSubmit || isSaving)
                 }
             }
+            #endif
         }
         #if os(macOS)
         .frame(minWidth: 560, idealWidth: 620, minHeight: 620)
@@ -236,36 +306,30 @@ public struct CustomServiceEditorSheet: View {
 
     // MARK: - Sections
 
-    private var identitySection: some View {
-        Section("Identité") {
-            TextField("Nom du service (ex: Jellyfin, Vaultwarden)", text: $name)
-            TextField("Description (optionnelle)", text: $description)
+    @ViewBuilder
+    private var identityFields: some View {
+        TextField("Nom du service (ex: Jellyfin, Vaultwarden)", text: $name)
+        TextField("Description (optionnelle)", text: $description)
 
-            TextField("Catégorie", text: $category)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(categorySuggestions, id: \.self) { suggestion in
-                        let selected = category == suggestion
-                        Button(suggestion) {
-                            category = suggestion
-                        }
-                        #if os(tvOS)
-                        .adaptivePillButtonStyle(
-                            tint: selected ? DesignTokens.accent(accentTheme, colorScheme) : nil,
-                            prominent: selected
-                        )
-                        #else
-                        .buttonStyle(.bordered)
-                        .tint(selected ? DesignTokens.accent(accentTheme, colorScheme) : .secondary)
-                        .controlSize(.small)
-                        #endif
+        TextField("Catégorie", text: $category)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(categorySuggestions, id: \.self) { suggestion in
+                    let selected = category == suggestion
+                    Button(suggestion) {
+                        category = suggestion
                     }
+                    .adaptivePillButtonStyle(
+                        tint: selected ? DesignTokens.accent(accentTheme, colorScheme) : nil,
+                        prominent: selected
+                    )
+                    .adaptiveSmallControlSize()
                 }
-                .padding(.vertical, 4)
             }
-
-            Toggle("Supervision active", isOn: $enabled)
+            .padding(.vertical, 4)
         }
+
+        Toggle("Supervision active", isOn: $enabled)
     }
 
     private var iconPickerSection: some View {
@@ -277,94 +341,93 @@ public struct CustomServiceEditorSheet: View {
         )
     }
 
-    private var protocolTargetSection: some View {
-        Section("Protocole & Cible") {
-            Picker("Protocole", selection: $selectedProtocol) {
-                ForEach(CustomServiceProtocol.allCases) { proto in
-                    Label(proto.title, systemImage: proto.systemImage).tag(proto)
-                }
+    @ViewBuilder
+    private var protocolTargetFields: some View {
+        Picker("Protocole", selection: $selectedProtocol) {
+            ForEach(CustomServiceProtocol.allCases) { proto in
+                Label(proto.title, systemImage: proto.systemImage).tag(proto)
+            }
+        }
+
+        switch selectedProtocol {
+        case .httpRest, .jsonMetrics:
+            TextField("URL principale (https://…)", text: $url)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                #endif
+            TextField("URL de healthcheck (optionnelle)", text: $healthUrl)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                #endif
+            TextField("URL interne LAN (optionnelle)", text: $internalUrl)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                #endif
+
+            if selectedProtocol == .jsonMetrics {
+                TextField("Chemin JSON métriques (ex: data.streams ou *) ", text: $jsonMetricPath)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
             }
 
-            switch selectedProtocol {
-            case .httpRest, .jsonMetrics:
-                TextField("URL principale (https://…)", text: $url)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
-                TextField("URL de healthcheck (optionnelle)", text: $healthUrl)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
-                TextField("URL interne LAN (optionnelle)", text: $internalUrl)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
+            httpExpectedStatusControl
+            Toggle("Vérifier le certificat SSL", isOn: $verifySsl)
 
-                if selectedProtocol == .jsonMetrics {
-                    TextField("Chemin JSON métriques (ex: data.streams ou *) ", text: $jsonMetricPath)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                }
+        case .tcpPort:
+            TextField("Hôte ou IP (ex: 192.168.1.10)", text: $host)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+            TextField("Port TCP (ex: 22, 443, 5432)", text: $portText)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
+            TextField("URL web associée (optionnelle)", text: $url)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                #endif
 
-                httpExpectedStatusControl
-                Toggle("Vérifier le certificat SSL", isOn: $verifySsl)
+        case .icmpPing:
+            TextField("Hôte ou IP (ex: 192.168.1.1)", text: $host)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+            TextField("URL web associée (optionnelle)", text: $url)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                #endif
 
-            case .tcpPort:
-                TextField("Hôte ou IP (ex: 192.168.1.10)", text: $host)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                TextField("Port TCP (ex: 22, 443, 5432)", text: $portText)
-                    #if os(iOS)
-                    .keyboardType(.numberPad)
-                    #endif
-                TextField("URL web associée (optionnelle)", text: $url)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
-
-            case .icmpPing:
-                TextField("Hôte ou IP (ex: 192.168.1.1)", text: $host)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                TextField("URL web associée (optionnelle)", text: $url)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
-
-            case .webhookIngest:
-                Picker("Expiration TTL du heartbeat", selection: $webhookTtlSeconds) {
-                    Text("5 minutes").tag(300)
-                    Text("1 heure").tag(3600)
-                    Text("6 heures").tag(21600)
-                    Text("24 heures").tag(86400)
-                }
-                Text("Endpoint d'ingestion : POST /api/custom-services/\(existingService?.id ?? "<id>")/webhook")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
-            Picker("Intervalle de vérification", selection: $refreshIntervalSeconds) {
-                Text("10 secondes").tag(10)
-                Text("30 secondes").tag(30)
-                Text("1 minute").tag(60)
+        case .webhookIngest:
+            Picker("Expiration TTL du heartbeat", selection: $webhookTtlSeconds) {
                 Text("5 minutes").tag(300)
+                Text("1 heure").tag(3600)
+                Text("6 heures").tag(21600)
+                Text("24 heures").tag(86400)
             }
+            Text("Endpoint d'ingestion : POST /api/custom-services/\(existingService?.id ?? "<id>")/webhook")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+
+        Picker("Intervalle de vérification", selection: $refreshIntervalSeconds) {
+            Text("10 secondes").tag(10)
+            Text("30 secondes").tag(30)
+            Text("1 minute").tag(60)
+            Text("5 minutes").tag(300)
         }
     }
 
@@ -382,131 +445,134 @@ public struct CustomServiceEditorSheet: View {
         #endif
     }
 
-    private var authSection: some View {
-        Section("Authentification") {
-            Picker("Type d'authentification", selection: $authType) {
-                ForEach(CustomServiceAuthType.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
-            }
-
-            if authType == .header {
-                TextField("Nom de l'en-tête HTTP", text: $authHeaderName)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-            }
-
-            if authType != .none {
-                SecureField(
-                    existingService?.authTokenSet == true
-                        ? "Jeton / Secret (laisser vide pour conserver)"
-                        : "Jeton / Mot de passe / Clé API",
-                    text: $authToken
-                )
+    @ViewBuilder
+    private var authFields: some View {
+        Picker("Type d'authentification", selection: $authType) {
+            ForEach(CustomServiceAuthType.allCases) { mode in
+                Text(mode.title).tag(mode)
             }
         }
-    }
 
-    private var alertPolicySection: some View {
-        Section("Politique d'alerte") {
-            Toggle("Alerter en cas d'indisponibilité", isOn: $alertEnabled)
-
-            if alertEnabled {
-                #if os(tvOS)
-                HStack {
-                    Text("Échecs consécutifs : \(consecutiveFailures)")
-                    Spacer()
-                    Button {
-                        if consecutiveFailures > 1 { consecutiveFailures -= 1 }
-                    } label: {
-                        Image(systemName: "minus")
-                    }
-                    .adaptivePillButtonStyle()
-                    Button {
-                        if consecutiveFailures < 10 { consecutiveFailures += 1 }
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .adaptivePillButtonStyle()
-                }
-                #else
-                Stepper(
-                    "Échecs consécutifs avant alerte : \(consecutiveFailures)",
-                    value: $consecutiveFailures,
-                    in: 1...10
-                )
+        if authType == .header {
+            TextField("Nom de l'en-tête HTTP", text: $authHeaderName)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
                 #endif
+        }
 
-                Picker("Refroidissement entre alertes", selection: $cooldownSeconds) {
-                    Text("1 minute").tag(60)
-                    Text("5 minutes").tag(300)
-                    Text("15 minutes").tag(900)
-                    Text("1 heure").tag(3600)
+        if authType != .none {
+            SecureField(
+                existingService?.authTokenSet == true
+                    ? "Jeton / Secret (laisser vide pour conserver)"
+                    : "Jeton / Mot de passe / Clé API",
+                text: $authToken
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var alertPolicyFields: some View {
+        Toggle("Alerter en cas d'indisponibilité", isOn: $alertEnabled)
+
+        if alertEnabled {
+            #if os(tvOS)
+            HStack {
+                Text("Échecs consécutifs : \(consecutiveFailures)")
+                Spacer()
+                Button {
+                    if consecutiveFailures > 1 { consecutiveFailures -= 1 }
+                } label: {
+                    Image(systemName: "minus")
                 }
+                .adaptivePillButtonStyle()
+                Button {
+                    if consecutiveFailures < 10 { consecutiveFailures += 1 }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .adaptivePillButtonStyle()
+            }
+            #else
+            Stepper(
+                "Échecs consécutifs avant alerte : \(consecutiveFailures)",
+                value: $consecutiveFailures,
+                in: 1...10
+            )
+            #endif
+
+            Picker("Refroidissement entre alertes", selection: $cooldownSeconds) {
+                Text("1 minute").tag(60)
+                Text("5 minutes").tag(300)
+                Text("15 minutes").tag(900)
+                Text("1 heure").tag(3600)
             }
         }
     }
 
-    private var liveTestSection: some View {
-        Section("Diagnostic préalable") {
-            Button {
-                Task { await runLiveTest() }
-            } label: {
-                HStack {
-                    if isTesting {
-                        ProgressView()
-                            .adaptiveSmallControlSize()
-                    } else {
-                        Image(systemName: "bolt.horizontal.circle.fill")
-                    }
-                    Text(isTesting ? "Test en cours…" : "Tester la connexion")
-                        .fontWeight(.semibold)
+    @ViewBuilder
+    private var liveTestFields: some View {
+        Button {
+            guard canSubmit && !isTesting else { return }
+            Task { await runLiveTest() }
+        } label: {
+            HStack {
+                if isTesting {
+                    ProgressView()
+                        .adaptiveSmallControlSize()
+                } else {
+                    Image(systemName: "bolt.horizontal.circle.fill")
                 }
+                Text(isTesting ? "Test en cours…" : "Tester la connexion")
+                    .fontWeight(.semibold)
             }
-            .disabled(!canSubmit || isTesting)
+            .opacity(canSubmit && !isTesting ? 1.0 : 0.5)
+        }
+        #if os(tvOS)
+        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme))
+        #else
+        .disabled(!canSubmit || isTesting)
+        #endif
 
-            if let result = testResult {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
-                            .foregroundStyle(result.ok ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme))
-                        Text(result.message)
-                            .font(.subheadline.weight(.medium))
-                        Spacer()
-                        Text("\(result.latencyMs) ms")
-                            .font(.system(.caption, design: .monospaced, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
+        if let result = testResult {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
+                        .foregroundStyle(result.ok ? DesignTokens.nominal(colorScheme) : DesignTokens.critical(colorScheme))
+                    Text(result.message)
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    Text("\(result.latencyMs) ms")
+                        .font(.system(.caption, design: .monospaced, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
 
-                    if let httpStatus = result.httpStatus {
-                        Text("Statut HTTP : \(httpStatus)")
-                            .font(.system(.caption2, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    }
+                if let httpStatus = result.httpStatus {
+                    Text("Statut HTTP : \(httpStatus)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
 
-                    if let metrics = result.metrics, !metrics.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(metrics.keys.sorted(), id: \.self) { key in
-                                    if let val = metrics[key] {
-                                        Text("\(key): \(val.displayString)")
-                                            .font(.system(.caption2, design: .monospaced, weight: .medium))
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(
-                                                DesignTokens.surfaceElevated(colorScheme),
-                                                in: Capsule()
-                                            )
-                                    }
+                if let metrics = result.metrics, !metrics.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(metrics.keys.sorted(), id: \.self) { key in
+                                if let val = metrics[key] {
+                                    Text("\(key): \(val.displayString)")
+                                        .font(.system(.caption2, design: .monospaced, weight: .medium))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
+                                            in: Capsule()
+                                        )
                                 }
                             }
                         }
                     }
                 }
-                .padding(.vertical, 4)
             }
+            .padding(.vertical, 4)
         }
     }
 

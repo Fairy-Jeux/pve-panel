@@ -139,13 +139,11 @@ public struct AppleTVPairingView: View {
                                 .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         }
                         Spacer()
-                        Picker("Mode", selection: $roleMode) {
-                            ForEach(PairingRoleMode.allCases) { mode in
-                                Label(mode.title, systemImage: mode.systemImage).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 460)
+                        AdaptiveSegmentedControl(
+                            options: PairingRoleMode.allCases,
+                            selection: $roleMode,
+                            title: \.title
+                        )
 
                         Button {
                             cleanup()
@@ -539,11 +537,8 @@ public struct AppleTVPairingView: View {
             .opacity(canSend ? 1.0 : 0.45)
             #endif
         }
-        #if os(tvOS)
-        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 16)
-        #else
-        .buttonStyle(.borderedProminent)
-        .tint(DesignTokens.accent(accentTheme, colorScheme))
+        .adaptivePillButtonStyle(tint: DesignTokens.accent(accentTheme, colorScheme), prominent: true, cornerRadius: 14)
+        #if !os(tvOS)
         .disabled(!canSend)
         #endif
     }
@@ -560,7 +555,7 @@ public struct AppleTVPairingView: View {
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                     .frame(width: large ? 74 : 42, height: large ? 90 : 52)
                     .background(
-                        DesignTokens.surfaceElevated(colorScheme),
+                        DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                         in: RoundedRectangle(cornerRadius: large ? 18 : 12, style: .continuous)
                     )
                     .overlay(

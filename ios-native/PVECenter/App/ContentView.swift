@@ -242,52 +242,120 @@ public struct ContentView: View {
     // MARK: - macOS 26 Native Liquid Glass Split View
 
     #if os(macOS)
-    private var sidebarSelectionBinding: Binding<AppTab?> {
-        Binding(
-            get: { viewModel.selectedTab },
-            set: { if let tab = $0 { viewModel.selectedTab = tab } }
-        )
-    }
-
     private var macOSBody: some View {
-        NavigationSplitView {
-            List(selection: sidebarSelectionBinding) {
-                Section("Supervision") {
-                    sidebarRow(for: .overview)
-                    sidebarRow(for: .proxmox)
-                    sidebarRow(for: .storage)
-                    sidebarRow(for: .services)
+        let themeAccent = viewModel.tintColor(for: colorScheme)
+        return NavigationSplitView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    macSidebarSection(
+                        title: "Supervision",
+                        tabs: [.overview, .proxmox, .storage, .services],
+                        accent: themeAccent
+                    )
+                    macSidebarSection(
+                        title: "Administration",
+                        tabs: [.operations, .users],
+                        accent: themeAccent
+                    )
                 }
-                Section("Administration") {
-                    sidebarRow(for: .operations, badge: operationsBadgeCount)
-                    sidebarRow(for: .users)
-                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 12)
             }
-            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .background(
+                ZStack {
+                    AmbientBackgroundView()
+                    DesignTokens.surface(theme: viewModel.accentTheme, colorScheme)
+                        .opacity(colorScheme == .light ? 0.52 : 0.42)
+                }
+                .ignoresSafeArea()
+            )
             .navigationSplitViewColumnWidth(min: 205, ideal: 230, max: 270)
         } detail: {
             NavigationStack {
-                activeTabContent(for: viewModel.selectedTab)
-                    .scrollEdgeEffectStyle(.soft, for: .top)
-                    .background { AmbientBackgroundView() }
-                    .navigationTitle(viewModel.selectedTab.title)
-                    .searchable(
-                        text: $viewModel.searchText,
-                        placement: .toolbar,
-                        prompt: "Filtrer LXC, VM, disques, services…"
-                    )
-                    .toolbar {
-                        commonToolbarItems
-                    }
+                ZStack {
+                    AmbientBackgroundView()
+                    activeTabContent(for: viewModel.selectedTab)
+                        .scrollEdgeEffectStyle(.soft, for: .top)
+                }
+                .navigationTitle(viewModel.selectedTab.title)
+                .searchable(
+                    text: $viewModel.searchText,
+                    placement: .toolbar,
+                    prompt: "Filtrer LXC, VM, disques, services…"
+                )
+                .toolbar {
+                    commonToolbarItems
+                }
             }
         }
-        .tint(viewModel.tintColor(for: colorScheme))
+        .tint(themeAccent)
     }
 
-    private func sidebarRow(for tab: AppTab, badge: Int = 0) -> some View {
-        Label(tab.title, systemImage: tab.systemImage)
-            .badge(badge)
-            .tag(tab)
+    private func macSidebarSection(title: String, tabs: [AppTab], accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                .padding(.horizontal, 10)
+                .padding(.bottom, 2)
+
+            ForEach(tabs) { tab in
+                let badge = tab == .operations ? operationsBadgeCount : 0
+                macSidebarButton(for: tab, badge: badge, accent: accent)
+            }
+        }
+    }
+
+    private func macSidebarButton(for tab: AppTab, badge: Int, accent: Color) -> some View {
+        let selected = viewModel.selectedTab == tab
+        return Button {
+            viewModel.selectedTab = tab
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: tab.systemImage)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(selected ? accent : DesignTokens.secondaryText(colorScheme))
+                    .frame(width: 20)
+
+                Text(tab.title)
+                    .font(.subheadline.weight(selected ? .semibold : .medium))
+                    .foregroundStyle(selected ? DesignTokens.primaryText(colorScheme) : DesignTokens.primaryText(colorScheme).opacity(0.84))
+                    .lineLimit(1)
+
+                Spacer(minLength: 4)
+
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(.system(.caption2, design: .monospaced, weight: .bold))
+                        .foregroundStyle(selected ? accent : DesignTokens.primaryText(colorScheme))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            (selected ? accent : DesignTokens.secondaryText(colorScheme)).opacity(0.20),
+                            in: Capsule()
+                        )
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                selected
+                    ? accent.opacity(colorScheme == .light ? 0.16 : 0.22)
+                    : Color.clear,
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(
+                        selected ? accent.opacity(0.45) : Color.clear,
+                        lineWidth: 0.9
+                    )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
     #endif
 
@@ -300,17 +368,20 @@ public struct ContentView: View {
                 tvOSTabScreen(for: tab)
             }
         }
+        .tint(viewModel.tintColor(for: .dark))
     }
 
     @ViewBuilder
     private func tvOSTabScreen(for tab: AppTab) -> some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                tvOSHeaderBar(for: tab)
-                activeTabContent(for: tab)
+            ZStack {
+                AmbientBackgroundView()
+                VStack(spacing: 0) {
+                    tvOSHeaderBar(for: tab)
+                    activeTabContent(for: tab)
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .background { AmbientBackgroundView() }
         }
         .tabItem {
             Label(tab.tvTitle, systemImage: tab.systemImage)
@@ -325,7 +396,8 @@ public struct ContentView: View {
     }
 
     private func tvOSHeaderBar(for tab: AppTab) -> some View {
-        HStack(spacing: 18) {
+        let themeAccent = DesignTokens.accent(viewModel.accentTheme, .dark)
+        return HStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(tab.title)
                     .font(.title2.weight(.bold))
@@ -335,8 +407,8 @@ public struct ContentView: View {
                     Circle()
                         .fill(
                             viewModel.isDemoMode
-                                ? Color.indigo
-                                : (viewModel.connectionError == nil && !viewModel.serverBaseURL.isEmpty ? Color.green : Color.orange)
+                                ? themeAccent
+                                : (viewModel.connectionError == nil && !viewModel.serverBaseURL.isEmpty ? DesignTokens.nominal(.dark) : DesignTokens.caution(.dark))
                         )
                         .frame(width: 10, height: 10)
                     Text(
@@ -368,7 +440,7 @@ public struct ContentView: View {
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                     }
-                    .adaptivePillButtonStyle(tint: .indigo, prominent: true)
+                    .adaptivePillButtonStyle(tint: themeAccent, prominent: true)
                 }
 
                 Button {
@@ -437,17 +509,21 @@ public struct ContentView: View {
                     }
                 }
                 .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
+                .background { AmbientBackgroundView() }
                 .navigationTitle("PVE Center")
             } detail: {
                 NavigationStack {
-                    activeTabContent(for: viewModel.selectedTab)
-                        .scrollEdgeEffectStyle(.soft, for: .top)
-                        .background { AmbientBackgroundView() }
-                        .navigationTitle(viewModel.selectedTab.title)
-                        .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
-                        .toolbar {
-                            commonToolbarItems
-                        }
+                    ZStack {
+                        AmbientBackgroundView()
+                        activeTabContent(for: viewModel.selectedTab)
+                            .scrollEdgeEffectStyle(.soft, for: .top)
+                    }
+                    .navigationTitle(viewModel.selectedTab.title)
+                    .searchable(text: $viewModel.searchText, prompt: "Filtrer LXC, VM, disques, services…")
+                    .toolbar {
+                        commonToolbarItems
+                    }
                 }
             }
         } else {
@@ -486,13 +562,15 @@ public struct ContentView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            content()
-                .scrollEdgeEffectStyle(.soft, for: .top)
-                .background { AmbientBackgroundView() }
-                .navigationTitle(tab.title)
-                .toolbar {
-                    commonToolbarItems
-                }
+            ZStack {
+                AmbientBackgroundView()
+                content()
+                    .scrollEdgeEffectStyle(.soft, for: .top)
+            }
+            .navigationTitle(tab.title)
+            .toolbar {
+                commonToolbarItems
+            }
         }
         .tabItem {
             Label(tab.title, systemImage: tab.systemImage)

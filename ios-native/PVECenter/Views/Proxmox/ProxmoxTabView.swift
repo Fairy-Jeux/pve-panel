@@ -76,18 +76,11 @@ public struct ProxmoxTabView: View {
                         .foregroundStyle(DesignTokens.secondaryText(colorScheme))
                         .lineLimit(1)
                     Spacer()
-                    Picker("Filtre des ressources", selection: $filter) {
-                        ForEach(ResourceFilter.allCases) { item in
-                            Text(item.rawValue).tag(item)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    #if os(tvOS)
-                    .frame(maxWidth: 640)
-                    #else
-                    .frame(maxWidth: 300)
-                    #endif
+                    AdaptiveSegmentedControl(
+                        options: ResourceFilter.allCases,
+                        selection: $filter,
+                        title: \.rawValue
+                    )
                 }
 
                 LazyVGrid(columns: adaptiveColumns, spacing: gridSpacing) {
@@ -231,7 +224,7 @@ public struct ProxmoxTabView: View {
                         .foregroundStyle(res.isRunning ? teal : DesignTokens.secondaryText(colorScheme))
                         .frame(width: iconBoxSize, height: iconBoxSize)
                         .background(
-                            DesignTokens.surfaceElevated(colorScheme),
+                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
 
@@ -310,13 +303,7 @@ public struct ProxmoxTabView: View {
                     }
                 }
 
-                #if os(tvOS)
                 actionBar(for: res)
-                #else
-                GlassEffectContainer(spacing: actionSpacing) {
-                    actionBar(for: res)
-                }
-                #endif
             }
         }
 
@@ -392,35 +379,23 @@ public struct ProxmoxTabView: View {
         role: ButtonRole? = nil
     ) -> some View {
         let resolvedTint = foreground ?? (prominent ? DesignTokens.accent(accentTheme, colorScheme) : nil)
-        let button = Button(role: role) {
+        Button(role: role) {
             pendingCommand = PendingPowerCommand(resource: resource, action: action)
         } label: {
-            powerButtonLabel(action, foreground: foreground)
+            powerButtonLabel(action)
         }
         .adaptiveSmallControlSize()
-
-        button.adaptivePillButtonStyle(tint: resolvedTint, prominent: prominent)
+        .adaptivePillButtonStyle(tint: resolvedTint, prominent: prominent)
     }
 
-    @ViewBuilder
-    private func powerButtonLabel(_ action: PveAction, foreground: Color?) -> some View {
-        let label = Label(action.shortLabel, systemImage: action.systemImage)
+    private func powerButtonLabel(_ action: PveAction) -> some View {
+        Label(action.shortLabel, systemImage: action.systemImage)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
             #if os(tvOS)
             .font(.callout.weight(.semibold))
             #else
-            .frame(minHeight: 26)
+            .font(.caption.weight(.semibold))
             #endif
-
-        #if os(tvOS)
-        label
-        #else
-        if let foreground {
-            label.foregroundStyle(foreground)
-        } else {
-            label
-        }
-        #endif
     }
 }

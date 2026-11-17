@@ -19,58 +19,58 @@ public enum DesignTokens {
     public static func canvas(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
         switch (theme, scheme) {
         case (.cyan, .light):
-            return Color(red: 0.940, green: 0.962, blue: 0.988)
+            return Color(red: 0.935, green: 0.960, blue: 0.988)
         case (.cider, .light):
-            return Color(red: 0.992, green: 0.942, blue: 0.952)
+            return Color(red: 0.992, green: 0.935, blue: 0.948)
         case (.indigo, .light):
-            return Color(red: 0.945, green: 0.948, blue: 0.994)
+            return Color(red: 0.938, green: 0.942, blue: 0.994)
         case (.emerald, .light):
-            return Color(red: 0.932, green: 0.982, blue: 0.962)
+            return Color(red: 0.924, green: 0.980, blue: 0.958)
         case (.amber, .light):
-            return Color(red: 0.992, green: 0.960, blue: 0.928)
+            return Color(red: 0.992, green: 0.955, blue: 0.918)
         case (.purple, .light):
-            return Color(red: 0.966, green: 0.940, blue: 0.994)
+            return Color(red: 0.960, green: 0.932, blue: 0.994)
         case (.cyan, _):
-            return Color(red: 0.018, green: 0.032, blue: 0.072)
+            return Color(red: 0.020, green: 0.045, blue: 0.098)
         case (.cider, _):
-            return Color(red: 0.072, green: 0.018, blue: 0.032)
+            return Color(red: 0.112, green: 0.020, blue: 0.044)
         case (.indigo, _):
-            return Color(red: 0.025, green: 0.026, blue: 0.088)
+            return Color(red: 0.035, green: 0.036, blue: 0.128)
         case (.emerald, _):
-            return Color(red: 0.014, green: 0.052, blue: 0.042)
+            return Color(red: 0.016, green: 0.078, blue: 0.060)
         case (.amber, _):
-            return Color(red: 0.064, green: 0.034, blue: 0.014)
+            return Color(red: 0.102, green: 0.048, blue: 0.016)
         case (.purple, _):
-            return Color(red: 0.050, green: 0.018, blue: 0.080)
+            return Color(red: 0.078, green: 0.024, blue: 0.122)
         }
     }
 
     public static func canvasSecondary(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
         switch (theme, scheme) {
         case (.cyan, .light):
-            return Color(red: 0.918, green: 0.946, blue: 0.982)
+            return Color(red: 0.908, green: 0.942, blue: 0.980)
         case (.cider, .light):
-            return Color(red: 0.980, green: 0.916, blue: 0.934)
+            return Color(red: 0.978, green: 0.906, blue: 0.926)
         case (.indigo, .light):
-            return Color(red: 0.924, green: 0.928, blue: 0.986)
+            return Color(red: 0.914, green: 0.920, blue: 0.986)
         case (.emerald, .light):
-            return Color(red: 0.908, green: 0.968, blue: 0.946)
+            return Color(red: 0.898, green: 0.964, blue: 0.938)
         case (.amber, .light):
-            return Color(red: 0.984, green: 0.942, blue: 0.896)
+            return Color(red: 0.982, green: 0.934, blue: 0.884)
         case (.purple, .light):
-            return Color(red: 0.946, green: 0.914, blue: 0.986)
+            return Color(red: 0.938, green: 0.904, blue: 0.984)
         case (.cyan, _):
-            return Color(red: 0.010, green: 0.018, blue: 0.044)
+            return Color(red: 0.010, green: 0.024, blue: 0.058)
         case (.cider, _):
-            return Color(red: 0.038, green: 0.008, blue: 0.018)
+            return Color(red: 0.056, green: 0.008, blue: 0.022)
         case (.indigo, _):
-            return Color(red: 0.014, green: 0.014, blue: 0.052)
+            return Color(red: 0.018, green: 0.018, blue: 0.072)
         case (.emerald, _):
-            return Color(red: 0.008, green: 0.028, blue: 0.022)
+            return Color(red: 0.008, green: 0.042, blue: 0.032)
         case (.amber, _):
-            return Color(red: 0.034, green: 0.016, blue: 0.006)
+            return Color(red: 0.052, green: 0.022, blue: 0.006)
         case (.purple, _):
-            return Color(red: 0.026, green: 0.008, blue: 0.046)
+            return Color(red: 0.040, green: 0.010, blue: 0.068)
         }
     }
 
@@ -83,17 +83,17 @@ public enum DesignTokens {
         case (_, .light):
             return Color(red: 0.992, green: 0.996, blue: 1.000)
         case (.cyan, _):
-            return Color(red: 0.068, green: 0.094, blue: 0.152)
+            return Color(red: 0.068, green: 0.098, blue: 0.165)
         case (.cider, _):
-            return Color(red: 0.145, green: 0.052, blue: 0.076)
+            return Color(red: 0.168, green: 0.056, blue: 0.084)
         case (.indigo, _):
-            return Color(red: 0.078, green: 0.082, blue: 0.175)
+            return Color(red: 0.084, green: 0.088, blue: 0.195)
         case (.emerald, _):
-            return Color(red: 0.048, green: 0.125, blue: 0.104)
+            return Color(red: 0.048, green: 0.142, blue: 0.114)
         case (.amber, _):
-            return Color(red: 0.138, green: 0.086, blue: 0.044)
+            return Color(red: 0.158, green: 0.096, blue: 0.046)
         case (.purple, _):
-            return Color(red: 0.116, green: 0.056, blue: 0.168)
+            return Color(red: 0.132, green: 0.060, blue: 0.190)
         }
     }
 
@@ -104,9 +104,9 @@ public enum DesignTokens {
     public static func surfaceElevated(theme: AccentTheme, _ scheme: ColorScheme) -> Color {
         switch scheme {
         case .light:
-            return accent(theme, .light).opacity(0.075)
+            return accent(theme, .light).opacity(0.085)
         default:
-            return accent(theme, .dark).opacity(0.085)
+            return accent(theme, .dark).opacity(0.11)
         }
     }
 
@@ -283,6 +283,21 @@ public enum DesignTokens {
         }
     }
 
+    /// Retourne noir profond ou blanc selon le ratio de contraste WCAG sur la couleur de fond résolue.
+    public static func contrastingForeground(on background: Color, in env: EnvironmentValues) -> Color {
+        let resolved = background.resolve(in: env)
+        func linear(_ c: Float) -> Double {
+            let v = max(0, min(1, Double(c)))
+            return v <= 0.03928 ? (v / 12.92) : pow((v + 0.055) / 1.055, 2.4)
+        }
+        let lum = 0.2126 * linear(resolved.red) + 0.7152 * linear(resolved.green) + 0.0722 * linear(resolved.blue)
+        let whiteContrast = 1.05 / (lum + 0.05)
+        let darkContrast = (lum + 0.05) / 0.058
+        return darkContrast >= whiteContrast
+            ? Color(red: 0.035, green: 0.055, blue: 0.110)
+            : Color.white
+    }
+
     public static var pageHorizontalPadding: CGFloat {
         #if os(tvOS)
         return 48
@@ -334,19 +349,13 @@ public extension View {
             )
         )
         #else
-        if prominent {
-            if let tint {
-                self.buttonStyle(.glassProminent).tint(tint)
-            } else {
-                self.buttonStyle(.glassProminent)
-            }
-        } else {
-            if let tint {
-                self.buttonStyle(.glass).tint(tint)
-            } else {
-                self.buttonStyle(.glass)
-            }
-        }
+        self.buttonStyle(
+            AppleGlassPillButtonStyle(
+                tint: tint,
+                prominent: prominent,
+                cornerRadius: cornerRadius
+            )
+        )
         #endif
     }
 
@@ -377,10 +386,133 @@ public extension View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { AmbientBackgroundView() }
         #else
-        self.formStyle(.grouped)
+        self
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .background { AmbientBackgroundView() }
         #endif
     }
 }
+
+#if !os(tvOS)
+/// Style de capsule verre homogène pour iOS & macOS évitant la pollution de `.tint(...)`
+/// héritée et garantissant un contraste net (jamais de texte orange sur fond orange).
+public struct AppleGlassPillButtonStyle: ButtonStyle {
+    public var tint: Color?
+    public var prominent: Bool
+    public var cornerRadius: CGFloat?
+
+    public init(tint: Color? = nil, prominent: Bool = false, cornerRadius: CGFloat? = nil) {
+        self.tint = tint
+        self.prominent = prominent
+        self.cornerRadius = cornerRadius
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        AppleGlassPillButtonBody(
+            configuration: configuration,
+            tint: tint,
+            prominent: prominent,
+            cornerRadius: cornerRadius
+        )
+    }
+}
+
+private struct AppleGlassPillButtonBody: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.self) private var environment
+    @State private var isHovered: Bool = false
+
+    let configuration: ButtonStyleConfiguration
+    let tint: Color?
+    let prominent: Bool
+    let cornerRadius: CGFloat?
+
+    var body: some View {
+        let themeAccent = DesignTokens.accent(accentTheme, colorScheme)
+        let resolvedTint = tint ?? themeAccent
+        let shape = RoundedRectangle(cornerRadius: cornerRadius ?? 999, style: .continuous)
+        let isLight = colorScheme == .light
+
+        let foregroundColor: Color = {
+            if prominent {
+                return DesignTokens.contrastingForeground(on: resolvedTint, in: environment)
+            }
+            if let tint {
+                return tint
+            }
+            return DesignTokens.primaryText(colorScheme)
+        }()
+
+        let fillOverlay: Color = {
+            if prominent {
+                if configuration.isPressed {
+                    return resolvedTint.opacity(0.84)
+                }
+                return isHovered ? resolvedTint : resolvedTint.opacity(0.94)
+            }
+            if let tint {
+                let baseAlpha: Double = isLight ? 0.13 : 0.16
+                let activeAlpha: Double = configuration.isPressed ? 0.28 : (isHovered ? 0.22 : baseAlpha)
+                return tint.opacity(activeAlpha)
+            }
+            let neutralAlpha: Double = isLight
+                ? (configuration.isPressed ? 0.14 : (isHovered ? 0.09 : 0.055))
+                : (configuration.isPressed ? 0.18 : (isHovered ? 0.12 : 0.08))
+            return (isLight ? DesignTokens.primaryText(.light) : Color.white).opacity(neutralAlpha)
+        }()
+
+        let strokeColor: Color = {
+            if prominent {
+                return Color.white.opacity(isLight ? 0.35 : 0.28)
+            }
+            if let tint {
+                return tint.opacity(isHovered ? 0.62 : 0.42)
+            }
+            return DesignTokens.hairBorder(colorScheme, highContrast: isHovered)
+        }()
+
+        let labelContent = configuration.label
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background {
+                if prominent {
+                    shape.fill(fillOverlay)
+                } else if reduceTransparency {
+                    ZStack {
+                        shape.fill(DesignTokens.surface(theme: accentTheme, colorScheme))
+                        shape.fill(fillOverlay)
+                    }
+                } else {
+                    ZStack {
+                        shape.fill(.ultraThinMaterial)
+                        shape.fill(fillOverlay)
+                    }
+                }
+            }
+            .overlay(
+                shape.strokeBorder(strokeColor, lineWidth: prominent ? 0.85 : 1.0)
+            )
+            .contentShape(shape)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(isEnabled ? 1.0 : 0.48)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.14), value: isHovered)
+
+        #if os(macOS)
+        labelContent.onHover { hovering in
+            isHovered = hovering
+        }
+        #else
+        labelContent
+        #endif
+    }
+}
+#endif
 
 #if os(tvOS)
 /// Custom dark-glass focus style replacing tvOS `.buttonStyle(.card)` so card
@@ -496,6 +628,7 @@ private struct TVGlassPillButtonBody: View {
     @Environment(\.accentTheme) private var accentTheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.self) private var environment
 
     let configuration: ButtonStyleConfiguration
     let tint: Color?
@@ -505,20 +638,37 @@ private struct TVGlassPillButtonBody: View {
     var body: some View {
         let resolvedTint = tint ?? DesignTokens.accent(accentTheme, colorScheme)
         let shape = RoundedRectangle(cornerRadius: cornerRadius ?? 999, style: .continuous)
-        let darkBase = DesignTokens.surface(theme: accentTheme, .dark).opacity(0.92)
+        let darkBase = DesignTokens.surface(theme: accentTheme, .dark).opacity(0.94)
 
-        let restFill: Color = prominent
-            ? resolvedTint.opacity(reduceTransparency ? 0.42 : 0.30)
-            : Color.white.opacity(reduceTransparency ? 0.14 : 0.085)
+        let restFill: Color = {
+            if prominent {
+                return resolvedTint.opacity(reduceTransparency ? 0.44 : 0.32)
+            }
+            if let tint {
+                return tint.opacity(reduceTransparency ? 0.22 : 0.14)
+            }
+            return Color.white.opacity(reduceTransparency ? 0.16 : 0.09)
+        }()
         let focusFill: Color = prominent
-            ? resolvedTint.opacity(0.88)
+            ? resolvedTint.opacity(0.92)
             : resolvedTint.opacity(0.32)
         let restForeground: Color = prominent ? .white : (tint ?? Color.white.opacity(0.94))
-        let restBorder: Color = prominent ? resolvedTint.opacity(0.65) : Color.white.opacity(0.20)
-        let focusBorder: Color = prominent ? Color.white.opacity(0.85) : resolvedTint
+        let focusForeground: Color = prominent
+            ? DesignTokens.contrastingForeground(on: resolvedTint, in: environment)
+            : Color.white
+        let restBorder: Color = {
+            if prominent {
+                return resolvedTint.opacity(0.72)
+            }
+            if let tint {
+                return tint.opacity(0.45)
+            }
+            return Color.white.opacity(0.22)
+        }()
+        let focusBorder: Color = prominent ? Color.white.opacity(0.90) : resolvedTint
 
         configuration.label
-            .foregroundStyle(isFocused ? Color.white : restForeground)
+            .foregroundStyle(isFocused ? focusForeground : restForeground)
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
             .background(
@@ -780,7 +930,7 @@ public struct AmbientBackgroundView: View {
 
             RadialGradient(
                 colors: [
-                    glows.topLeading.opacity(isLight ? 0.16 : 0.28),
+                    glows.topLeading.opacity(isLight ? 0.22 : 0.42),
                     Color.clear,
                 ],
                 center: .topLeading,
@@ -790,7 +940,7 @@ public struct AmbientBackgroundView: View {
 
             RadialGradient(
                 colors: [
-                    glows.topTrailing.opacity(isLight ? 0.13 : 0.24),
+                    glows.topTrailing.opacity(isLight ? 0.18 : 0.34),
                     Color.clear,
                 ],
                 center: .topTrailing,
@@ -800,7 +950,7 @@ public struct AmbientBackgroundView: View {
 
             RadialGradient(
                 colors: [
-                    glows.bottom.opacity(isLight ? 0.09 : 0.16),
+                    glows.bottom.opacity(isLight ? 0.12 : 0.24),
                     Color.clear,
                 ],
                 center: .bottom,
@@ -810,6 +960,88 @@ public struct AmbientBackgroundView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: accentTheme)
         .ignoresSafeArea()
+    }
+}
+
+/// Contrôle segmenté adaptatif aligné sur le thème actif et parfaitement focusable sur Apple TV.
+public struct AdaptiveSegmentedControl<Option: Hashable & Identifiable>: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
+    @Environment(\.self) private var environment
+
+    public let options: [Option]
+    @Binding public var selection: Option
+    public let title: (Option) -> String
+
+    public init(
+        options: [Option],
+        selection: Binding<Option>,
+        title: @escaping (Option) -> String
+    ) {
+        self.options = options
+        self._selection = selection
+        self.title = title
+    }
+
+    public var body: some View {
+        let themeAccent = DesignTokens.accent(accentTheme, colorScheme)
+
+        #if os(tvOS)
+        HStack(spacing: 10) {
+            ForEach(options) { option in
+                let isSelected = selection == option
+                Button {
+                    selection = option
+                } label: {
+                    Text(title(option))
+                        .font(.callout.weight(.semibold))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                .adaptivePillButtonStyle(
+                    tint: isSelected ? themeAccent : nil,
+                    prominent: isSelected
+                )
+            }
+        }
+        .focusSection()
+        #else
+        let activeForeground = DesignTokens.contrastingForeground(on: themeAccent, in: environment)
+        HStack(spacing: 4) {
+            ForEach(options) { option in
+                let isSelected = selection == option
+                Button {
+                    withAnimation(.easeOut(duration: 0.16)) {
+                        selection = option
+                    }
+                } label: {
+                    Text(title(option))
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .foregroundStyle(isSelected ? activeForeground : DesignTokens.secondaryText(colorScheme))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background {
+                            if isSelected {
+                                Capsule().fill(themeAccent)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background {
+            Capsule()
+                .fill(DesignTokens.surface(theme: accentTheme, colorScheme).opacity(colorScheme == .light ? 0.85 : 0.72))
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(DesignTokens.hairBorder(colorScheme), lineWidth: 0.85)
+        }
+        #endif
     }
 }
 
@@ -1075,10 +1307,12 @@ public struct UsageProgressBar: View {
     @Environment(\.accentTheme) private var accentTheme
     public let percentage: Double
     public var tint: Color?
+    public var height: CGFloat?
 
-    public init(percentage: Double, tint: Color? = nil) {
+    public init(percentage: Double, tint: Color? = nil, height: CGFloat? = nil) {
         self.percentage = max(0, min(100, percentage))
         self.tint = tint
+        self.height = height
     }
 
     private var resolvedColor: Color {
@@ -1088,21 +1322,36 @@ public struct UsageProgressBar: View {
         return DesignTokens.accent(accentTheme, colorScheme)
     }
 
+    private var resolvedHeight: CGFloat {
+        if let height { return height }
+        #if os(tvOS)
+        return 10
+        #else
+        return 7
+        #endif
+    }
+
     public var body: some View {
+        let barHeight = resolvedHeight
         GeometryReader { geo in
+            let fillWidth: CGFloat = percentage > 0
+                ? max(barHeight, geo.size.width * (percentage / 100))
+                : 0
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(
                         colorScheme == .light
                             ? Color(red: 0.067, green: 0.098, blue: 0.173).opacity(0.11)
-                            : Color.white.opacity(0.12)
+                            : Color.white.opacity(0.14)
                     )
-                Capsule()
-                    .fill(resolvedColor.gradient)
-                    .frame(width: max(4, geo.size.width * (percentage / 100)))
+                if fillWidth > 0 {
+                    Capsule()
+                        .fill(resolvedColor.gradient)
+                        .frame(width: min(geo.size.width, fillWidth))
+                }
             }
         }
-        .frame(height: 6)
+        .frame(height: barHeight)
         .accessibilityValue("\(Int(percentage)) pourcent")
     }
 }
@@ -1110,6 +1359,7 @@ public struct UsageProgressBar: View {
 public struct ToastOverlayView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accentTheme) private var accentTheme
     public let toast: ToastMessage
 
     public init(toast: ToastMessage) {
@@ -1130,9 +1380,24 @@ public struct ToastOverlayView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
 
+        #if os(tvOS)
+        label
+            .background(
+                DesignTokens.surface(theme: accentTheme, .dark).opacity(0.96),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    iconColor.opacity(0.45),
+                    lineWidth: 1.25
+                )
+            )
+            .shadow(color: .black.opacity(0.50), radius: 16, y: 6)
+            .padding(.horizontal, 20)
+        #else
         if reduceTransparency {
             label
-                .background(DesignTokens.surface(colorScheme), in: Capsule())
+                .background(DesignTokens.surface(theme: accentTheme, colorScheme), in: Capsule())
                 .overlay(Capsule().strokeBorder(DesignTokens.hairBorder(colorScheme, highContrast: true), lineWidth: 1.5))
                 .padding(.horizontal, 20)
         } else if colorScheme == .light {
@@ -1144,9 +1409,12 @@ public struct ToastOverlayView: View {
                 .padding(.horizontal, 20)
         } else {
             label
+                .background(DesignTokens.surface(theme: accentTheme, .dark).opacity(0.75), in: Capsule())
                 .glassEffect(.regular, in: Capsule())
+                .overlay(Capsule().strokeBorder(iconColor.opacity(0.32), lineWidth: 0.9))
                 .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
                 .padding(.horizontal, 20)
         }
+        #endif
     }
 }

@@ -1,6 +1,3 @@
-#if canImport(Charts)
-import Charts
-#endif
 import SwiftUI
 
 private struct ResourceMetricPoint: Identifiable {
@@ -52,15 +49,11 @@ public struct OverviewTabView: View {
                             onSelectMachines: { viewModel.selectedTab = .proxmox },
                             onSelectStorage: { viewModel.selectedTab = .storage }
                         )
-                        #if canImport(Charts)
                         nodeTelemetryChart(pve)
-                        #endif
                     }
 
                     quickStatsGrid
-                    #if canImport(Charts)
                     servicesLatencyChartCard
-                    #endif
                     servicesAccessCard
                     activeStreamsSection
                 }
@@ -89,7 +82,6 @@ public struct OverviewTabView: View {
         }
     }
 
-    #if canImport(Charts)
     private func nodeTelemetryChart(_ pve: PveOverview) -> some View {
         let teal = DesignTokens.accent(accentTheme, colorScheme)
         let rootPct = pve.node.rootfsTotalBytes > 0
@@ -100,9 +92,16 @@ public struct OverviewTabView: View {
             ResourceMetricPoint(id: "ram", label: "RAM", percentage: pve.node.memPct, color: DesignTokens.secondaryText(colorScheme)),
             ResourceMetricPoint(id: "root", label: "RootFS", percentage: rootPct, color: DesignTokens.nominal(colorScheme)),
         ]
+        #if os(tvOS)
+        let rowSpacing: CGFloat = 14
+        let barHeight: CGFloat = 12
+        #else
+        let rowSpacing: CGFloat = 10
+        let barHeight: CGFloat = 8
+        #endif
 
         return GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Charge du nœud")
@@ -123,37 +122,32 @@ public struct OverviewTabView: View {
                     .fixedSize()
                 }
 
-                Chart(points) { item in
-                    BarMark(
-                        x: .value("Utilisation", item.percentage),
-                        y: .value("Métrique", item.label)
-                    )
-                    .foregroundStyle(item.color)
-                    .cornerRadius(6)
-                    .annotation(position: .trailing) {
-                        Text(String(format: "%.0f %%", item.percentage))
-                            #if os(tvOS)
-                            .font(.system(.caption, design: .monospaced, weight: .semibold))
-                            #else
-                            .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                            #endif
-                            .foregroundStyle(DesignTokens.secondaryText(colorScheme))
+                VStack(alignment: .leading, spacing: rowSpacing) {
+                    ForEach(points) { item in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(item.label)
+                                    #if os(tvOS)
+                                    .font(.callout.weight(.semibold))
+                                    #else
+                                    .font(.caption.weight(.semibold))
+                                    #endif
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
+                                Text(String(format: "%.0f %%", item.percentage))
+                                    #if os(tvOS)
+                                    .font(.system(.callout, design: .monospaced, weight: .bold))
+                                    #else
+                                    .font(.system(.caption, design: .monospaced, weight: .bold))
+                                    #endif
+                                    .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                    .lineLimit(1)
+                            }
+                            UsageProgressBar(percentage: item.percentage, tint: item.color, height: barHeight)
+                        }
                     }
                 }
-                .chartXScale(domain: 0...100)
-                .chartXAxis(.hidden)
-                #if os(tvOS)
-                .chartYAxis {
-                    AxisMarks { _ in
-                        AxisValueLabel()
-                            .font(.callout.weight(.medium))
-                            .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                    }
-                }
-                .frame(height: 210)
-                #else
-                .frame(height: 108)
-                #endif
 
                 HStack {
                     Text("Loadavg \(pve.node.loadavg.prefix(3).joined(separator: " / "))")
@@ -189,10 +183,17 @@ public struct OverviewTabView: View {
                 ? 0
                 : Int((onlinePoints.map(\.latencyMs).reduce(0, +) / Double(onlinePoints.count)).rounded())
             let displayed = Array(points.prefix(6))
-            let maxLatency = max(20.0, (displayed.map(\.latencyMs).max() ?? 20.0) * 1.25)
+            let maxLatency = max(20.0, (displayed.map(\.latencyMs).max() ?? 20.0) * 1.15)
+            #if os(tvOS)
+            let rowSpacing: CGFloat = 14
+            let barHeight: CGFloat = 10
+            #else
+            let rowSpacing: CGFloat = 10
+            let barHeight: CGFloat = 7
+            #endif
 
             GlassCard {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Santé & Latence des services")
@@ -219,48 +220,48 @@ public struct OverviewTabView: View {
                         }
                     }
 
-                    Chart(displayed) { item in
-                        let barColor: Color = !item.isOnline
-                            ? DesignTokens.critical(colorScheme)
-                            : (item.latencyMs >= 100
-                                ? DesignTokens.caution(colorScheme)
-                                : (item.latencyMs >= 40 ? DesignTokens.accent(accentTheme, colorScheme) : DesignTokens.nominal(colorScheme)))
+                    VStack(alignment: .leading, spacing: rowSpacing) {
+                        ForEach(displayed) { item in
+                            let barColor: Color = !item.isOnline
+                                ? DesignTokens.critical(colorScheme)
+                                : (item.latencyMs >= 100
+                                    ? DesignTokens.caution(colorScheme)
+                                    : (item.latencyMs >= 40 ? DesignTokens.accent(accentTheme, colorScheme) : DesignTokens.nominal(colorScheme)))
+                            let pct = item.isOnline
+                                ? min(100, max(6, (item.latencyMs / maxLatency) * 100))
+                                : 100
 
-                        BarMark(
-                            x: .value("Latence (ms)", item.isOnline ? max(1.0, item.latencyMs) : maxLatency * 0.12),
-                            y: .value("Service", item.name)
-                        )
-                        .foregroundStyle(barColor)
-                        .cornerRadius(6)
-                        .annotation(position: .trailing) {
-                            Text(item.isOnline ? "\(Int(item.latencyMs.rounded())) ms" : "HS")
-                                #if os(tvOS)
-                                .font(.system(.caption, design: .monospaced, weight: .semibold))
-                                #else
-                                .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                                #endif
-                                .foregroundStyle(item.isOnline ? DesignTokens.secondaryText(colorScheme) : DesignTokens.critical(colorScheme))
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(barColor)
+                                        .frame(width: 7, height: 7)
+                                    Text(item.name)
+                                        #if os(tvOS)
+                                        .font(.callout.weight(.semibold))
+                                        #else
+                                        .font(.caption.weight(.semibold))
+                                        #endif
+                                        .foregroundStyle(DesignTokens.primaryText(colorScheme))
+                                        .lineLimit(1)
+                                    Spacer(minLength: 8)
+                                    Text(item.isOnline ? "\(Int(item.latencyMs.rounded())) ms" : "HS")
+                                        #if os(tvOS)
+                                        .font(.system(.callout, design: .monospaced, weight: .bold))
+                                        #else
+                                        .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                        #endif
+                                        .foregroundStyle(item.isOnline ? DesignTokens.secondaryText(colorScheme) : DesignTokens.critical(colorScheme))
+                                        .lineLimit(1)
+                                }
+                                UsageProgressBar(percentage: pct, tint: barColor, height: barHeight)
+                            }
                         }
                     }
-                    .chartXScale(domain: 0...maxLatency)
-                    .chartXAxis(.hidden)
-                    #if os(tvOS)
-                    .chartYAxis {
-                        AxisMarks { _ in
-                            AxisValueLabel()
-                                .font(.callout.weight(.medium))
-                                .foregroundStyle(DesignTokens.primaryText(colorScheme))
-                        }
-                    }
-                    .frame(height: CGFloat(max(190, displayed.count * 52)))
-                    #else
-                    .frame(height: CGFloat(max(96, displayed.count * 26)))
-                    #endif
                 }
             }
         }
     }
-    #endif
 
     private var mergedLatencyPoints: [ServiceLatencyPoint] {
         var seen: Set<String> = []
@@ -523,7 +524,7 @@ public struct OverviewTabView: View {
                             .padding(.vertical, 8)
                             #endif
                             .background(
-                                DesignTokens.surfaceElevated(colorScheme),
+                                DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                             )
                         }

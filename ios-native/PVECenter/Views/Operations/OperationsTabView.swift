@@ -117,13 +117,11 @@ public struct OperationsTabView: View {
                     }
                 }
 
-                Picker("Filtrer les incidents", selection: $incidentFilter) {
-                    ForEach(IncidentFilter.allCases) { item in
-                        Text(item.rawValue).tag(item)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
+                AdaptiveSegmentedControl(
+                    options: IncidentFilter.allCases,
+                    selection: $incidentFilter,
+                    title: \.rawValue
+                )
 
                 if displayedIncidents.isEmpty {
                     Text(
@@ -242,8 +240,6 @@ public struct OperationsTabView: View {
                                             .font(.callout.weight(.semibold))
                                             #else
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(caution)
-                                            .frame(minHeight: Layout.smallButtonMinHeight)
                                             #endif
                                             .lineLimit(1)
                                     }
@@ -266,7 +262,6 @@ public struct OperationsTabView: View {
                                             .font(.callout.weight(.semibold))
                                             #else
                                             .font(.caption.weight(.semibold))
-                                            .frame(minHeight: Layout.smallButtonMinHeight)
                                             #endif
                                             .lineLimit(1)
                                     }
@@ -282,7 +277,7 @@ public struct OperationsTabView: View {
                         }
                         .padding(Layout.rowPadding)
                         .background(
-                            DesignTokens.surfaceElevated(colorScheme),
+                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
                     }
@@ -299,7 +294,6 @@ public struct OperationsTabView: View {
                     .foregroundStyle(DesignTokens.primaryText(colorScheme))
                     .lineLimit(1)
 
-                #if os(tvOS)
                 HStack(spacing: Layout.actionSpacing) {
                     scanButton(
                         target: "jellyfin",
@@ -314,24 +308,6 @@ public struct OperationsTabView: View {
                         prominent: false
                     )
                 }
-                #else
-                GlassEffectContainer(spacing: Layout.actionSpacing) {
-                    HStack(spacing: Layout.actionSpacing) {
-                        scanButton(
-                            target: "jellyfin",
-                            title: "Scanner Jellyfin",
-                            systemImage: "arrow.triangle.2.circlepath",
-                            prominent: true
-                        )
-                        scanButton(
-                            target: "plex",
-                            title: "Scanner Plex",
-                            systemImage: "arrow.clockwise",
-                            prominent: false
-                        )
-                    }
-                }
-                #endif
             }
         }
     }
@@ -425,13 +401,15 @@ public struct OperationsTabView: View {
                             }
 
                             if req.isPending {
-                                let decisionButtons = HStack(spacing: Layout.actionSpacing) {
+                                HStack(spacing: Layout.actionSpacing) {
                                     Button {
                                         Task { await viewModel.decideSeerrRequest(id: req.id, approve: true) }
                                     } label: {
                                         Label("Approuver", systemImage: "checkmark")
                                             #if os(tvOS)
                                             .font(.callout.weight(.semibold))
+                                            #else
+                                            .font(.caption.weight(.semibold))
                                             #endif
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.82)
@@ -447,7 +425,7 @@ public struct OperationsTabView: View {
                                             #if os(tvOS)
                                             .font(.callout.weight(.semibold))
                                             #else
-                                            .foregroundStyle(DesignTokens.critical(colorScheme))
+                                            .font(.caption.weight(.semibold))
                                             #endif
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.82)
@@ -456,19 +434,11 @@ public struct OperationsTabView: View {
                                     .adaptivePillButtonStyle(tint: DesignTokens.critical(colorScheme))
                                     .adaptiveSmallControlSize()
                                 }
-
-                                #if os(tvOS)
-                                decisionButtons
-                                #else
-                                GlassEffectContainer(spacing: Layout.actionSpacing) {
-                                    decisionButtons
-                                }
-                                #endif
                             }
                         }
                         .padding(Layout.rowPadding)
                         .background(
-                            DesignTokens.surfaceElevated(colorScheme),
+                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
                     }
@@ -499,7 +469,7 @@ public struct OperationsTabView: View {
                             #if os(tvOS)
                             .font(.callout.weight(.semibold))
                             #else
-                            .foregroundStyle(qbit.altSpeedEnabled ? DesignTokens.caution(colorScheme) : DesignTokens.nominal(colorScheme))
+                            .font(.caption.weight(.semibold))
                             #endif
                             .lineLimit(1)
                             .minimumScaleFactor(0.82)
@@ -547,9 +517,6 @@ public struct OperationsTabView: View {
                                         systemImage: torrent.isPaused ? "play.fill" : "pause.fill"
                                     )
                                     .labelStyle(.iconOnly)
-                                    #if !os(tvOS)
-                                    .frame(minWidth: Layout.buttonMinHeight, minHeight: Layout.buttonMinHeight)
-                                    #endif
                                 }
                                 .adaptivePillButtonStyle()
                                 .adaptiveSmallControlSize()
@@ -561,7 +528,7 @@ public struct OperationsTabView: View {
                         }
                         .padding(Layout.rowPadding)
                         .background(
-                            DesignTokens.surfaceElevated(colorScheme),
+                            DesignTokens.surfaceElevated(theme: accentTheme, colorScheme),
                             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
                     }
