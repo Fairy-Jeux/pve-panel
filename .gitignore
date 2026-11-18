@@ -1,29 +1,40 @@
+# Runtime configuration, databases, keys, and secrets
 .env
+.env.*
+!.env.example
 services.yaml
+!services.example.yaml
 config/config.yaml
 !config/config.example.yaml
 config/*.db
 config/*.db-*
 config/*.p8
+*.p8
+*.pem
+*.key
+
+# Python virtual environments & caches
 .venv/
+venv/
 backend/.venv/
 __pycache__/
-*.pyc
-*.pyo
-.DS_Store
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend Node & Vite build artifacts
+node_modules/
 frontend/node_modules/
 frontend/dist/
 *.tsbuildinfo
+
+# Logs & OS cruft
 *.log
-frontend/ios/App/Pods/
-frontend/ios/App/build/
-frontend/ios/DerivedData/
-*.ipa
-*.xcarchive
-*.mobileprovision
-*.p12
-*.p8
-ios-native/.build/
-ios-native/build/
-*.xcuserstate
-xcuserdata/
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db

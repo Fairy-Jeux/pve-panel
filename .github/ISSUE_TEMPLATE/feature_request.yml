@@ -1,0 +1,45 @@
+name: Feature Request
+description: Propose a new feature, connector protocol, media widget, or improvement for pve-panel
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      options:
+        - Proxmox VE & Storage / SMART
+        - Custom Service Connectors & AlertEngine
+        - Notification Channels (APNs / Webhooks)
+        - Media Integrations & Operations
+        - Security & Authentication
+        - Embedded Web UI & Themes
+        - Installer & Docker Deployment
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Motivation
+      description: What problem does this solve or what homelab workflow does it improve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you envision the API, configuration schema, or UI working.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any workarounds or alternative designs you considered.
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be interested in submitting a Pull Request for this feature.
